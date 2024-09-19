@@ -1,0 +1,347 @@
+******************************************************************************
+          TMS320C6x COFF Linker Version 4.00                   
+******************************************************************************
+>> Linked Fri May 13 18:18:53 2011
+
+OUTPUT FILE NAME:   <xydetroit.out>
+ENTRY POINT SYMBOL: "_c_int00"  address: 0000a6a0
+
+
+MEMORY CONFIGURATION
+
+           name     origin    length      used    attributes    fill
+         --------  --------  ---------  --------  ----------  --------
+         IVECS     00000000  000000200  00000200     RWIX    
+         IPROG     00000200  00000fe00  0000a860     RWIX    
+         SSRAM     00400000  000080000  00000000     RWIX    
+         GSRAM     01400000  000200000  00000000     RWIX    
+         PLXREG    01600000  000020000  00000000     RWIX    
+         DL3       01700000  000100000  00000000     RWIX    
+         IREG      01800000  000200000  00000000     RWIX    
+         SDRAM     02000000  001000000  00000000     RWIX    
+         IDATA     80000000  000010000  00000928     RWIX    
+
+
+SECTION ALLOCATION MAP
+
+ output                                  attributes/
+section   page    origin      length       input sections
+--------  ----  ----------  ----------   ----------------
+.vectors   0    00000000    00000200     
+                  00000000    00000200     isfp6201.o6x (.vectors)
+
+.text      0    00000200    0000a860     
+                  00000200    00005280     xycore.o6x (.text)
+                  00005480    00000000     rts6201.lib : errno.obj (.text)
+                  00005480    00000000     isfp6201.o6x (.text)
+                  00005480    00000f80     rts6201.lib : pow.obj (.text)
+                  00006400    000007c0                 : cmpd.obj (.text)
+                  00006bc0    00000720                 : cos.obj (.text)
+                  000072e0    00000640                 : tan.obj (.text)
+                  00007920    00000640                 : sin.obj (.text)
+                  00007f60    000004c0                 : log.obj (.text)
+                  00008420    000003e0                 : frcdivd.obj (.text)
+                  00008800    00000320                 : round.obj (.text)
+                  00008b20    00000300                 : memcpy.obj (.text)
+                  00008e20    00000280                 : frcaddd.obj (.text)
+                  000090a0    00000240                 : ldexp.obj (.text)
+                  000092e0    00000220     de62c6x.lib : de_oc6x.o6x (.text)
+                  00009500    00000220     rts6201.lib : frexp.obj (.text)
+                  00009720    00000220                 : divd.obj (.text)
+                  00009940    000001e0                 : frcmpyd.obj (.text)
+                  00009b20    000001e0                 : mpyd.obj (.text)
+                  00009d00    000001e0                 : addd.obj (.text)
+                  00009ee0    00000180                 : autoinit.obj (.text)
+                  0000a060    00000100                 : exit.obj (.text)
+                  0000a160    00000100                 : modf.obj (.text)
+                  0000a260    000000e0     de62c6x.lib : de_cdint.o6x (.text)
+                  0000a340    000000c0     rts6201.lib : divi.obj (.text)
+                  0000a400    000000c0                 : fixdi.obj (.text)
+                  0000a4c0    000000a0                 : renormd.obj (.text)
+                  0000a560    000000a0     de62c6x.lib : de_oplx.o6x (.text)
+                  0000a600    000000a0     rts6201.lib : remi.obj (.text)
+                  0000a6a0    00000080                 : boot.obj (.text)
+                  0000a720    00000080                 : fltid.obj (.text)
+                  0000a7a0    00000080                 : floor.obj (.text)
+                  0000a820    00000060                 : fltud.obj (.text)
+                  0000a880    00000060     de62c6x.lib : de_crdl3.o6x (.text)
+                  0000a8e0    00000060     rts6201.lib : subd.obj (.text)
+                  0000a940    00000060     de62c6x.lib : de_cled.o6x (.text)
+                  0000a9a0    00000040     rts6201.lib : trunc.obj (.text)
+                  0000a9e0    00000040                 : negd.obj (.text)
+                  0000aa20    00000040                 : absd.obj (.text)
+
+.stack     0    80000000    00000400     UNINITIALIZED
+                  80000000    00000000     rts6201.lib : boot.obj (.stack)
+
+.tables    0    80000000    00000000     UNINITIALIZED
+
+.data      0    80000000    00000000     UNINITIALIZED
+                  80000000    00000000     xycore.o6x (.data)
+                  80000000    00000000     rts6201.lib : ldexp.obj (.data)
+                  80000000    00000000                 : frexp.obj (.data)
+                  80000000    00000000                 : frcmpyd.obj (.data)
+                  80000000    00000000                 : errno.obj (.data)
+                  80000000    00000000                 : cmpd.obj (.data)
+                  80000000    00000000                 : autoinit.obj (.data)
+                  80000000    00000000                 : absd.obj (.data)
+                  80000000    00000000                 : trunc.obj (.data)
+                  80000000    00000000                 : tan.obj (.data)
+                  80000000    00000000                 : subd.obj (.data)
+                  80000000    00000000                 : sin.obj (.data)
+                  80000000    00000000                 : round.obj (.data)
+                  80000000    00000000                 : renormd.obj (.data)
+                  80000000    00000000                 : pow.obj (.data)
+                  80000000    00000000                 : negd.obj (.data)
+                  80000000    00000000                 : mpyd.obj (.data)
+                  80000000    00000000                 : modf.obj (.data)
+                  80000000    00000000                 : memcpy.obj (.data)
+                  80000000    00000000                 : log.obj (.data)
+                  80000000    00000000                 : frcdivd.obj (.data)
+                  80000000    00000000                 : frcaddd.obj (.data)
+                  80000000    00000000                 : fltud.obj (.data)
+                  80000000    00000000                 : fltid.obj (.data)
+                  80000000    00000000                 : floor.obj (.data)
+                  80000000    00000000                 : fixdi.obj (.data)
+                  80000000    00000000                 : exit.obj (.data)
+                  80000000    00000000                 : divd.obj (.data)
+                  80000000    00000000                 : cos.obj (.data)
+                  80000000    00000000                 : boot.obj (.data)
+                  80000000    00000000                 : addd.obj (.data)
+                  80000000    00000000                 : remi.obj (.data)
+                  80000000    00000000                 : divi.obj (.data)
+                  80000000    00000000     de62c6x.lib : de_cdint.o6x (.data)
+                  80000000    00000000                 : de_oplx.o6x (.data)
+                  80000000    00000000                 : de_oc6x.o6x (.data)
+                  80000000    00000000                 : de_crdl3.o6x (.data)
+                  80000000    00000000                 : de_cled.o6x (.data)
+                  80000000    00000000     isfp6201.o6x (.data)
+
+.bss       0    80000400    00000014     UNINITIALIZED
+                  80000400    00000008     rts6201.lib : exit.obj (.bss:c)
+                  80000408    00000000                 : exit.obj (.bss)
+                  80000408    00000000                 : fixdi.obj (.bss)
+                  80000408    00000000                 : divd.obj (.bss)
+                  80000408    00000000                 : boot.obj (.bss)
+                  80000408    00000000                 : cos.obj (.bss)
+                  80000408    00000000                 : frcaddd.obj (.bss)
+                  80000408    00000000                 : frcdivd.obj (.bss)
+                  80000408    00000000                 : fltud.obj (.bss)
+                  80000408    00000000                 : floor.obj (.bss)
+                  80000408    00000000                 : fltid.obj (.bss)
+                  80000408    00000000     de62c6x.lib : de_crdl3.o6x (.bss)
+                  80000408    00000000                 : de_oc6x.o6x (.bss)
+                  80000408    00000000                 : de_cled.o6x (.bss)
+                  80000408    00000000     xycore.o6x (.bss)
+                  80000408    00000000     isfp6201.o6x (.bss)
+                  80000408    00000000     rts6201.lib : remi.obj (.bss)
+                  80000408    00000000                 : addd.obj (.bss)
+                  80000408    00000000                 : divi.obj (.bss)
+                  80000408    00000000     de62c6x.lib : de_oplx.o6x (.bss)
+                  80000408    00000000                 : de_cdint.o6x (.bss)
+                  80000408    00000000     rts6201.lib : absd.obj (.bss)
+                  80000408    00000000                 : autoinit.obj (.bss)
+                  80000408    00000000                 : trunc.obj (.bss)
+                  80000408    00000000                 : subd.obj (.bss)
+                  80000408    00000000                 : tan.obj (.bss)
+                  80000408    00000000                 : frexp.obj (.bss)
+                  80000408    00000000                 : ldexp.obj (.bss)
+                  80000408    00000000                 : frcmpyd.obj (.bss)
+                  80000408    00000000                 : cmpd.obj (.bss)
+                  80000408    00000000                 : errno.obj (.bss)
+                  80000408    00000000                 : mpyd.obj (.bss)
+                  80000408    00000000                 : negd.obj (.bss)
+                  80000408    00000000                 : modf.obj (.bss)
+                  80000408    00000000                 : log.obj (.bss)
+                  80000408    00000000                 : memcpy.obj (.bss)
+                  80000408    00000000                 : renormd.obj (.bss)
+                  80000408    00000000                 : round.obj (.bss)
+                  80000408    00000000                 : sin.obj (.bss)
+                  80000408    00000000                 : pow.obj (.bss)
+                  80000408    00000008     xycore.o6x (.bss:c)
+                  80000410    00000004     rts6201.lib : errno.obj (.bss:c)
+
+.sysmem    0    80000000    00000000     UNINITIALIZED
+
+.cinit     0    80000418    0000028c     
+                  80000418    00000140     rts6201.lib : pow.obj (.cinit)
+                  80000558    00000048                 : sin.obj (.cinit)
+                  800005a0    00000048                 : tan.obj (.cinit)
+                  800005e8    00000048                 : cos.obj (.cinit)
+                  80000630    00000040                 : log.obj (.cinit)
+                  80000670    00000010     xycore.o6x (.cinit:c)
+                  80000680    00000010     rts6201.lib : exit.obj (.cinit:c)
+                  80000690    0000000c                 : errno.obj (.cinit:c)
+                  8000069c    00000008     --HOLE-- [fill = 00000000]
+
+.const     0    80000000    00000000     UNINITIALIZED
+
+.cio       0    80000000    00000000     UNINITIALIZED
+
+.far       0    800006a8    00000288     UNINITIALIZED
+                  800006a8    00000120     rts6201.lib : pow.obj (.far)
+                  800007c8    00000080                 : exit.obj (.far)
+                  80000848    00000040                 : cos.obj (.far)
+                  80000888    00000040                 : sin.obj (.far)
+                  800008c8    00000038                 : tan.obj (.far)
+                  80000900    00000030                 : log.obj (.far)
+
+
+GLOBAL SYMBOLS: SORTED ALPHABETICALLY BY Name 
+
+address    name
+--------   ----
+80000400   $bss
+80000400   .bss
+80000000   .data
+00000200   .text
+0000a13c   C$$EXIT
+0000a260   _C6x_ControlDisableIntSrc
+0000a940   _C6x_ControlLed
+0000a880   _C6x_ControlResetDspLink3
+000092e0   _C6x_OpenC6x
+0000a560   _C6x_OpenPlx
+8000040c   _G_lastRand2
+80000408   _G_lastRandomNum
+0000028c   _GetRandNum2
+00000230   _GetRandNum
+00000200   _SetSeed
+00000218   _SetSeed2
+00000400   __STACK_SIZE
+80000400   ___bss__
+80000418   ___cinit__
+80000000   ___data__
+80000000   ___edata__
+80000414   ___end__
+0000aa60   ___etext__
+ffffffff   ___pinit__
+00000200   ___text__
+0000aa20   __absd
+00009d00   __addd
+80000404   __cleanup_ptr
+00006400   __cmpd
+00009720   __divd
+0000a340   __divi
+000064d0   __eqld
+0000a400   __fixdi
+0000a720   __fltid
+0000a820   __fltud
+00008e20   __frcaddd
+00008420   __frcdivd
+00009940   __frcmpyd
+00006a70   __geqd
+000067e0   __gtrd
+00006920   __leqd
+00006694   __lssd
+00009b20   __mpyd
+0000a9e0   __negd
+000065b0   __neqd
+0000a600   __remi
+00008800   __round
+80000000   __stack
+0000a8e0   __subd
+0000a9a0   __trunc
+0000a13c   _abort
+0000a10c   _atexit
+00009ee0   _auto_init
+0000a6a0   _c_int00
+00006bc0   _cos
+80000410   _errno
+0000a060   _exit
+0000a7a0   _floor
+00009500   _frexp
+000090a0   _ldexp
+00007f60   _log
+000002e8   _main
+00008b20   _memcpy
+0000a160   _modf
+00005480   _pow
+0000a4c0   _renormd
+00007920   _sin
+000072e0   _tan
+80000418   cinit
+80000000   edata
+80000414   end
+0000aa60   etext
+ffffffff   pinit
+
+
+GLOBAL SYMBOLS: SORTED BY Symbol Address 
+
+address    name
+--------   ----
+00000200   .text
+00000200   _SetSeed
+00000200   ___text__
+00000218   _SetSeed2
+00000230   _GetRandNum
+0000028c   _GetRandNum2
+000002e8   _main
+00000400   __STACK_SIZE
+00005480   _pow
+00006400   __cmpd
+000064d0   __eqld
+000065b0   __neqd
+00006694   __lssd
+000067e0   __gtrd
+00006920   __leqd
+00006a70   __geqd
+00006bc0   _cos
+000072e0   _tan
+00007920   _sin
+00007f60   _log
+00008420   __frcdivd
+00008800   __round
+00008b20   _memcpy
+00008e20   __frcaddd
+000090a0   _ldexp
+000092e0   _C6x_OpenC6x
+00009500   _frexp
+00009720   __divd
+00009940   __frcmpyd
+00009b20   __mpyd
+00009d00   __addd
+00009ee0   _auto_init
+0000a060   _exit
+0000a10c   _atexit
+0000a13c   _abort
+0000a13c   C$$EXIT
+0000a160   _modf
+0000a260   _C6x_ControlDisableIntSrc
+0000a340   __divi
+0000a400   __fixdi
+0000a4c0   _renormd
+0000a560   _C6x_OpenPlx
+0000a600   __remi
+0000a6a0   _c_int00
+0000a720   __fltid
+0000a7a0   _floor
+0000a820   __fltud
+0000a880   _C6x_ControlResetDspLink3
+0000a8e0   __subd
+0000a940   _C6x_ControlLed
+0000a9a0   __trunc
+0000a9e0   __negd
+0000aa20   __absd
+0000aa60   ___etext__
+0000aa60   etext
+80000000   edata
+80000000   .data
+80000000   ___data__
+80000000   ___edata__
+80000000   __stack
+80000400   ___bss__
+80000400   $bss
+80000400   .bss
+80000404   __cleanup_ptr
+80000408   _G_lastRandomNum
+8000040c   _G_lastRand2
+80000410   _errno
+80000414   ___end__
+80000414   end
+80000418   ___cinit__
+80000418   cinit
+ffffffff   pinit
+ffffffff   ___pinit__
+
+[73 symbols]

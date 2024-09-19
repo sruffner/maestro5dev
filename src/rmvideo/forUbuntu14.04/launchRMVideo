@@ -1,0 +1,26 @@
+# simple script that launches RMVideo. Before launching, it turns ON vertical sync, screen saver, and display power
+# management. It restores the screen saver and DPMS after RMVideo is killed via Ctrl-C (SIGINT); VSync is left ON.
+# RMVideo traps SIGINT so that this script will continue execution when the RMVideo process exits. NOTE the full path
+# to the RMVideo executable!
+#
+# 17jan2019: RMVideo redesigned to function properly with vertical sync on. In this launcher script we use 
+# nvidia-settings to turn on SyncToVBlank. Since this is typically on anyway, we don't turn it off afterwards.
+# 06feb2019: We altered Linux scheduler parameters to reduce the "resume execution latency" when the RMVideo thread
+# stalls in glFinish() waiting for the vertical blanking interval. The default parameters are restored when 
+# RMVideo exits. You may need to adjust these parameters for your particular Linux machine!
+# 05mar2019: Further testing indicated that the changes in the Linux scheduler really didn't help much (and may
+# even worsen RMVideo performance), so I've commented them out. 
+# 14jan2020: Use nvidia-settings to set PowerMizer mode to "Prefer maximum performance" while RMVideo is running.
+#
+nvidia-settings -a SyncToVBlank=1 -a '[gpu:0]/GPUPowerMizerMode=1'
+xset s off -dpms
+# sysctl -w kernel.sched_min_granularity_ns=500000
+# sysctl -w kernel.sched_wakeup_granularity_ns=500000
+# sysctl -w kernel.sched_latency_ns=1000000
+/usr/local/rmvideo/rmvideo connect 
+xset s on +dpms
+nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=0'
+# sysctl -w kernel.sched_latency_ns=18000000
+# sysctl -w kernel.sched_wakeup_granularity_ns=3000000
+# sysctl -w kernel.sched_min_granularity_ns=2250000
+

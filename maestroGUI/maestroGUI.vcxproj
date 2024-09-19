@@ -1,0 +1,289 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{3C563829-989A-4021-99F1-2E86816C3EDC}</ProjectGuid>
+    <RootNamespace>$safeprojectname$</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <Keyword>MFCProj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>NotSet</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>C:\maestro5dev\src\gui;C:\maestro5dev\src\gui\sizebar;C:\maestro5dev\src\gui\res;C:\maestro5dev\src\gui\jmxdoc;C:\maestro5dev\src\gui\gridctrl;C:\maestro5dev\src\gui\fileeditctrl;C:\maestro5dev\src\cxdriver;C:\maestro5dev\external\includes\rmvideo;C:\maestro5dev\external\includes\eyelink;$(RTX64SDKDir4)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <ValidateAllParameters>true</ValidateAllParameters>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\maestro5dev\src\gui;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>C:\maestro5dev\src\gui;C:\maestro5dev\src\gui\jmxdoc;C:\maestro5dev\src\gui\gridctrl;C:\maestro5dev\src\gui\fileeditctrl;C:\maestro5dev\src\gui\sizebar;C:\maestro5dev\src\gui\res;C:\maestro5dev\src\cxdriver;C:\maestro5dev\external\includes\rmvideo;C:\maestro5dev\external\includes\eyelink;$(RTX64SDKDir4)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <ValidateAllParameters>true</ValidateAllParameters>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\maestro5dev\src\gui;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\maestro5dev\src\gui\clrbutton.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cmdline.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cntrlx.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxabout.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxchannel.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxchannelform.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxcontmode.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxcontrolpanel.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxcontrolpaneldlg.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxcontrun.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxcontrunform.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxdoc.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxeyelink.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxeyelinkdlg.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxfileedit.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxfixrewdlg.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxidlemode.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cximporter.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxmainframe.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxmodecontrol.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxmovefilequeue.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxmsglogbar.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxobjcombo.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxobjtree.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxobj_ifc.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxpert.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxpertform.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxrandomvar.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxrmvstoredlg.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxrpdistro.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxrpdistrodlg.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxrpdistroview.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxrtapi.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxruntime.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxsettings.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxspikehistbar.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxtarget.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxtargform.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxtestmode.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxtreemap.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxtrial.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxtrialform.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxtrialmode.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxtrialseq.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxvideodspdlg.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\cxviewhint.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\dib.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\dirchooser.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\fileeditctrl\fileeditctrl.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\funcparser.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\graphbar.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\cellrange.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\gridcell.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\gridcellbase.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\gridctrl.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\griddroptarget.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\gridmemdc.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\inplacecombo.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\inplaceedit.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\inplacenumedit.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\inplacetextedit.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\inplacetree.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\litegrid.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\gridctrl\titletip.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\jmxdoc\jmxdocimporter.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\jmxdoc\jsonvalue.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\logedit.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\logsplash.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\mdrgtree.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\numedit.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\res\resource.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\sizebar\scbarcf.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\sizebar\scbarg.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\sizebar\sizecbar.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\sizebar\szdlgbar.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\splash.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\stdafx.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\targetver.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\treemap.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\util.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\visualfx.h" />
+    <ClInclude Include="C:\maestro5dev\src\gui\xyplotbar.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="C:\maestro5dev\src\gui\clrbutton.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cmdline.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cntrlx.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxabout.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxchannel.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxchannelform.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxcontmode.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxcontrolpanel.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxcontrolpaneldlg.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxcontrun.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxcontrunform.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxdoc.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxeyelink.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxeyelinkdlg.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxfileedit.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxfixrewdlg.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxidlemode.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cximporter.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxmainframe.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxmodecontrol.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxmovefilequeue.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxmsglogbar.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxobjcombo.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxobjtree.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxpert.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxpertform.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxrandomvar.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxrmvstoredlg.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxrpdistro.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxrpdistrodlg.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxrpdistroview.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxrtapi.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxruntime.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxsettings.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxspikehistbar.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxtarget.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxtargform.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxtestmode.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxtreemap.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxtrial.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxtrialform.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxtrialmode.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxtrialseq.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\cxvideodspdlg.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\dib.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\dirchooser.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\fileeditctrl\fileeditctrl.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\funcparser.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\graphbar.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\gridctrl\gridcell.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\gridctrl\gridcellbase.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\gridctrl\gridctrl.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\gridctrl\griddroptarget.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\gridctrl\inplacecombo.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\gridctrl\inplaceedit.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\gridctrl\inplacenumedit.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\gridctrl\inplacetextedit.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\gridctrl\inplacetree.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\gridctrl\litegrid.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\gridctrl\titletip.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\jmxdoc\jmxdocimporter.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\jmxdoc\jsonvalue.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\logedit.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\logsplash.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\mdrgtree.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\numedit.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\sizebar\scbarcf.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\sizebar\scbarg.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\sizebar\sizecbar.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\sizebar\szdlgbar.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\splash.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\treemap.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\util.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="C:\maestro5dev\src\gui\visualfx.cpp" />
+    <ClCompile Include="C:\maestro5dev\src\gui\xyplotbar.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="C:\maestro5dev\src\gui\res\maestro.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="C:\maestro5dev\src\gui\res\chan.ico" />
+    <Image Include="C:\maestro5dev\src\gui\res\cxicons.bmp" />
+    <Image Include="C:\maestro5dev\src\gui\res\cxsplash.bmp" />
+    <Image Include="C:\maestro5dev\src\gui\res\main.ico" />
+    <Image Include="C:\maestro5dev\src\gui\res\mainapp.ico" />
+    <Image Include="C:\maestro5dev\src\gui\res\pert.ico" />
+    <Image Include="C:\maestro5dev\src\gui\res\stimrun.ico" />
+    <Image Include="C:\maestro5dev\src\gui\res\target.ico" />
+    <Image Include="C:\maestro5dev\src\gui\res\toolbar.bmp" />
+    <Image Include="C:\maestro5dev\src\gui\res\trial.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="C:\maestro5dev\external\lib\eyelink_core64.lib" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

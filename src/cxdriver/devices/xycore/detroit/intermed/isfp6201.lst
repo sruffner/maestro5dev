@@ -1,0 +1,194 @@
+TMS320C6x COFF Assembler         Version 4.00     Fri May 13 18:18:44 2011
+Copyright (c) 1996-2000 Texas Instruments Incorporated
+intermed\isfp6201.asm                                                PAGE    1
+
+       1                    ;******************************************************************************
+       2                    ;* TMS320C6x ANSI C Codegen                                      Version 4.00 *
+       3                    ;* Date/Time created: Fri May 13 18:18:44 2011                                *
+       4                    ;******************************************************************************
+       5                    
+       6                    ;******************************************************************************
+       7                    ;* GLOBAL FILE PARAMETERS                                                     *
+       8                    ;*                                                                            *
+       9                    ;*   Architecture      : TMS320C620x                                          *
+      10                    ;*   Optimization      : Disabled                                             *
+      11                    ;*   Optimizing for    : Compile time, Ease of Development                    *
+      12                    ;*                       Based on options: no -o, no -ms                      *
+      13                    ;*   Endian            : Little                                               *
+      14                    ;*   Interrupt Thrshld : Disabled                                             *
+      15                    ;*   Memory Model      : Small                                                *
+      16                    ;*   Calls to RTS      : Near                                                 *
+      17                    ;*   Pipelining        : Disabled                                             *
+      18                    ;*   Memory Aliases    : Presume are aliases (pessimistic)                    *
+      19                    ;*   Debug Info        : Debug                                                *
+      20                    ;*                                                                            *
+      21                    ;******************************************************************************
+      22                    
+      23          0000000F  FP      .set    A15
+      24          0000002E  DP      .set    B14
+      25          0000002F  SP      .set    B15
+      26                            .global $bss
+      27                    
+      28                    ;       acp6x -q -D_TGTDETROIT -Iinclude -I.. -m --i_output_file intermed\isfp6201.if --template_info_
+      29                            .file   "isfp6201.c"
+      30 00000000            .sect .vectors        ; point this section towards vectors      
+      31                     ; RESET ISFP (usually comes from rts6201.lib)                     
+      32                     .ref _c_int00              ; provide reference to reset function  
+      33 00000000 0080002A!     MVKL .S2 _c_int00,B1    ; Op 1: Load low half of ISR address   
+      34 00000004 0080006A!     MVKH .S2 _c_int00,B1    ; Op 2: Load high half of ISR address  
+      35 00000008 00040362      B    .S2 B1             ; Op 3: Branch to ISR                  
+      36 0000000c 00000000      NOP                     ; Op 4:                                
+      37 00000010 00000000      NOP                     ; Op 5:                                
+      38 00000014 00000000      NOP                     ; Op 6:                                
+      39 00000018 00000000      NOP                     ; Op 7:                                
+      40 0000001c 00000000      NOP                     ; Op 8:                                
+      41                     ; NMI ISFP                                                     
+      42 00000020 00000000   NOP                  ; Op 1: no ISR for this vector            
+      43 00000024 00000000   NOP                  ; Op 2:                                   
+      44 00000028 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+      45 0000002c 00000000   NOP                  ; Op 4:                                   
+      46 00000030 00000000   NOP                  ; Op 5:                                   
+      47 00000034 00000000   NOP                  ; Op 6:                                   
+      48 00000038 00000000   NOP                  ; Op 7:                                   
+      49 0000003c 00000000   NOP                  ; Op 8:                                   
+      50                     ; RESERVED ISFP                                                
+      51 00000040 00000000   NOP                  ; Op 1: leave reserved ISFP empty         
+      52 00000044 00000000   NOP                  ; Op 2:                                   
+      53 00000048 00000000   NOP                  ; Op 3:                                   
+      54 0000004c 00000000   NOP                  ; Op 4:                                   
+      55 00000050 00000000   NOP                  ; Op 5:                                   
+TMS320C6x COFF Assembler         Version 4.00     Fri May 13 18:18:44 2011
+Copyright (c) 1996-2000 Texas Instruments Incorporated
+intermed\isfp6201.asm                                                PAGE    2
+
+      56 00000054 00000000   NOP                  ; Op 6:                                   
+      57 00000058 00000000   NOP                  ; Op 7:                                   
+      58 0000005c 00000000   NOP                  ; Op 8:                                   
+      59                     ; RESERVED ISFP                                                
+      60 00000060 00000000   NOP                  ; Op 1: leave reserved ISFP empty         
+      61 00000064 00000000   NOP                  ; Op 2:                                   
+      62 00000068 00000000   NOP                  ; Op 3:                                   
+      63 0000006c 00000000   NOP                  ; Op 4:                                   
+      64 00000070 00000000   NOP                  ; Op 5:                                   
+      65 00000074 00000000   NOP                  ; Op 6:                                   
+      66 00000078 00000000   NOP                  ; Op 7:                                   
+      67 0000007c 00000000   NOP                  ; Op 8:                                   
+      68                     ; INT4 ISFP - External Interrupt pin 4                         
+      69 00000080 00000000   NOP                  ; Op 1: no ISR for this vector            
+      70 00000084 00000000   NOP                  ; Op 2:                                   
+      71 00000088 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+      72 0000008c 00000000   NOP                  ; Op 4:                                   
+      73 00000090 00000000   NOP                  ; Op 5:                                   
+      74 00000094 00000000   NOP                  ; Op 6:                                   
+      75 00000098 00000000   NOP                  ; Op 7:                                   
+      76 0000009c 00000000   NOP                  ; Op 8:                                   
+      77                     ; INT5 ISFP - External Interrupt pin 5                         
+      78 000000a0 00000000   NOP                  ; Op 1: no ISR for this vector            
+      79 000000a4 00000000   NOP                  ; Op 2:                                   
+      80 000000a8 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+      81 000000ac 00000000   NOP                  ; Op 4:                                   
+      82 000000b0 00000000   NOP                  ; Op 5:                                   
+      83 000000b4 00000000   NOP                  ; Op 6:                                   
+      84 000000b8 00000000   NOP                  ; Op 7:                                   
+      85 000000bc 00000000   NOP                  ; Op 8:                                   
+      86                     ; INT6 ISFP - External Interrupt pin 6                         
+      87 000000c0 00000000   NOP                  ; Op 1: no ISR for this vector            
+      88 000000c4 00000000   NOP                  ; Op 2:                                   
+      89 000000c8 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+      90 000000cc 00000000   NOP                  ; Op 4:                                   
+      91 000000d0 00000000   NOP                  ; Op 5:                                   
+      92 000000d4 00000000   NOP                  ; Op 6:                                   
+      93 000000d8 00000000   NOP                  ; Op 7:                                   
+      94 000000dc 00000000   NOP                  ; Op 8:                                   
+      95                     ; INT7 ISFP - External Interrupt pin 7                         
+      96 000000e0 00000000   NOP                  ; Op 1: no ISR for this vector            
+      97 000000e4 00000000   NOP                  ; Op 2:                                   
+      98 000000e8 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+      99 000000ec 00000000   NOP                  ; Op 4:                                   
+     100 000000f0 00000000   NOP                  ; Op 5:                                   
+     101 000000f4 00000000   NOP                  ; Op 6:                                   
+     102 000000f8 00000000   NOP                  ; Op 7:                                   
+     103 000000fc 00000000   NOP                  ; Op 8:                                   
+     104                     ; INT8 ISFP - DMA Channel 0 Interrupt                          
+     105 00000100 00000000   NOP                  ; Op 1: no ISR for this vector            
+     106 00000104 00000000   NOP                  ; Op 2:                                   
+     107 00000108 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+     108 0000010c 00000000   NOP                  ; Op 4:                                   
+     109 00000110 00000000   NOP                  ; Op 5:                                   
+     110 00000114 00000000   NOP                  ; Op 6:                                   
+TMS320C6x COFF Assembler         Version 4.00     Fri May 13 18:18:44 2011
+Copyright (c) 1996-2000 Texas Instruments Incorporated
+intermed\isfp6201.asm                                                PAGE    3
+
+     111 00000118 00000000   NOP                  ; Op 7:                                   
+     112 0000011c 00000000   NOP                  ; Op 8:                                   
+     113                     ; INT9 ISFP - DMA Channel 1 Interrupt                          
+     114 00000120 00000000   NOP                  ; Op 1: no ISR for this vector            
+     115 00000124 00000000   NOP                  ; Op 2:                                   
+     116 00000128 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+     117 0000012c 00000000   NOP                  ; Op 4:                                   
+     118 00000130 00000000   NOP                  ; Op 5:                                   
+     119 00000134 00000000   NOP                  ; Op 6:                                   
+     120 00000138 00000000   NOP                  ; Op 7:                                   
+     121 0000013c 00000000   NOP                  ; Op 8:                                   
+     122                     ; INT10 ISFP - EMIF SDRAM Timer interrupt                      
+     123 00000140 00000000   NOP                  ; Op 1: no ISR for this vector            
+     124 00000144 00000000   NOP                  ; Op 2:                                   
+     125 00000148 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+     126 0000014c 00000000   NOP                  ; Op 4:                                   
+     127 00000150 00000000   NOP                  ; Op 5:                                   
+     128 00000154 00000000   NOP                  ; Op 6:                                   
+     129 00000158 00000000   NOP                  ; Op 7:                                   
+     130 0000015c 00000000   NOP                  ; Op 8:                                   
+     131                     ; INT11 ISFP - DMA Channel 2 Interrupt                         
+     132 00000160 00000000   NOP                  ; Op 1: no ISR for this vector            
+     133 00000164 00000000   NOP                  ; Op 2:                                   
+     134 00000168 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+     135 0000016c 00000000   NOP                  ; Op 4:                                   
+     136 00000170 00000000   NOP                  ; Op 5:                                   
+     137 00000174 00000000   NOP                  ; Op 6:                                   
+     138 00000178 00000000   NOP                  ; Op 7:                                   
+     139 0000017c 00000000   NOP                  ; Op 8:                                   
+     140                     ; INT12 ISFP - DMA Channel 3 Interrupt                         
+     141 00000180 00000000   NOP                  ; Op 1: no ISR for this vector            
+     142 00000184 00000000   NOP                  ; Op 2:                                   
+     143 00000188 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+     144 0000018c 00000000   NOP                  ; Op 4:                                   
+     145 00000190 00000000   NOP                  ; Op 5:                                   
+     146 00000194 00000000   NOP                  ; Op 6:                                   
+     147 00000198 00000000   NOP                  ; Op 7:                                   
+     148 0000019c 00000000   NOP                  ; Op 8:                                   
+     149                     ; INT13 ISFP - Host Port Host-to-DSP Interrupt                 
+     150 000001a0 00000000   NOP                  ; Op 1: no ISR for this vector            
+     151 000001a4 00000000   NOP                  ; Op 2:                                   
+     152 000001a8 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+     153 000001ac 00000000   NOP                  ; Op 4:                                   
+     154 000001b0 00000000   NOP                  ; Op 5:                                   
+     155 000001b4 00000000   NOP                  ; Op 6:                                   
+     156 000001b8 00000000   NOP                  ; Op 7:                                   
+     157 000001bc 00000000   NOP                  ; Op 8:                                   
+     158                     ; INT14 ISFP - Timer 0 Interrupt                               
+     159 000001c0 00000000   NOP                  ; Op 1: no ISR for this vector            
+     160 000001c4 00000000   NOP                  ; Op 2:                                   
+     161 000001c8 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+     162 000001cc 00000000   NOP                  ; Op 4:                                   
+     163 000001d0 00000000   NOP                  ; Op 5:                                   
+     164 000001d4 00000000   NOP                  ; Op 6:                                   
+     165 000001d8 00000000   NOP                  ; Op 7:                                   
+TMS320C6x COFF Assembler         Version 4.00     Fri May 13 18:18:44 2011
+Copyright (c) 1996-2000 Texas Instruments Incorporated
+intermed\isfp6201.asm                                                PAGE    4
+
+     166 000001dc 00000000   NOP                  ; Op 8:                                   
+     167                     ; INT15 ISFP - Timer 0 Interrupt                               
+     168 000001e0 00000000   NOP                  ; Op 1: no ISR for this vector            
+     169 000001e4 00000000   NOP                  ; Op 2:                                   
+     170 000001e8 001800E2   B    .S2 IRP         ; Op 3: return to calling point           
+     171 000001ec 00000000   NOP                  ; Op 4:                                   
+     172 000001f0 00000000   NOP                  ; Op 5:                                   
+     173 000001f4 00000000   NOP                  ; Op 6:                                   
+     174 000001f8 00000000   NOP                  ; Op 7:                                   
+     175 000001fc 00000000   NOP                  ; Op 8:                                   
+     176 00000000            .text                ; Set back to .text section for normal code
+
+ No Errors, No Warnings

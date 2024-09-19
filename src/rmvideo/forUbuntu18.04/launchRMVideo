@@ -1,0 +1,23 @@
+# simple script that launches RMVideo. Before launching, it turns ON vertical sync, screen saver, and display power
+# management. It restores the screen saver and DPMS after RMVideo is killed via Ctrl-C (SIGINT); VSync is left ON.
+# RMVideo traps SIGINT so that this script will continue execution when the RMVideo process exits. NOTE the full path
+# to the RMVideo executable!
+#
+# 17jan2019: RMVideo redesigned to function properly with vertical sync on. In this launcher script we use 
+# nvidia-settings to turn on SyncToVBlank. Since this is typically on anyway, we don't turn it off afterwards.
+# 06feb2019: We altered Linux scheduler parameters to reduce the "resume execution latency" when the RMVideo thread
+# stalls in glFinish() waiting for the vertical blanking interval. The default parameters are restored when 
+# RMVideo exits. You may need to adjust these parameters for your particular Linux machine!
+# 05mar2019: Further testing indicated that the changes in the Linux scheduler really didn't help much (and may
+# even worsen RMVideo performance), so I've commented them out. 
+# 05dec2019: To ensure DPMS disabled, need to set 0 timeouts for standby, suspend, and off modes.
+# 13jan2020: Using nvidia-settings to force NVidia PowerMizerMode to "Prefer maximum performance" before launching 
+# RMVideo, then restore it to Auto/Adaptive after RMVideo terminates. Dramatic performance improvement! Also removed
+# the commented-out commands related to Linux scheduler parameters.
+#
+nvidia-settings -a SyncToVBlank=1 -a "[gpu:0]/GpuPowerMizerMode=1"
+xset s off dpms 0 0 0 -dpms
+/usr/local/rmvideo/rmvideo connect 
+xset s on dpms 600 600 900 +dpms
+nvidia-settings -a "[gpu:0]/GpuPowerMizerMode=0"
+

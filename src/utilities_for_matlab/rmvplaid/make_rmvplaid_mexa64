@@ -1,0 +1,3 @@
+/usr/local/matlab-7sp3-64/bin/mex rmvplaid.c -f /home/sruffner/matlab/mexopts_v7.sh
+mv /net/keck1/matlab_public/7.0/rmvplaid.mexa64 /net/keck1/matlab_public/7.0/previous/
+mv rmvplaid.mexa64 /net/keck1/matlab_public/7.0/

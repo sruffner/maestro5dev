@@ -1,0 +1,1396 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#ifndef APSTUDIO_INVOKED
+#include "targetver.h"
+#endif
+#include "afxres.h"
+#include "verrsrc.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (United States) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#ifndef APSTUDIO_INVOKED\r\n"
+    "#include ""targetver.h""\r\n"
+    "#endif\r\n"
+    "#include ""afxres.h""\r\n"
+    "#include ""verrsrc.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#include ""maestro.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "main.ico"
+
+IDI_TGT_ICON            ICON                    "target.ico"
+
+IDI_TRIAL_ICON          ICON                    "trial.ico"
+
+IDI_CHAN_ICON           ICON                    "chan.ico"
+
+IDI_RUN_ICON            ICON                    "stimrun.ico"
+
+IDI_PERT_ICON           ICON                    "pert.ico"
+
+IDI_MAINAPP             ICON                    "mainapp.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDR_MAINFRAME           BITMAP                  "toolbar.bmp"
+
+IDB_CXICONS             BITMAP                  "cxicons.bmp"
+
+IDB_SPLASH              BITMAP                  "cxsplash.bmp"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Toolbar
+//
+
+IDR_MAINFRAME TOOLBAR 16, 16
+BEGIN
+    BUTTON      ID_FILE_NEW
+    BUTTON      ID_FILE_OPEN
+    BUTTON      ID_FILE_SAVE
+    SEPARATOR
+    BUTTON      ID_EDIT_CUT
+    BUTTON      ID_EDIT_COPY
+    BUTTON      ID_EDIT_PASTE
+    SEPARATOR
+    BUTTON      ID_VIEW_PLOTPANEL
+    BUTTON      ID_VIEW_DATAPANEL
+    BUTTON      ID_VIEW_HISTPANEL
+    BUTTON      ID_VIEW_LOGPANEL
+    SEPARATOR
+    BUTTON      ID_MODE_IDLE
+    BUTTON      ID_MODE_TRIALS
+    BUTTON      ID_MODE_CONT
+    BUTTON      ID_MODE_TEST
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MAINFRAME MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New\tCtrl+N",                ID_FILE_NEW
+        MENUITEM "&Open...\tCtrl+O",            ID_FILE_OPEN
+        MENUITEM "&Save\tCtrl+S",               ID_FILE_SAVE
+        MENUITEM "Save &As...",                 ID_FILE_SAVE_AS
+        MENUITEM SEPARATOR
+        MENUITEM "&Import...",                  ID_FILE_IMPORT
+        MENUITEM "Import &JMX doc...",          ID_FILE_JMXIMPORT
+        MENUITEM "Copy selection to...",        ID_FILE_COPYREMOTE
+        MENUITEM SEPARATOR
+        MENUITEM "Recent File",                 ID_FILE_MRU_FILE1, GRAYED
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+    POPUP "&Edit"
+    BEGIN
+        MENUITEM "&Undo\tCtrl+Z",               ID_EDIT_UNDO
+        MENUITEM SEPARATOR
+        MENUITEM "Cu&t\tCtrl+X",                ID_EDIT_CUT
+        MENUITEM "&Copy\tCtrl+C",               ID_EDIT_COPY
+        MENUITEM "&Paste\tCtrl+V",              ID_EDIT_PASTE
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
+        POPUP "&Panels"
+        BEGIN
+            MENUITEM "&Eye/Target Pos",             ID_VIEW_PLOTPANEL
+            MENUITEM "&Data Traces",                ID_VIEW_DATAPANEL
+            MENUITEM "&Message Log",                ID_VIEW_LOGPANEL
+            MENUITEM "&Spike Histograms",           ID_VIEW_HISTPANEL
+        END
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+    END
+    POPUP "&Object"
+    BEGIN
+        POPUP "&New"
+        BEGIN
+            MENUITEM "&XY Scope Target",            ID_OBJ_XYTGT
+            MENUITEM "RM&Video Target",             ID_OBJ_FBTGT
+            MENUITEM "&Trial",                      ID_OBJ_TRIAL
+            MENUITEM "&Channel Config",             ID_OBJ_CHCFG
+            MENUITEM "&Run",                        ID_OBJ_RUN
+            MENUITEM "&Perturbation",               ID_OBJ_PERT
+            MENUITEM SEPARATOR
+            MENUITEM "Target &Set",                 ID_OBJ_TGSET
+            MENUITEM "Trial S&et",                  ID_OBJ_TRSET
+            MENUITEM "Trial Su&bset",               ID_OBJ_TRSUB
+            MENUITEM "R&un Set",                    ID_OBJ_RUNSET
+        END
+        MENUITEM "&Copy",                       ID_OBJ_COPY
+        MENUITEM "&Rename",                     ID_OBJ_NAME
+        MENUITEM SEPARATOR
+        MENUITEM "&Delete",                     ID_OBJ_DEL
+        MENUITEM "Remove &All",                 ID_OBJ_CLEAR
+        MENUITEM SEPARATOR
+        MENUITEM "Show &Properties",            ID_OBJ_PROP
+    END
+    POPUP "&Mode"
+    BEGIN
+        MENUITEM "&Idle\tF9",                   ID_MODE_IDLE
+        MENUITEM "&Trials\tF10",                ID_MODE_TRIALS
+        MENUITEM "&Continuous\tF11",            ID_MODE_CONT
+        MENUITEM "T&est and Calib\tF12",        ID_MODE_TEST
+        MENUITEM SEPARATOR
+        MENUITEM "&Restart CXDRIVER",           ID_MODE_RESTART
+    END
+    POPUP "O&ptions"
+    BEGIN
+        MENUITEM "&Use Chair",                  ID_OPT_CHAIR
+        MENUITEM "&Allow RMVideo Repeat Frames", ID_OPT_RMVDUPE
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About Maestro...",           ID_APP_ABOUT
+        MENUITEM "&Go to User's Guide",         ID_HELP_USRGUIDE
+    END
+END
+
+IDR_CXPOPUPS MENU
+BEGIN
+    POPUP "blank0"
+    BEGIN
+        MENUITEM "Insert Target",               ID_GRID_INSERTTARG
+        MENUITEM "Insert Segment",              ID_GRID_INSERTSEG
+        MENUITEM SEPARATOR
+        MENUITEM "Copy <name>",                 ID_GRID_COPYSEG
+        MENUITEM "Cut <name>",                  ID_GRID_CUTSEG
+        MENUITEM "Append Paste Segment",        ID_GRID_PASTESEG
+        MENUITEM "Replace Segment",             ID_GRID_REPLACESEG
+        MENUITEM SEPARATOR
+        MENUITEM "Remove section",              ID_GRID_REMOVESECT
+        MENUITEM "Delete <name>",               ID_GRID_DEL
+        MENUITEM "Remove All Targets",          ID_GRID_CLRTARGS
+        MENUITEM "Remove All Segments",         ID_GRID_CLRSEGS
+        MENUITEM "Clear Table",                 ID_GRID_CLRALL
+        MENUITEM SEPARATOR
+        POPUP "Modification Mode"
+        BEGIN
+            MENUITEM "Modify\tAlt+0",               ID_GRID_MODIFY
+            MENUITEM "Modify Across All Segments\tAlt+1", ID_GRID_MODALLSEGS
+            MENUITEM "Modify Across Matching Segments\tAlt+2", ID_GRID_MODMATCHSEGS
+            MENUITEM "Modify Across All Trials in Set\tAlt+3", ID_GRID_MODALLTRIALS
+            MENUITEM "Modify Across Matching Trials in Set\tAlt+4", ID_GRID_MODMATCHTRIALS
+            MENUITEM "Modify Across Selected Trials in Set\tAlt+5", ID_GRID_MODSELTRIALS
+        END
+    END
+    POPUP "blank1"
+    BEGIN
+        MENUITEM "&Zero all AO",                ID_TESTAO_ZERO
+        MENUITEM "Ma&ximize all AO",            ID_TESTAO_MAX
+        MENUITEM "Mi&nimize all AO",            ID_TESTAO_MIN
+        MENUITEM "&Set all AO to this value",   ID_TESTAO_THIS
+        MENUITEM SEPARATOR
+        MENUITEM "Run Test &Waveform",          ID_TESTAO_WAVE
+    END
+    POPUP "blank2"
+    BEGIN
+        MENUITEM "&Remove All",                 ID_RUN_STIM_CLEAR
+        MENUITEM SEPARATOR
+        MENUITEM "&Copy",                       ID_RUN_STIM_COPY
+        MENUITEM "Cu&t ",                       ID_RUN_STIM_CUT
+        MENUITEM "&Delete",                     ID_RUN_STIM_DEL
+        MENUITEM SEPARATOR
+        MENUITEM "&Paste ",                     ID_RUN_STIM_PASTE
+        MENUITEM "&Insert",                     ID_RUN_STIM_INS
+        MENUITEM "&Append",                     ID_RUN_STIM_APPEND
+    END
+    POPUP "blank3"
+    BEGIN
+        MENUITEM "&Remove All",                 ID_RUN_TGT_CLEAR
+        MENUITEM SEPARATOR
+        MENUITEM "&Delete",                     ID_RUN_TGT_DEL
+        MENUITEM "Move to &Origin",             ID_RUN_TGT_CENTER
+        MENUITEM SEPARATOR
+        MENUITEM "&Insert",                     ID_RUN_TGT_INS
+        MENUITEM "&Append",                     ID_RUN_TGT_APPEND
+    END
+    POPUP "blank4"
+    BEGIN
+        MENUITEM "&Add Perturbation",           ID_PERT_APPEND
+        MENUITEM "&Remove",                     ID_PERT_REMOVE
+        MENUITEM "&Clear Perturbation List",    ID_PERT_CLEAR
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_MAINFRAME ACCELERATORS
+BEGIN
+    "0",            ID_GRID_MODIFY,         VIRTKEY, ALT, NOINVERT
+    "1",            ID_GRID_MODALLSEGS,     VIRTKEY, ALT, NOINVERT
+    "2",            ID_GRID_MODMATCHSEGS,   VIRTKEY, ALT, NOINVERT
+    "3",            ID_GRID_MODALLTRIALS,   VIRTKEY, ALT, NOINVERT
+    "4",            ID_GRID_MODMATCHTRIALS, VIRTKEY, ALT, NOINVERT
+    "5",            ID_GRID_MODSELTRIALS,   VIRTKEY, ALT, NOINVERT
+    "6",            ID_TARGF_MODTHIS,       VIRTKEY, ALT, NOINVERT
+    "7",            ID_TARGF_MODALL,        VIRTKEY, ALT, NOINVERT
+    "8",            ID_TARGF_MODMATCHING,   VIRTKEY, ALT, NOINVERT
+    "9",            ID_TARGF_MODSELECTED,   VIRTKEY, ALT, NOINVERT
+    "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
+    "N",            ID_FILE_NEW,            VIRTKEY, CONTROL, NOINVERT
+    "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL, NOINVERT
+    "S",            ID_FILE_SAVE,           VIRTKEY, CONTROL, NOINVERT
+    "V",            ID_EDIT_PASTE,          VIRTKEY, CONTROL, NOINVERT
+    VK_F10,         ID_MODE_TRIALS,         VIRTKEY, NOINVERT
+    VK_F11,         ID_MODE_CONT,           VIRTKEY, NOINVERT
+    VK_F12,         ID_MODE_TEST,           VIRTKEY, NOINVERT
+    VK_F3,          ID_CM_TOGGLETRACK,      VIRTKEY, NOINVERT
+    VK_F4,          ID_CM_TRKSPEEDUP,       VIRTKEY, NOINVERT
+    VK_F4,          ID_CM_TRKSPEEDDN,       VIRTKEY, SHIFT, NOINVERT
+    VK_F5,          ID_CM_TRKDIRUP,         VIRTKEY, NOINVERT
+    VK_F5,          ID_CM_TRKDIRDN,         VIRTKEY, SHIFT, NOINVERT
+    VK_F6,          ID_NEXT_PANE,           VIRTKEY, NOINVERT
+    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
+    VK_F7,          ID_TM_TOGGLESTART,      VIRTKEY, NOINVERT
+    VK_F8,          ID_TM_TOGGLEPAUSE,      VIRTKEY, NOINVERT
+    VK_F9,          ID_MODE_IDLE,           VIRTKEY, NOINVERT
+    VK_SPACE,       ID_CM_TOGGLEFIX,        VIRTKEY, CONTROL, NOINVERT
+    "X",            ID_EDIT_CUT,            VIRTKEY, CONTROL, NOINVERT
+    "Z",            ID_EDIT_UNDO,           VIRTKEY, CONTROL, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOGEX 0, 0, 311, 111
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About Maestro"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC,20,21,20,20
+    LTEXT           "Maestro",IDC_STATIC,44,18,26,8,SS_NOPREFIX
+    LTEXT           "Copyright (C) 2000-2024",IDC_STATIC,44,38,77,8
+    DEFPUSHBUTTON   "OK",IDOK,272,7,32,14,WS_GROUP
+    LTEXT           "Version 4.2.1 (Apr 2023)",IDC_STATIC,44,28,77,8
+    LTEXT           "Inquiries:  Steve Lisberger (lisberger@neuro.duke.edu)",IDC_STATIC,20,74,172,8
+    LTEXT           "Duke University, Durham NC  USA",IDC_STATIC,53,94,151,8
+    LTEXT           "Online User's Guide:  https://sites.google.com/a/srscicomp.com/maestro",IDC_STATIC,19,59,255,8
+    LTEXT           "Lisberger Laboratory",IDC_STATIC,53,84,147,8
+END
+
+IDD_TARGFORM DIALOGEX 0, 0, 368, 310
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    COMBOBOX        IDC_TARGF_TYPE,59,27,118,80,CBS_DROPDOWNLIST | WS_VSCROLL | WS_GROUP | WS_TABSTOP
+    COMBOBOX        IDC_TARGF_SHAPE,69,54,87,80,CBS_DROPDOWNLIST | WS_VSCROLL | WS_GROUP | WS_TABSTOP
+    EDITTEXT        IDC_TARGF_ORECTW,69,82,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TARGF_ORECTH,69,100,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TARGF_IRECTW,116,82,40,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_TARGF_IRECTH,116,100,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TARGF_XSIGMA,107,118,30,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_TARGF_YSIGMA,140,118,30,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_TARGF_REDMEAN,33,162,20,14,ES_AUTOHSCROLL | ES_NUMBER | WS_GROUP
+    EDITTEXT        IDC_TARGF_GRNMEAN,55,162,20,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_TARGF_BLUMEAN,77,162,20,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_TARGF_REDCON,33,180,20,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_TARGF_GRNCON,55,180,20,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_TARGF_BLUCON,77,180,20,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_TARGF_REDMEAN2,109,162,20,14,ES_AUTOHSCROLL | ES_NUMBER | WS_GROUP
+    EDITTEXT        IDC_TARGF_GRNMEAN2,131,162,20,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_TARGF_BLUMEAN2,153,162,20,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_TARGF_REDCON2,109,180,20,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_TARGF_GRNCON2,131,180,20,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_TARGF_BLUCON2,153,180,20,14,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Use Grayscale",IDC_TARGF_GRAY,"Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,69,197,62,10
+    EDITTEXT        IDC_TARGF_NDOTS,197,18,20,14,ES_AUTOHSCROLL | ES_NUMBER | WS_GROUP
+    EDITTEXT        IDC_TARGF_DOTSZ,256,18,16,14,ES_AUTOHSCROLL | ES_NUMBER | WS_GROUP
+    EDITTEXT        IDC_TARGF_DOTLIFE,301,18,29,14,ES_AUTOHSCROLL
+    CONTROL         "ms",IDC_TARGF_DOTLF_MS,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,333,17,24,8
+    CONTROL         "deg",IDC_TARGF_DOTLF_DEG,"Button",BS_AUTORADIOBUTTON,333,25,26,8
+    EDITTEXT        IDC_TARGF_RANDSEED,211,36,45,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_TARGF_COHER,313,36,31,14,ES_AUTOHSCROLL | WS_GROUP
+    CONTROL         "Pattern motion WRT screen?",IDC_TARGF_WRTSCRN,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,218,55,110,10
+    CONTROL         "direc",IDC_TARGF_NOISEDIR,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,192,81,31,8
+    CONTROL         "speed",IDC_TARGF_NOISESPEED,"Button",BS_AUTORADIOBUTTON,192,92,35,8
+    EDITTEXT        IDC_TARGF_NOISEUPD,320,75,31,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "additive",IDC_TARGF_SPDALG,240,92,43,14
+    EDITTEXT        IDC_TARGF_NOISERNG,320,92,31,14,ES_AUTOHSCROLL | WS_GROUP
+    CONTROL         "sinusoidal",IDC_TARGF_SINE,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,191,128,49,8
+    CONTROL         "squarewave",IDC_TARGF_SQUARE,"Button",BS_AUTORADIOBUTTON,191,139,55,8
+    CONTROL         "Independent gratings?",IDC_TARGF_INDEPGRATS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,269,126,84,10
+    CONTROL         "Dynamic orientation?",IDC_TARGF_ORIENTADJ,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,269,137,82,10
+    EDITTEXT        IDC_TARGF_GRAT1_DA,268,159,30,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_TARGF_GRAT2_DA,304,159,30,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TARGF_GRAT1_SF,268,178,30,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TARGF_GRAT2_SF,304,178,30,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TARGF_GRAT1_PH,268,194,30,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TARGF_GRAT2_PH,304,194,30,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TARGF_FLICKON,85,225,20,14,ES_AUTOHSCROLL | ES_NUMBER | WS_GROUP
+    EDITTEXT        IDC_TARGF_FLICKOFF,117,225,20,14,ES_AUTOHSCROLL | ES_NUMBER | WS_GROUP
+    EDITTEXT        IDC_TARGF_FLICKDELAY,148,225,20,14,ES_AUTOHSCROLL | ES_NUMBER | WS_GROUP
+    EDITTEXT        IDC_TARGF_MVFOLDER,39,259,133,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_TARGF_MVFILE,39,278,133,14,ES_AUTOHSCROLL | WS_GROUP
+    CONTROL         "Loop indefinitely during trial?",IDC_TARGF_MVREP,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,201,256,120,10
+    CONTROL         "Pause playback when turned off?",IDC_TARGF_MVPAUSE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,201,271,128,10
+    CONTROL         "Playback at monitor frame rate?",IDC_TARGF_MVRATE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,201,286,140,10
+    CTEXT           "Outer",IDC_TARGF_ORLBL,69,71,42,9,NOT WS_GROUP
+    CTEXT           "Inner",IDC_TARGF_IRLBL,115,71,41,8,NOT WS_GROUP
+    RTEXT           "Width(deg)",IDC_TARGF_WLBL,15,85,52,8,NOT WS_GROUP
+    RTEXT           "Height(deg)",IDC_TARGF_HLBL,16,103,51,8,NOT WS_GROUP
+    GROUPBOX        "Color (RGB colorspace)",IDC_STATIC,7,143,170,68
+    CTEXT           "R",IDC_STATIC,37,153,14,8,NOT WS_GROUP
+    CTEXT           "G",IDC_STATIC,60,153,14,8,NOT WS_GROUP
+    CTEXT           "B",IDC_STATIC,80,153,14,8,NOT WS_GROUP
+    LTEXT           "Mean",IDC_STATIC,11,165,19,8,NOT WS_GROUP
+    LTEXT           "%Con",IDC_STATIC,11,183,19,8,NOT WS_GROUP
+    RTEXT           "XYScope Type",IDC_TARGF_TYPELBL,8,29,49,8,NOT WS_GROUP
+    LTEXT           "Aperture:",IDC_STATIC,37,57,30,8,NOT WS_GROUP
+    GROUPBOX        "Dots",IDC_STATIC,181,7,180,108
+    LTEXT           "N",IDC_STATIC,187,21,8,8,NOT WS_GROUP
+    LTEXT           "lifetime",IDC_STATIC,277,21,22,8,NOT WS_GROUP
+    GROUPBOX        "Gratings/Plaids",IDC_STATIC,181,117,180,94
+    LTEXT           "drift axis (deg CCW)",IDC_STATIC,202,164,63,8,NOT WS_GROUP
+    LTEXT           "spatial freq (cyc/deg)",IDC_STATIC,196,180,68,8,NOT WS_GROUP
+    LTEXT           "spatial phase (deg)",IDC_STATIC,204,196,60,8,NOT WS_GROUP
+    RTEXT           "Gaussian std dev in X,Y (deg):",IDC_TARGF_STDEVLBL,10,121,96,8,NOT WS_GROUP
+    GROUPBOX        "Target Window",IDC_STATIC,7,43,170,94
+    RTEXT           "+/- range",IDC_STATIC,284,95,32,8,NOT WS_GROUP
+    RTEXT           "noise update intv (msec)",IDC_STATIC,238,78,78,8,NOT WS_GROUP
+    RTEXT           "size (pix)",IDC_STATIC,226,21,28,8,NOT WS_GROUP
+    RTEXT           "% coherence",IDC_STATIC,267,39,42,8,NOT WS_GROUP
+    GROUPBOX        "Noise",IDC_STATIC,188,65,167,46
+    RTEXT           "seed",IDC_STATIC,191,39,16,8,NOT WS_GROUP
+    CTEXT           "1st",IDC_STATIC,276,150,14,8
+    CTEXT           "2nd",IDC_STATIC,312,150,14,8
+    LTEXT           "(for 2nd grating)",IDC_STATIC,116,153,50,8
+    CONTROL         "Modify THIS Target",IDC_TARGF_MODMODE,"Button",BS_OWNERDRAW | WS_TABSTOP,8,6,168,17
+    GROUPBOX        "Video/Image",IDC_STATIC,7,246,353,58
+    LTEXT           "Folder:",IDC_STATIC,14,262,22,8
+    LTEXT           "File:",IDC_STATIC,19,281,14,8
+    GROUPBOX        "Flicker (RMVideo only)",IDC_STATIC,7,214,353,30
+    LTEXT           "On, Off, Initial Delay:",IDC_STATIC,15,228,66,8,NOT WS_GROUP
+    LTEXT           "[in #video frames, 0..99; disabled if On or Off = 0]",IDC_STATIC,178,228,155,8,NOT WS_GROUP
+END
+
+IDD_TRIALFORM DIALOGEX 0, 0, 562, 316
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    CONTROL         "",IDC_TRH_PARTITIONS,"MFCGridCtrl",WS_TABSTOP,2,130,558,13
+    CONTROL         "",IDC_TRH_SEGTABLE,"MFCGridCtrl",WS_TABSTOP,2,144,558,168
+    CONTROL         "",IDC_TRH_TABPROPS,"Static",SS_BLACKFRAME,2,1,558,125
+END
+
+IDD_POPUP DIALOGEX 0, 0, 111, 80
+STYLE DS_SETFONT | DS_MODALFRAME | DS_NOIDLEMSG | WS_POPUP
+EXSTYLE WS_EX_CLIENTEDGE
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    CONTROL         "Tree1",IDC_POPUP_TREE,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | WS_TABSTOP,1,0,109,79
+END
+
+IDD_CHANNELFORM DIALOG 0, 0, 270, 192
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "Restore Defaults",IDC_CH_RESTOREDEF,25,7,64,14
+    PUSHBUTTON      "Space Evenly",IDC_CH_SPACEEVENLY,25,26,64,14
+    PUSHBUTTON      "Common Axis",IDC_CH_ONEAXIS,25,45,64,14
+    CONTROL         "",IDC_CH_GRID,"MFCGridCtrl",WS_TABSTOP,111,7,152,178
+    LTEXT           "Y-axis Min (mV)",IDC_STATIC,17,90,49,8
+    EDITTEXT        IDC_CH_YMIN,69,86,32,14,ES_AUTOHSCROLL
+    LTEXT           "Y-axis Max (mV)",IDC_STATIC,15,107,51,8
+    EDITTEXT        IDC_CH_YMAX,69,104,32,14,ES_AUTOHSCROLL
+END
+
+IDD_AIOCP DIALOGEX 0, 0, 307, 261
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    CONTROL         "",IDC_AIO_CHANS,"MFCGridCtrl",WS_TABSTOP,7,7,196,240
+    PUSHBUTTON      "mV",IDC_AIO_UNITS,246,22,54,14
+    PUSHBUTTON      "Pause",IDC_AIO_PAUSE,221,46,79,14
+    PUSHBUTTON      "Calibrate AI Device",IDC_AIO_AICAL,221,71,79,14
+    COMBOBOX        IDC_AIO_CHLIST,220,150,80,64,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Units:",IDC_STATIC,223,26,19,8,NOT WS_GROUP
+    LTEXT           "Channels Displayed:",IDC_STATIC,220,139,65,8
+END
+
+IDD_CONTCP1 DIALOG 0, 0, 300, 150
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "START",IDC_CONT_GO,177,14,55,14,WS_GROUP
+    PUSHBUTTON      "ABORT!",IDC_CONT_ABORT,238,14,55,14
+    PUSHBUTTON      "RESTART",IDC_CONT_RESTART,203,32,64,14
+    PUSHBUTTON      "Record ON",IDC_CONT_REC,7,112,50,14
+    PUSHBUTTON      "Fixation ON",IDC_CONT_FIXATE,202,67,65,14
+    COMBOBOX        IDC_CONT_SET,63,15,103,75,CBS_DROPDOWNLIST | WS_VSCROLL | WS_GROUP | WS_TABSTOP
+    COMBOBOX        IDC_CONT_CURR,63,35,103,75,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_CONT_EXECMODE,63,55,103,75,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_CONT_CHANCFG,63,75,103,75,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_CONT_DATAPATH,65,106,228,14,ES_AUTOHSCROLL
+    CONTROL         "Save high-resolution spike trace?",IDC_CONT_RECSPKS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,66,126,121,10
+    LTEXT           "Run Set:",IDC_STATIC,33,17,29,8
+    LTEXT           "Current Run:",IDC_STATIC,21,37,41,8
+    LTEXT           "Exec Mode:",IDC_STATIC,22,57,39,8
+    LTEXT           "Channel Cfg:",IDC_STATIC,20,77,42,8
+    LTEXT           "(Ctrl+spacebar)",IDC_STATIC,210,84,50,9
+END
+
+IDD_TMRCP DIALOGEX 0, 0, 265, 261
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    CONTROL         "",IDC_TMR_CHANS,"MFCGridCtrl",WS_TABSTOP,7,7,247,229
+    PUSHBUTTON      "Reset",IDC_TMR_RESET,7,240,58,14
+    PUSHBUTTON      "Loopback Test",IDC_TMR_LOOP,84,240,58,14
+    PUSHBUTTON      "Repeat Write",IDC_TMR_REPEAT,161,240,58,14
+END
+
+IDD_TRIALCP1 DIALOGEX 0, 0, 300, 150
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    COMBOBOX        IDC_TRIAL_SET,35,4,110,122,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_TRIAL_CURR,35,21,110,116,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_TRIAL_SEQ_SUBSETS,42,50,101,110,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_TRIAL_SEQ_TRIALS,42,65,101,110,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_TRIAL_STOP_MODE,10,100,87,110,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_TRIAL_STOP_COUNT,115,100,25,14,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Save?",IDC_TRIAL_RECDATA,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,129,35,10
+    EDITTEXT        IDC_TRIAL_DATAPATH,47,127,187,14,ES_AUTOHSCROLL
+    CONTROL         "Rec spikes?",IDC_TRIAL_RECSPKS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,239,129,52,10
+    EDITTEXT        IDC_TRIAL_IGT,241,86,34,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_TRIAL_DELAY,241,104,34,14,ES_AUTOHSCROLL | ES_NUMBER
+    PUSHBUTTON      "START",IDC_TRIAL_GO,153,10,64,14,WS_GROUP
+    PUSHBUTTON      "RESUME",IDC_TRIAL_PAUSE,224,10,64,14
+    PUSHBUTTON      "ABORT!",IDC_TRIAL_ABORT,188,28,64,14
+    PUSHBUTTON      "#Trials",IDC_TRIAL_PRES,152,50,35,12,WS_GROUP
+    PUSHBUTTON      "#Blocks",IDC_TRIAL_BLK,152,65,35,12
+    PUSHBUTTON      "Attempted:",IDC_TRIAL_ATT,224,50,41,12,WS_GROUP
+    PUSHBUTTON      "Completed:",IDC_TRIAL_REW,224,65,41,12
+    LTEXT           "SET",IDC_STATIC,14,6,15,8
+    LTEXT           "TRIAL",IDC_STATIC,10,23,22,8
+    EDITTEXT        IDC_TRIAL_ATT_RO,268,50,23,12,ES_CENTER | ES_READONLY | NOT WS_TABSTOP
+    EDITTEXT        IDC_TRIAL_REW_RO,268,65,23,12,ES_CENTER | ES_READONLY | NOT WS_TABSTOP
+    EDITTEXT        IDC_TRIAL_BLK_RO,189,65,23,12,ES_CENTER | ES_READONLY | NOT WS_TABSTOP
+    LTEXT           "Inter-trial Delay (ms)",IDC_STATIC,174,107,62,8
+    GROUPBOX        "Auto-Stop",IDC_STATIC,3,88,143,33
+    LTEXT           "N =",IDC_STATIC,103,103,12,8
+    EDITTEXT        IDC_TRIAL_PRES_RO,189,50,23,12,ES_CENTER | ES_READONLY | NOT WS_TABSTOP
+    LTEXT           """Ignore"" threshold (ms)",IDC_STATIC,164,89,73,8
+    GROUPBOX        "Sequencing",IDC_STATIC,3,39,143,45
+    LTEXT           "Subsets",IDC_STATIC,10,52,26,8
+    LTEXT           "Trials",IDC_STATIC,18,67,18,8
+END
+
+IDD_TRIALCP2 DIALOGEX 0, 0, 300, 150
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    EDITTEXT        IDC_TRIAL_STAIR_STREN,67,18,59,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_TRIAL_STAIR_REVBUDDY,67,36,24,13,ES_RIGHT | ES_READONLY | ES_NUMBER | NOT WS_TABSTOP
+    CONTROL         "Spin1",IDC_TRIAL_STAIR_REV,"msctls_updown32",UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | WS_TABSTOP,83,36,11,12
+    EDITTEXT        IDC_TRIAL_STAIR_UPBUDDY,23,53,24,13,ES_RIGHT | ES_READONLY | ES_NUMBER | NOT WS_TABSTOP
+    CONTROL         "Spin1",IDC_TRIAL_STAIR_UP,"msctls_updown32",UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | WS_TABSTOP,44,52,11,13
+    EDITTEXT        IDC_TRIAL_STAIR_DNBUDDY,73,53,24,13,ES_RIGHT | ES_READONLY | ES_NUMBER | NOT WS_TABSTOP
+    CONTROL         "Spin1",IDC_TRIAL_STAIR_DN,"msctls_updown32",UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | WS_TABSTOP,93,52,11,13
+    EDITTEXT        IDC_TRIAL_STAIR_IRREL,37,68,16,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRIAL_START_H,213,18,26,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_TRIAL_START_V,243,18,26,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_TRIAL_POS_SCALE,213,54,26,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_TRIAL_POS_ROT,243,54,26,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRIAL_VEL_SCALE,213,73,26,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRIAL_VEL_ROT,243,73,26,14,ES_AUTOHSCROLL
+    COMBOBOX        IDC_TRIAL_CHCFG,213,102,74,75,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_TRIAL_VSTABWIN,10,129,26,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "Reset",IDC_TRIAL_RSTPARMS,223,129,70,14
+    CONTROL         "Channel Cfg:",IDC_TRIAL_CH_ENA,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,149,104,57,10
+    GROUPBOX        "Staircase sequencer",IDC_STATIC,7,7,127,79
+    GROUPBOX        "Global overrides",IDC_STATIC,141,7,152,115
+    LTEXT           "Starting strength:",IDC_STATIC,12,21,54,8
+    LTEXT           "up,",IDC_STATIC,58,55,11,8,NOT WS_GROUP
+    LTEXT           "down",IDC_STATIC,108,55,18,8
+    LTEXT           "Stop after:",IDC_STATIC,31,38,34,8
+    LTEXT           "reversals",IDC_STATIC,97,38,29,8
+    LTEXT           "% irrelevant trials",IDC_STATIC,58,71,53,8
+    LTEXT           "Rot(deg)",IDC_STATIC,243,44,28,8
+    LTEXT           "Scale",IDC_STATIC,216,44,19,8
+    LTEXT           "Transforms:",IDC_STATIC,150,44,38,8
+    LTEXT           "Target Position",IDC_STATIC,161,57,48,8
+    LTEXT           "Target Velocity",IDC_STATIC,161,76,48,8
+    LTEXT           "Start Pos H,V (deg)",IDC_STATIC,150,21,62,8
+    LTEXT           "VStab sliding window length (ms) [1..20]",IDC_STATIC,39,132,126,8
+    EDITTEXT        IDC_TRIAL_CHAINLEN,12,97,122,26,ES_MULTILINE | ES_AUTOHSCROLL | WS_VSCROLL | WS_GROUP,WS_EX_CLIENTEDGE
+    LTEXT           "Trial Chain Lengths:",IDC_STATIC,12,88,64,8
+END
+
+IDD_DISPLAY DIALOGEX 0, 0, 300, 150
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    EDITTEXT        IDC_DISP_XY_DIST,80,13,20,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_XY_W,104,13,20,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_XY_H,128,13,20,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_XY_DELAY,48,33,25,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_XY_DUR,111,33,25,14,ES_AUTOHSCROLL
+    CONTROL         "Auto",IDC_DISP_XY_AUTO,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,176,35,31,10
+    CONTROL         "Fixed:",IDC_DISP_XY_FIXED,"Button",BS_AUTORADIOBUTTON | WS_TABSTOP,209,35,32,10
+    EDITTEXT        IDC_DISP_XY_SEED,240,33,46,14,ES_AUTOHSCROLL
+    COMBOBOX        IDC_DISP_RMVMODE,53,69,101,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_DISP_GAMMA_R,203,68,25,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_GAMMA_G,231,68,25,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_GAMMA_B,259,68,25,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_FB_DIST,78,87,25,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_FB_W,109,87,25,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_FB_H,141,87,25,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_FB_RED,118,106,25,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_FB_GRN,150,106,25,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_FB_BLU,182,106,25,14,ES_AUTOHSCROLL
+    CONTROL         "Use grayscale?",IDC_DISP_FB_GRAY,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,217,108,63,10
+    EDITTEXT        IDC_DISP_SYNCDUR,239,125,25,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISP_SYNCSZ,157,125,25,14,ES_AUTOHSCROLL
+    LTEXT           "Screen D,W,H (mm): ",IDC_STATIC,12,15,68,8
+    LTEXT           "Dot Delay:",IDC_STATIC,11,36,34,8
+    LTEXT           "ON Dur:",IDC_STATIC,81,36,26,8
+    LTEXT           "Screen D,W,H (mm):",IDC_STATIC,10,90,66,8
+    GROUPBOX        "XY Scope",IDC_STATIC,7,4,286,48
+    GROUPBOX        "RMVideo Framebuffer",IDC_STATIC,7,57,286,89
+    LTEXT           "FOV:",IDC_STATIC,171,17,17,8
+    EDITTEXT        IDC_DISP_XYFIELD,191,14,93,14,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "FOV:",IDC_STATIC,183,90,17,8
+    EDITTEXT        IDC_DISP_FBFIELD,203,87,83,14,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Video Mode",IDC_STATIC,11,71,39,8
+    LTEXT           "Gamma RGB",IDC_STATIC,160,71,42,8
+    LTEXT           "Background R, G, B [0..255]:",IDC_STATIC,22,109,95,8
+    LTEXT           "Seed:",IDC_STATIC,153,36,20,8
+    LTEXT           "Sync Flash:  Spot size (mm, 0=disabled)",IDC_STATIC,29,128,127,8
+    LTEXT           "Dur (#frames)",IDC_STATIC,193,128,46,8
+END
+
+IDD_RUNFORM DIALOG 0, 0, 500, 239
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_RF_DUTYPER,99,22,30,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RF_AUTOSTOP,99,40,30,14,ES_AUTOHSCROLL
+    COMBOBOX        IDC_RF_DUTYPULSE,81,58,48,74,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_RF_HOFFSET,157,33,30,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RF_VOFFSET,157,49,30,14,ES_AUTOHSCROLL
+    CONTROL         "",IDC_RF_XYTGTS,"MFCGridCtrl",WS_TABSTOP,253,7,240,74
+    CONTROL         "",IDC_RF_STIMULI,"MFCGridCtrl",WS_TABSTOP,7,88,486,144
+    LTEXT           "Duty Cycle (ms)",IDC_STATIC,46,25,50,8
+    LTEXT           "#Cycles to Auto-Stop",IDC_STATIC,25,43,68,8
+    LTEXT           "Duty Marker Pulse",IDC_STATIC,18,60,59,8
+    LTEXT           "Pos Offset (deg)",IDC_STATIC,144,23,52,8
+    LTEXT           "H",IDC_STATIC,149,36,8,8
+    LTEXT           "V",IDC_STATIC,149,52,8,8
+    LTEXT           "Targets For",IDC_STATIC,214,15,37,8
+    LTEXT           "XYseq",IDC_STATIC,229,23,22,8
+    LTEXT           "Stimulus",IDC_STATIC,224,33,27,8
+END
+
+IDD_CONTCP2 DIALOG 0, 0, 300, 150
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "",IDC_CONT_TGTS,"MFCGridCtrl",WS_TABSTOP,5,7,290,83
+    PUSHBUTTON      "Add",IDC_CONT_TGT_ADD,48,98,50,14,WS_GROUP
+    PUSHBUTTON      "Delete",IDC_CONT_TGT_DEL,125,98,50,14
+    PUSHBUTTON      "Remove All",IDC_CONT_TGT_CLEAR,202,98,50,14
+    LTEXT           "F4 increments pattern velocity by 5 deg/s (Shift-F4 to decrement).",IDC_STATIC,73,121,206,8
+    LTEXT           "F5 increments pattern direction by 15 deg (Shift-F5 to decrement).",IDC_STATIC,73,132,206,8
+    RTEXT           "For TRACK target:",IDC_STATIC,11,127,59,8,SS_CENTERIMAGE
+END
+
+IDD_FIXREW DIALOGEX 0, 0, 300, 150
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    EDITTEXT        IDC_FIX_DUR,99,34,33,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_FIX_HACC,215,34,33,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_FIX_VACC,253,34,33,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_FIX_REW1,99,56,33,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_FIX_REW2,137,56,33,14,ES_AUTOHSCROLL
+    CONTROL         "Override trial defn?",IDC_FIX_REWOVR,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,181,58,75,10
+    CONTROL         "Play reward indicator beep?",IDC_FIX_REWBEEP,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,100,127,103,10
+    PUSHBUTTON      "Reward Stats:",IDC_FIX_RESETREW,135,13,54,12
+    EDITTEXT        IDC_FIX_NREWARDS,203,13,30,12,ES_CENTER | ES_READONLY | NOT WS_TABSTOP
+    LTEXT           "Fixation  Duration (msec)",IDC_STATIC,18,37,78,8,NOT WS_GROUP
+    LTEXT           "Accuracy H,V (deg)",IDC_STATIC,147,37,63,8,NOT WS_GROUP
+    LTEXT           "Reward Pulse 1,2 (msec)",IDC_STATIC,17,59,80,8,NOT WS_GROUP
+    LTEXT           "Random Withholding VR:",IDC_STATIC,15,96,81,8,NOT WS_GROUP
+    LTEXT           "Audio Reward (ms)",IDC_STATIC,37,113,60,8,NOT WS_GROUP
+    EDITTEXT        IDC_FIX_VRATIO,99,92,33,14,ES_AUTOHSCROLL
+    LTEXT           "([1..10]; VR=1 disables random withholding)",IDC_STATIC,135,96,137,8
+    EDITTEXT        IDC_FIX_AUDIOREW,99,110,33,14,ES_AUTOHSCROLL
+    LTEXT           "([100..1000]; 0 disables audio reward)",IDC_STATIC,135,112,119,8
+    EDITTEXT        IDC_FIX_REWARDSUM,238,13,35,12,ES_RIGHT | ES_READONLY | NOT WS_TABSTOP
+    LTEXT           "ms",IDC_STATIC,275,15,10,8
+    LTEXT           "N=",IDC_STATIC,191,15,10,8
+    EDITTEXT        IDC_FIX_REWMULT,99,73,33,14,ES_AUTOHSCROLL
+    LTEXT           "Reward Multiplier",IDC_STATIC,42,76,55,8,NOT WS_GROUP
+    LTEXT           "([1..5])",IDC_STATIC,135,76,21,8
+END
+
+IDD_PERTFORM DIALOG 0, 0, 251, 117
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "",IDC_PERT_GRID,"MFCGridCtrl",WS_TABSTOP,7,7,234,103
+END
+
+IDD_MSGLOG DIALOGEX 0, 0, 208, 93
+STYLE DS_SETFONT | WS_CHILD | WS_VISIBLE
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    CONTROL         "Save log?",IDC_MSGLOG_SAVE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,9,46,10
+    EDITTEXT        IDC_MSGLOG_PATH,55,7,145,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_MSGLOG_LOG,7,27,193,58,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL | NOT WS_TABSTOP,WS_EX_CLIENTEDGE
+END
+
+IDD_TRIALCP3 DIALOG 0, 0, 300, 150
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "",IDC_TSTAT_GRID,"MFCGridCtrl",WS_TABSTOP,15,27,269,116
+    LTEXT           "Trial Set:",IDC_STATIC,17,15,29,8
+    LTEXT           "name",IDC_TSTAT_SET,49,15,235,8,NOT WS_GROUP
+END
+
+IDD_TRIALCP4 DIALOG 0, 0, 300, 150
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif"
+BEGIN
+    COMBOBOX        IDC_RPD_CURR,23,6,130,75,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Start New Distrib",IDC_RPD_NEWDIST,164,5,60,14
+    PUSHBUTTON      "Save Summary...",IDC_RPD_SAVE,229,5,60,14
+    EDITTEXT        IDC_RPD_RNG_MIN,195,41,35,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RPD_RNG_MAX,247,41,35,12,ES_AUTOHSCROLL
+    CONTROL         "",IDC_RPD_REW_ENA,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,9,39,16,8
+    EDITTEXT        IDC_RPD_REWMIN,55,37,35,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RPD_REWMAX,118,37,35,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RPD_REWSHIFT,55,51,35,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RPD_REWNUPD,130,51,23,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RPD_CURRMOSTREC,133,76,19,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RPD_PREVMOSTREC,133,90,19,12,ES_AUTOHSCROLL
+    LTEXT           "Static",IDC_RPD_VIEW,161,56,130,87,SS_NOTIFY | SS_SUNKEN
+    CONTROL         "mean +/- std (N=0)",IDC_RPD_CURRMEAN,"Static",SS_LEFTNOWORDWRAP | SS_SUNKEN | WS_GROUP,33,77,81,10
+    CONTROL         "mean +/- std (N=0)",IDC_RPD_PREVMEAN,"Static",SS_LEFTNOWORDWRAP | SS_SUNKEN | WS_GROUP,33,92,81,10
+    LTEXT           "N pass, M fail",IDC_RPD_REWSTATCURR,55,116,94,10,SS_SUNKEN
+    LTEXT           " N pass, M fail",IDC_RPD_REWSTATALL,55,129,94,10,SS_SUNKEN
+    LTEXT           "Trial:",IDC_STATIC,5,9,16,8
+    GROUPBOX        "Reward Window",IDC_STATIC,5,25,152,41
+    LTEXT           "Max:",IDC_STATIC,100,39,16,8
+    GROUPBOX        "Mean/Std Dev (all valid, or N most recent)",IDC_STATIC,5,67,152,38
+    LTEXT           "Curr:",IDC_STATIC,16,78,16,8
+    LTEXT           "Prev:",IDC_STATIC,14,92,18,8
+    GROUPBOX        "Reward Stats",IDC_STATIC,5,108,152,35
+    LTEXT           "Overall:",IDC_STATIC,24,129,25,8
+    LTEXT           "Range:",IDC_STATIC,167,44,24,8
+    LTEXT           "to",IDC_STATIC,235,44,8,8
+    LTEXT           "Current trial:",IDC_STATIC,11,118,38,8
+    LTEXT           "N:",IDC_STATIC,123,78,8,8
+    LTEXT           "N:",IDC_STATIC,123,92,8,8
+    LTEXT           "Min:",IDC_STATIC,39,39,14,8
+    LTEXT           "Shift by:",IDC_STATIC,27,54,26,8
+    LTEXT           "UpdIntv:",IDC_STATIC,100,54,28,8
+    COMBOBOX        IDC_RPD_RESPTYPE,218,25,75,75,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Response Type:",IDC_STATIC,163,28,53,8
+END
+
+IDD_RMVSTORE DIALOGEX 0, 0, 300, 150
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LISTBOX         IDC_RMV_FOLDERLIST,5,19,130,76,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Delete Folder",IDC_RMV_DELFOLDER,85,3,50,14,WS_GROUP
+    LISTBOX         IDC_RMV_FILELIST,141,19,153,76,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Delete File",IDC_RMV_DELFILE,245,3,50,14
+    EDITTEXT        IDC_RMV_SRC,39,109,186,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_RMV_FOLDER,47,128,109,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RMV_FILE,179,128,109,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "DOWNLOAD",IDC_RMV_DOWNLOAD,237,109,50,14
+    GROUPBOX        "Transfer Media File to RMVideo",IDC_STATIC,5,98,288,49
+    LTEXT           "Source:",IDC_STATIC,13,112,26,8
+    LTEXT           "To:  Folder",IDC_STATIC,10,131,35,8
+    LTEXT           "File",IDC_STATIC,164,131,12,8
+END
+
+IDD_EYELINK DIALOGEX 0, 0, 300, 150
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    PUSHBUTTON      "Button1",IDC_EL_CONNECT,107,14,86,17
+    CONTROL         "",IDC_EL_XOFS_SLIDE,"msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,141,47,142,13
+    PUSHBUTTON      "+/-",IDC_EL_XPOL,122,64,18,17
+    CONTROL         "",IDC_EL_XGAIN_SLIDE,"msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,141,65,142,13
+    PUSHBUTTON      "+/-",IDC_EL_YPOL,122,100,18,17
+    CONTROL         "",IDC_EL_YOFS_SLIDE,"msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,141,84,142,13
+    CONTROL         "",IDC_EL_YGAIN_SLIDE,"msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,141,102,142,13
+    EDITTEXT        IDC_EL_VELFW,103,124,31,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EL_XOFS_RO,76,47,40,14,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_EL_XGAIN_RO,76,65,40,14,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_EL_YOFS_RO,76,83,40,14,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_EL_YGAIN_RO,75,101,40,14,ES_AUTOHSCROLL | ES_READONLY
+    GROUPBOX        "Calibration",IDC_STATIC,16,37,270,83
+    LTEXT           "X Offset:",IDC_STATIC,39,49,30,8
+    LTEXT           "X Gain:",IDC_STATIC,45,68,24,8
+    LTEXT           "Y Offset:",IDC_STATIC,39,86,30,8
+    LTEXT           "Y Gain:",IDC_STATIC,45,104,24,8
+    LTEXT           "Velocity Filter Width (ms):",IDC_STATIC,18,127,83,8
+END
+
+IDD_TRIALFORM_OTHER DIALOGEX 0, 0, 547, 100
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE
+CAPTION "Perturbations/PSGM"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    COMBOBOX        IDC_TRH_SGMOP,16,26,78,59,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_TRH_SGMSEG,142,26,24,13,ES_RIGHT | ES_READONLY | ES_NUMBER | NOT WS_TABSTOP
+    CONTROL         "",IDC_TRH_SGMSEGSPIN,"msctls_updown32",UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | WS_TABSTOP,163,25,11,14
+    CONTROL         "External Trigger?",IDC_TRH_SGMTRIG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,184,27,69,10
+    EDITTEXT        IDC_TRH_SGMPA1,69,51,27,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_SGMPA2,101,51,27,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_SGMPW1,69,73,27,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_SGMPW2,101,73,27,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_SGMIPI,171,51,27,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_SGMITI,233,51,27,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_SGMNP,171,73,27,13,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_TRH_SGMNT,233,73,27,13,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "",IDC_TRH_PERTS,"MFCGridCtrl",WS_TABSTOP,279,18,255,73
+    GROUPBOX        "Pulse Stimulus Generator",IDC_STATIC,5,7,262,91
+    RTEXT           "start seg",IDC_STATIC,110,26,29,11,SS_CENTERIMAGE | NOT WS_GROUP
+    LTEXT           "Pulse amp (mV)",IDC_STATIC,17,53,50,8
+    LTEXT           "Pulse width (us)",IDC_STATIC,15,75,52,8
+    LTEXT           "IPI (ms) ",IDC_STATIC,143,53,26,8
+    LTEXT           "ITI (ms)",IDC_STATIC,205,53,27,8
+    LTEXT           "#Pulses",IDC_STATIC,143,75,26,8
+    LTEXT           "#Trains",IDC_STATIC,207,75,25,8
+    GROUPBOX        "Perturbations",IDC_STATIC,274,7,266,91
+END
+
+IDD_TRIALFORM_RV DIALOGEX 0, 0, 547, 100
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE
+CAPTION "Random Variables"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL         "",IDC_TRV_GRID,"MFCGridCtrl",WS_TABSTOP,7,7,533,86
+END
+
+IDD_TRIALFORM_MAIN DIALOGEX 0, 0, 547, 100
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Main"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_TRH_WEIGHT,33,20,30,13,ES_AUTOHSCROLL | ES_NUMBER | NOT WS_TABSTOP
+    CONTROL         "",IDC_TRH_WTSPIN,"msctls_updown32",UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | WS_GROUP | WS_TABSTOP,55,20,11,13
+    PUSHBUTTON      "KEEP",IDC_TRH_KEEP,87,20,33,13
+    EDITTEXT        IDC_TRH_SAVESEG,173,20,24,13,ES_RIGHT | ES_READONLY | ES_NUMBER | NOT WS_TABSTOP
+    CONTROL         "",IDC_TRH_SAVESEGSPIN,"msctls_updown32",UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | WS_TABSTOP,189,20,11,13
+    EDITTEXT        IDC_TRH_FAILSAFE,245,20,24,13,ES_RIGHT | ES_READONLY | ES_NUMBER | NOT WS_TABSTOP
+    CONTROL         "",IDC_TRH_FAILSAFESPIN,"msctls_updown32",UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | WS_TABSTOP,261,20,11,13
+    COMBOBOX        IDC_TRH_CHCFG,51,40,87,59,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_TRH_MARK1,211,40,24,13,ES_RIGHT | ES_AUTOHSCROLL | ES_READONLY | ES_NUMBER | NOT WS_TABSTOP
+    CONTROL         "",IDC_TRH_MARK1SPIN,"msctls_updown32",UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | WS_TABSTOP,227,40,11,13
+    EDITTEXT        IDC_TRH_MARK2,243,40,24,13,ES_RIGHT | ES_AUTOHSCROLL | ES_READONLY | ES_NUMBER | NOT WS_TABSTOP
+    CONTROL         "",IDC_TRH_MARK2SPIN,"msctls_updown32",UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | WS_TABSTOP,259,40,11,13
+    EDITTEXT        IDC_TRH_REWP1,75,60,20,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_WHVR1NUM,100,60,20,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_WHVR1DEN,134,60,20,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_REWP2,191,60,20,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_WHVR2NUM,216,60,20,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_WHVR2DEN,249,60,20,12,ES_AUTOHSCROLL
+    CONTROL         "",IDC_TRH_IGNPOSSCALE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,83,79,11,8
+    CONTROL         "Scale/Rotate Pos",IDC_TRH_IGNPOSROT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,97,78,73,10
+    CONTROL         "",IDC_TRH_IGNVELSCALE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,79,11,8
+    CONTROL         "Scale/Rotate Vel",IDC_TRH_IGNVELROT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,189,78,71,10
+    PUSHBUTTON      "noSpecialOp",IDC_TRH_SPECOP,351,17,52,13
+    EDITTEXT        IDC_TRH_SPECSEG,431,16,24,13,ES_RIGHT | ES_READONLY | ES_NUMBER | NOT WS_TABSTOP
+    CONTROL         "",IDC_TRH_SPECSEGSPIN,"msctls_updown32",UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | WS_TABSTOP,447,16,11,13
+    EDITTEXT        IDC_TRH_SACCVT,509,17,27,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_XYIL,381,37,24,13,ES_RIGHT | ES_AUTOHSCROLL | ES_READONLY | ES_NUMBER | NOT WS_TABSTOP
+    CONTROL         "",IDC_TRH_XYILSPIN,"msctls_updown32",UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | WS_TABSTOP,398,37,11,13
+    EDITTEXT        IDC_TRH_XYDOTSEED,466,38,43,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "periodic",IDC_TRH_MTRMODE,352,56,48,13,WS_GROUP
+    EDITTEXT        IDC_TRH_MTRINTV,436,56,27,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TRH_MTRLEN,496,56,27,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "NORMAL",IDC_TRH_TRITYP,351,74,48,13
+    PUSHBUTTON      "ch12",IDC_TRH_STAIRRESP,442,74,26,13
+    EDITTEXT        IDC_TRH_STAIRSTREN,503,74,34,12,ES_AUTOHSCROLL
+    RTEXT           "Wt",IDC_STATIC,15,21,13,11,SS_CENTERIMAGE | NOT WS_GROUP
+    RTEXT           "Starting at seg",IDC_STATIC,123,21,48,11,SS_CENTERIMAGE | NOT WS_GROUP
+    RTEXT           "Failsafe seg",IDC_STATIC,203,21,40,11,SS_CENTERIMAGE | NOT WS_GROUP
+    RTEXT           "Channels:",IDC_STATIC,13,41,33,11,SS_CENTERIMAGE | NOT WS_GROUP
+    CTEXT           "Rwd 1 (len, WHVR):",IDC_STATIC,7,60,68,11,SS_CENTERIMAGE | NOT WS_GROUP
+    GROUPBOX        "General",IDC_STATIC,7,7,268,88
+    RTEXT           "Display Interval:",IDC_STATIC,148,41,58,11,SS_CENTERIMAGE | NOT WS_GROUP
+    RTEXT           "XY dot seed",IDC_STATIC,422,38,42,11,SS_CENTERIMAGE | NOT WS_GROUP
+    LTEXT           "Ignore transforms:",IDC_STATIC,21,79,61,8
+    RTEXT           "at seg",IDC_STATIC,406,17,22,11,SS_CENTERIMAGE | NOT WS_GROUP
+    RTEXT           "Response:",IDC_STATIC,406,75,34,11,SS_CENTERIMAGE | NOT WS_GROUP
+    RTEXT           "Strength",IDC_STATIC,468,75,33,11,SS_CENTERIMAGE | NOT WS_GROUP
+    RTEXT           "XY Target Interleave:",IDC_STATIC,306,38,73,11,SS_CENTERIMAGE | NOT WS_GROUP
+    RTEXT           "Sacc VT(d/s)",IDC_STATIC,461,17,44,11,SS_CENTERIMAGE | NOT WS_GROUP
+    GROUPBOX        "Features",IDC_STATIC,282,7,258,88
+    LTEXT           "Staircase seq:",IDC_STATIC,303,76,46,8,NOT WS_GROUP
+    LTEXT           "Mid-trial Rewards:",IDC_STATIC,288,58,61,9,NOT WS_GROUP
+    LTEXT           "intv (ms)",IDC_STATIC,407,58,28,9
+    LTEXT           "len (ms)",IDC_STATIC,470,58,25,9
+    LTEXT           "Special operation:",IDC_STATIC,291,20,58,8
+    CTEXT           "/",IDC_STATIC,123,61,8,11,SS_CENTERIMAGE | NOT WS_GROUP
+    CTEXT           "Rwd 2:",IDC_STATIC,165,61,24,11,SS_CENTERIMAGE | NOT WS_GROUP
+    CTEXT           "/",IDC_STATIC,239,61,8,11,SS_CENTERIMAGE | NOT WS_GROUP
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 4,2,1,0
+ PRODUCTVERSION 4,2,1,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "Comments", "This program interacts with several specific hardware devices through a partner process that runs in the Real Time Extension (RTX) to Windows from IntervalZero, Inc."
+            VALUE "CompanyName", "Duke University/Lisberger Lab"
+            VALUE "FileDescription", "Maestro"
+            VALUE "FileVersion", "4.2.1.0"
+            VALUE "InternalName", "maestro"
+            VALUE "LegalCopyright", "Copyright (C) 2000-2024"
+            VALUE "OriginalFilename", "maestro.exe"
+            VALUE "ProductName", "Maestro -- Stimulus Control & Data Acquisition for Experiments in Visual Neuroscience"
+            VALUE "ProductVersion", "4.2.1.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 304
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 104
+    END
+
+    IDD_TARGFORM, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 360
+        VERTGUIDE, 158
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 304
+        HORZGUIDE, 16
+        HORZGUIDE, 33
+        HORZGUIDE, 118
+    END
+
+    IDD_TRIALFORM, DIALOG
+    BEGIN
+        LEFTMARGIN, 2
+        RIGHTMARGIN, 558
+        TOPMARGIN, 3
+        BOTTOMMARGIN, 312
+    END
+
+    IDD_POPUP, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 110
+        BOTTOMMARGIN, 79
+    END
+
+    IDD_CHANNELFORM, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 263
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 185
+    END
+
+    IDD_AIOCP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 300
+        VERTGUIDE, 12
+        VERTGUIDE, 115
+        VERTGUIDE, 154
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 254
+    END
+
+    IDD_CONTCP1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 143
+    END
+
+    IDD_TMRCP, DIALOG
+    BEGIN
+    END
+
+    IDD_TRIALCP1, DIALOG
+    BEGIN
+        LEFTMARGIN, 3
+        RIGHTMARGIN, 297
+        TOPMARGIN, 4
+        BOTTOMMARGIN, 148
+    END
+
+    IDD_TRIALCP2, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        VERTGUIDE, 12
+        VERTGUIDE, 134
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 143
+    END
+
+    IDD_DISPLAY, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 143
+    END
+
+    IDD_RUNFORM, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 493
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 232
+    END
+
+    IDD_CONTCP2, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 143
+    END
+
+    IDD_FIXREW, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 143
+    END
+
+    IDD_PERTFORM, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 241
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 110
+    END
+
+    IDD_MSGLOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 201
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 86
+    END
+
+    IDD_TRIALCP3, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 143
+    END
+
+    IDD_TRIALCP4, DIALOG
+    BEGIN
+        LEFTMARGIN, 5
+        RIGHTMARGIN, 293
+        TOPMARGIN, 3
+        BOTTOMMARGIN, 146
+    END
+
+    IDD_RMVSTORE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 143
+    END
+
+    IDD_EYELINK, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 143
+    END
+
+    IDD_TRIALFORM_OTHER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 540
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 98
+    END
+
+    IDD_TRIALFORM_RV, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 540
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 93
+    END
+
+    IDD_TRIALFORM_MAIN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 540
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 93
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_CONTCP1 DLGINIT
+BEGIN
+    IDC_CONT_CHANCFG, 0x403, 7, 0
+0x614d, 0x756e, 0x6c61, "\000" 
+    IDC_CONT_CHANCFG, 0x403, 12, 0
+0x7541, 0x6f74, 0x5220, 0x6365, 0x726f, 0x0064, 
+    IDC_CONT_CHANCFG, 0x403, 18, 0
+0x6953, 0x676e, 0x656c, 0x522d, 0x6e75, 0x5220, 0x7065, 0x6165, 0x0074, 
+
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_ABOUTBOX AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_DISPLAY AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_TARGFORM AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_TRIALFORM_MAIN AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_TRIALFORM AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_TRIALFORM_OTHER AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_TRIALFORM_RV AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_FIXREW AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDR_MAINFRAME           "Maestro\n\n\nMaestro Experiment Files (*.cxe)\n.cxe\nMaestro.Experiment\nMaestro Experiment Document"
+END
+
+STRINGTABLE
+BEGIN
+    AFX_IDS_APP_TITLE       "Maestro"
+    AFX_IDS_IDLEMESSAGE     "Ready"
+END
+
+STRINGTABLE
+BEGIN
+    ID_INDICATOR_EXT        "EXT"
+    ID_INDICATOR_CAPS       "CAP"
+    ID_INDICATOR_NUM        "NUM"
+    ID_INDICATOR_SCRL       "SCRL"
+    ID_INDICATOR_OVR        "OVR"
+    ID_INDICATOR_REC        "REC"
+END
+
+STRINGTABLE
+BEGIN
+    ID_FILE_NEW             "Create a new document\nNew"
+    ID_FILE_OPEN            "Open an existing document\nOpen"
+    ID_FILE_CLOSE           "Close the active document\nClose"
+    ID_FILE_SAVE            "Save the active document\nSave"
+    ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
+END
+
+STRINGTABLE
+BEGIN
+    ID_APP_ABOUT            "Display program information, version number and copyright\nAbout"
+    ID_APP_EXIT             "Quit the application; prompts to save documents\nExit"
+END
+
+STRINGTABLE
+BEGIN
+    ID_FILE_MRU_FILE1       "Open this document"
+    ID_FILE_MRU_FILE2       "Open this document"
+    ID_FILE_MRU_FILE3       "Open this document"
+    ID_FILE_MRU_FILE4       "Open this document"
+    ID_FILE_MRU_FILE5       "Open this document"
+    ID_FILE_MRU_FILE6       "Open this document"
+    ID_FILE_MRU_FILE7       "Open this document"
+    ID_FILE_MRU_FILE8       "Open this document"
+    ID_FILE_MRU_FILE9       "Open this document"
+    ID_FILE_MRU_FILE10      "Open this document"
+    ID_FILE_MRU_FILE11      "Open this document"
+    ID_FILE_MRU_FILE12      "Open this document"
+    ID_FILE_MRU_FILE13      "Open this document"
+    ID_FILE_MRU_FILE14      "Open this document"
+    ID_FILE_MRU_FILE15      "Open this document"
+    ID_FILE_MRU_FILE16      "Open this document"
+END
+
+STRINGTABLE
+BEGIN
+    ID_NEXT_PANE            "Switch to the next window pane\nNext Pane"
+    ID_PREV_PANE            "Switch back to the previous window pane\nPrevious Pane"
+END
+
+STRINGTABLE
+BEGIN
+    ID_WINDOW_NEW           "Open another window for the active document\nNew Window"
+    ID_WINDOW_ARRANGE       "Arrange icons at the bottom of the window\nArrange Icons"
+    ID_WINDOW_CASCADE       "Arrange windows so they overlap\nCascade Windows"
+    ID_WINDOW_TILE_HORZ     "Arrange windows as non-overlapping tiles\nTile Windows"
+    ID_WINDOW_TILE_VERT     "Arrange windows as non-overlapping tiles\nTile Windows"
+    ID_WINDOW_SPLIT         "Split the active window into panes\nSplit"
+END
+
+STRINGTABLE
+BEGIN
+    ID_EDIT_CLEAR           "Erase the selection\nErase"
+    ID_EDIT_CLEAR_ALL       "Erase everything\nErase All"
+    ID_EDIT_COPY            "Copy the selection and put it on the Clipboard\nCopy"
+    ID_EDIT_CUT             "Cut the selection and put it on the Clipboard\nCut"
+    ID_EDIT_FIND            "Find the specified text\nFind"
+    ID_EDIT_PASTE           "Insert Clipboard contents\nPaste"
+    ID_EDIT_REPEAT          "Repeat the last action\nRepeat"
+    ID_EDIT_REPLACE         "Replace specific text with different text\nReplace"
+    ID_EDIT_SELECT_ALL      "Select the entire document\nSelect All"
+    ID_EDIT_UNDO            "Undo the last action\nUndo"
+    ID_EDIT_REDO            "Redo the previously undone action\nRedo"
+END
+
+STRINGTABLE
+BEGIN
+    ID_VIEW_TOOLBAR         "Show or hide the toolbar\nToggle ToolBar"
+    ID_VIEW_STATUS_BAR      "Show or hide the status bar\nToggle StatusBar"
+END
+
+STRINGTABLE
+BEGIN
+    AFX_IDS_SCSIZE          "Change the window size"
+    AFX_IDS_SCMOVE          "Change the window position"
+    AFX_IDS_SCMINIMIZE      "Reduce the window to an icon"
+    AFX_IDS_SCMAXIMIZE      "Enlarge the window to full size"
+    AFX_IDS_SCNEXTWINDOW    "Switch to the next document window"
+    AFX_IDS_SCPREVWINDOW    "Switch to the previous document window"
+    AFX_IDS_SCCLOSE         "Close the active window and prompts to save the documents"
+END
+
+STRINGTABLE
+BEGIN
+    AFX_IDS_SCRESTORE       "Restore the window to normal size"
+    AFX_IDS_SCTASKLIST      "Activate Task List"
+    AFX_IDS_MDICHILD        "Activate this window"
+END
+
+STRINGTABLE
+BEGIN
+    ID_VIEW_PLOTPANEL       "Show or hide the Eye-Target Pos plot panel\nEye-Target Pos"
+    ID_VIEW_DATAPANEL       "Show or hide the Channel Data panel\nChannel Data"
+    ID_VIEW_LOGPANEL        "Show or hide the Message Log\nMessage Log"
+    ID_VIEW_HISTPANEL       "Show or hide the Spike Histogram Display\nSpike Histograms (Trial mode)"
+END
+
+STRINGTABLE
+BEGIN
+    ID_MODE_IDLE            "Switch to IDLE op mode\nIdle Mode"
+    ID_MODE_TRIALS          "Switch to TRIALS op mode\nTrials Mode"
+    ID_MODE_CONT            "Switch to CONTINUOUS op mode\nContinuous Mode"
+    ID_MODE_TEST            "Switch to Test & Calibration op mode\nTest & Calibration Mode"
+END
+
+STRINGTABLE
+BEGIN
+    ID_MODE_RESTART         "Restart Maestro's hardware controller CXDRIVER\nRestart CXDRIVER"
+    ID_OPT_CHAIR            "Check this item to enable use of animal chair"
+    ID_OPT_RMVDUPE          "Check this item to allow up to 3 duplicate RMVideo frames without aborting a trial"
+END
+
+STRINGTABLE
+BEGIN
+    ID_HELP_USRGUIDE        "Open Maestro User's Guide home page in default browser\nOpen online user guide"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_USRGUIDE_HOME       "https://sites.google.com/a/srscicomp.com/maestro"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_COPYREMOTE_FILEDLGTITLE "Choose destination document"
+END
+
+#endif    // English (United States) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE 9, 1
+#include "maestro.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

@@ -1,0 +1,118 @@
+; Copyright (c) 1990-2017 IntervalZero, Inc. All Rights Reserved
+;
+; Module Name:
+;
+;   ni6363_rtx64.inf (created from IntervalZero's sample.inf template)
+;
+; Abstract:
+;   (sar) This is the INF file for installing the RTX64pnp driver for the NI PCIe-6363
+;   Multi-function DAQ device required by Maestro 4.x. This INF file is required
+;   for any device that RTX64 does not support "out of the box". It was created
+;   using IntervalZero's sample.inf template, per instructions below.
+;
+;   This is a sample INF file for installing the RTX64pnp driver on a device
+;   that is not listed in the files %RTX64DIR%\Inf\RTX64Pnp.inf or
+;   %RTX64DIR%\Inf\RTX64PnpNet.inf.  See the RTX64 product documentation for
+;   detailed instructions describing how to modify and deploy this file.
+;   Basically, the tasks are:
+;
+;   1. Add an line to the bottom of this file for each device you wish to convert to
+;      RTX64.  The format of the line should be:
+;
+;      "Descriptive name (RTX64)"=RTX64pnp_Inst,"PCI\VEN_WWWW&DEV_XXXX&SUBSYS_YYYYYYYY&REV_ZZ"
+;
+;      where WWWW, XXXX, YYYYYYYY, and ZZ are decimal and/or hexadecimal digits that
+;      uniquely identify the device instance.  It is _required_ that the string "(RTX64)"
+;      appear in the description string on the left side of the '=' character.  This
+;      naming convention is required for the proper operation of RTX64.
+;
+;   2. Uncomment exactly one pair of Class/ClassGuid directives in the [Version] section.
+;      The pair you choose to uncomment should be based on what kind of device you are
+;      supporting with this change.  If the device is a Network Interface Card (NIC), you
+;      should uncomment the pair that contains "Class = Net", otherwise you should
+;      uncomment the pair that contain "Class = RTX64".  You cannot mix NICs and non-NIC
+;      devices in a single INF file.  If necessary, create two separate INF files, one
+;      for NICs and one for non-NIC devices.
+;
+;   3. If you change the name of this file (Sample.inf) due to your deployment needs, you
+;      should change the CatalogFile directive in the [Version] section to specify a CAT
+;      file with a matching name.
+;
+;   4. Use the Microsoft utilities INF2CAT.EXE and SIGNTOOL.EXE to generate a digitally
+;      signed and cross-signed CAT file from this INF file.  This is the standard way that
+;      device driver INF files are signed for deployment.
+;
+;   5. Convert a device using this INF file.  Use the Windows Device Manager to update the
+;      driver for the device and click the "Have Disk..." button to browse to the signed
+;      copy of this INF file.  The converted device will appear under the "RTX64 Drivers"
+;      category in the Device Manager.
+
+[Version]
+Signature   = "$WINDOWS NT$"
+;
+Class      = RTX64
+ClassGuid  = {28D556A0-E4E5-465A-AF80-00B4ED2867CF}
+;
+;Class      = Net
+;ClassGUID  = {4d36e972-e325-11ce-bfc1-08002be10318}
+;
+Provider    = %CompanyName%
+DriverVer=10/03/2017,3.3.0.4060
+CatalogFile = ni6363_rtx64.cat
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+; ================= Class section =====================
+
+[ClassInstall32]
+Addreg      = RtxClassReg
+AddProperty = RTX64AddProperty
+
+[RtxClassReg]
+HKR,,,0,%ClassName%
+HKR,,EnumPropPages32,,"RTX64DevicePropPage.dll,RTX64PropertyPageProvider"
+
+[RTX64AddProperty]
+DeviceIcon,,,,"@C:\Windows\system32\SetupApi.dll,-1"
+
+; ================= Device Install section =====================
+
+[Manufacturer]
+%CompanyName% = IntervalZero,NTamd64
+
+[SourceDisksNames]
+;1 = "Install disk",
+
+[SourceDisksFiles]
+;RTX64pnp.sys = 1
+
+[RTX64pnp_Inst.NTamd64]
+;CopyFiles=RTX64pnp.CopyFiles
+Characteristics = 0x84    ; NCF_HAS_UI (0x4) | NCF_PHYSICAL (0x80)
+BusType         = 5       ; PCI
+
+[RTX64pnp.CopyFiles]
+;RTX64pnp.sys
+
+[RTX64pnp_Inst.NTamd64.Services]
+AddService = RTX64pnp,0x00000002,RTX64pnp_Service 
+
+[RTX64pnp_Service]
+DisplayName   = %RTX64pnp.SVCDESC%                            
+ServiceType   = 1   ; SERVICE_KERNEL_DRIVER
+StartType     = 3   ; SERVICE_DEMAND_START
+ErrorControl  = 1   ; SERVICE_ERROR_NORMAL
+ServiceBinary = %12%\RTX64pnp.sys                            
+
+[Strings]
+CompanyName      = "IntervalZero, Inc."
+ClassName        = "RTX64 Drivers"
+RTX64pnp.SVCDESC = "RTX64 Plug and Play Driver Service"
+RTX64pnp.DRVDESC = "RTX64 Plug and Play Driver"
+
+; ================= Device Models section =====================
+; Add device entries for each of your devices at the bottom of this file.
+
+[IntervalZero.NTamd64]
+"National Instruments PCIe-6363 (RTX64)"=RTX64pnp_Inst,"PCI\VEN_1093&DEV_C4C4&SUBSYS_74351093&REV_00"

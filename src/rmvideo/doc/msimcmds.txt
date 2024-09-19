@@ -1,0 +1,570 @@
+# This is a simulated Maestro->RMVideo command stream, using the syntax expected by the emulator CRMVIoSim.
+delay 2
+hello
+getversion
+setgeom 443 248 650
+setbkg 0x808080
+setsync 5 9
+delay 1
+
+# Animation: Test flicker feature. Panning two spots from left to right.
+load 2
+type point
+rgbmean 0xFFFFFF
+dotsize 10
+enddef
+
+type point
+rgbmean 0xFFFFFF
+dotsize 10
+flicker 8 16 2
+enddef
+
+start 4
+seg 0
+sync 1
+onoff 0 1
+seg 1000
+sync 1
+onoff 0 0
+onoff 1 1
+pos 1 -15 0
+winvel 1 5 0
+seg 2000
+sync 1
+pos 1 0 0
+winvel 1 25 0
+seg 3000
+sync 1
+winvel 1 0 0
+stop 6000
+
+delay 1
+bye 
+exit
+
+# Animation: Display 4 images at different locations, with a spot at (0,0)
+load 5
+type image
+folder images
+file home.png
+enddef
+
+type image
+folder images
+file fcSplash_sm.png
+enddef
+
+type image
+folder images
+file img_test.bmp
+enddef
+
+type image
+folder images
+file fc_app128.png
+enddef
+
+type spot
+aperture rect
+rgbmean 0x0000ff
+outerw 4
+outerh 4
+sigma 0.5 0.5
+enddef
+
+start 6
+seg 0
+sync 1
+onoff 0 1
+onoff 4 1
+pos 0 -10 0
+seg 1000
+sync 1
+onoff 1 1
+pos 0 0 0
+pos 1 0 5
+seg 2000
+sync 1
+onoff 2 1
+pos 1 0 0
+pos 2 10 0
+seg 3000
+sync 1
+onoff 3 1
+pos 2 0 0
+pos 3 0 -5
+seg 6000
+sync 1
+pos 3 0 0
+winvel 0 5 2.5
+winvel 1 5 -2.5
+winvel 2 -5 -2.5
+winvel 3 -5 2.5
+pos 4 -10 -8
+winvel 4 10 8
+seg 8000
+sync 1
+winvel 0 0 0
+winvel 1 0 0
+winvel 2 0 0
+winvel 3 0 0
+pos 4 0 0
+winvel 4 0 0
+stop 10000
+
+delay 1
+
+# Animation: Pan RMV_POINT target from -10,-10 to 10,10; then 10,-10 to -10,10. At the same time, pan a
+# RMV_BAR target from -5,0 to 0,5 to 5,0 to 0,-5 and back to -5,0. A second RMV_BAR remains stationary
+# at -5,0.
+load 3
+type point
+rgbmean 0xFFFFFF
+dotsize 10
+enddef
+
+type bar
+rgbmean 0x000000
+outerw 0.2
+outerh 6
+driftaxis -60
+enddef
+
+type bar
+rgbmean 0x00FF00
+outerw 0
+outerh 20
+driftaxis -45
+enddef
+
+start 5
+seg 0                         # seg 0, 1s: Point at origin, bar at -5,0; stationary vert line at -5,0
+onoff 0 1
+onoff 1 1
+onoff 2 1
+pos 1 -5 0
+pos 2 -5 0
+seg 1000                      # seg 1, 2s: Point jumps to (-10,-10), then moves up and right at 10deg/s,
+pos 0 -10 -10
+winvel 0 10 10
+pos 1 0 0                     #   while bar moves up and right at 2.5 deg/s.
+winvel 1 2.5 2.5
+pos 2 0 0
+seg 3000                      # seg 3, 2s: Point jumps to (10,-10), then moves up and left at 10deg/s,
+pos 0 0 -20
+winvel 0 -10 10
+winvel 1 2.5 -2.5             #   while bar move down and right at 2.5 deg/s
+seg 5000                      # seg 4, 1s : Point stays put, bar moves left and down at 5deg/s
+pos 0 0 0
+winvel 0 0 0
+winvel 1 -5 -5
+seg 6000                      # seg 5, 1s: Point jumps back to origin and stays there, bar moves left and up at 5 deg/s
+pos 0 10 -10
+winvel 0 0 0
+winvel 1 -5 5
+stop 7000
+
+delay 1
+
+# Animation: A simple movie playback
+load 5
+type movie
+flags 0xA0                # repeat, at disp rate
+folder test
+file mmc1.mov
+enddef
+
+type movie
+flags 0xA0
+folder test
+file mmc2.mov
+enddef
+
+type movie
+flags 0xA0
+folder test
+file mmc3.mov
+enddef
+
+type movie
+flags 0xA0
+folder test
+file mmc4.mov
+enddef
+
+type spot
+aperture oval
+rgbmean 0xff0000
+outerw 15
+outerh 15
+sigma 0.5 0.5
+enddef
+
+start 6
+seg 0
+sync 1
+onoff 0 1
+onoff 4 1
+pos 0 -10 0
+seg 1000
+sync 1
+onoff 1 1
+pos 0 0 0
+pos 1 0 5
+seg 2000
+sync 1
+onoff 2 1
+pos 1 0 0
+pos 2 10 0
+seg 3000
+sync 1
+onoff 3 1
+pos 2 0 0
+pos 3 0 -5
+seg 6000
+sync 1
+pos 3 0 0
+winvel 0 5 2.5
+winvel 1 5 -2.5
+winvel 2 -5 -2.5
+winvel 3 -5 2.5
+pos 4 -10 -8
+winvel 4 10 8
+seg 8000
+sync 1
+winvel 0 0 0
+winvel 1 0 0
+winvel 2 0 0
+winvel 3 0 0
+pos 4 0 0
+winvel 4 0 0
+stop 10000
+
+delay 1
+
+#Animation: Testing out the "flowfield" random-dot target type
+load 1
+type flowfield
+rgbmean 0xffffff
+outerw 10
+innerw 0.5
+ndots 1000
+dotsize 3
+seed 392884
+enddef
+
+start 10
+seg 0
+onoff 0 1
+seg 1000
+patvel 0 5 0
+seg 3000
+patvel 0 -5 0
+seg 5000
+patvel 0 10 0
+seg 7000
+patvel 0 -10 0
+seg 9000
+patvel 0 20 0
+seg 11000
+patvel 0 -20 0
+seg 13000
+patvel 0 60 0
+seg 15000
+patvel 0 -60 0
+seg 17000
+patvel 0 0 0
+stop 18000
+
+delay 1
+
+# Testing RMV_SPOT target implementation
+# Animation: Test out the "spot" target using the four supported apertures.
+load 5
+type bar
+rgbmean 0x000000
+outerw 5
+outerh 5
+driftaxis 0
+enddef
+type spot
+aperture rect
+rgbmean 0xdfbe95
+outerw 5
+outerh 5
+enddef
+type spot
+aperture rectannu
+rgbmean 0x1027f8
+outerw 5
+outerh 3
+innerw 3
+innerh 1
+enddef
+type spot
+aperture oval
+rgbmean 0x43cc3c
+outerw 5
+outerh 5
+sigma 1 0.8
+enddef
+type spot
+aperture ovalannu
+rgbmean 0xd792e2
+outerw 5
+outerh 3
+innerw 3
+innerh 1
+enddef
+
+start 7
+seg 0
+onoff 0 1
+pos 0 0 0
+onoff 1 1
+pos 1 5 5
+onoff 2 1
+pos 2 -5 5
+onoff 3 1
+pos 3 -5 -5
+onoff 4 1
+pos 4 5 -5
+seg 1000
+pos 1 0 0
+winvel 1 -5 -5
+pos 2 0 0
+pos 3 0 0
+pos 4 0 0
+seg 2000
+winvel 1 0 0
+winvel 2 5 -5
+seg 3000
+onoff 1 0
+winvel 2 0 0
+winvel 3 5 5
+seg 4000
+onoff 2 0
+winvel 3 0 0
+winvel 4 -5 5
+seg 5000
+onoff 3 0
+winvel 4 0 0
+seg 6000
+onoff 1 1
+pos 1 -10 0
+onoff 2 1
+pos 2 -5 0
+onoff 3 1
+pos 3 5 0
+onoff 4 1
+pos 4 10 0
+stop 8000
+
+delay 1
+
+# Animation: Simple 45deg pattern motion in stationary "randomdots" target in two-color contrast mode
+load 2
+type spot
+aperture oval
+rgbmean 0xdfbe95
+outerw 20
+outerh 20
+innerw 5
+innerh 5
+enddef
+
+type randomdots
+aperture oval
+flags 0
+rgbmean 0x808080
+rgbcon 0x646464
+outerw 20
+outerh 20
+innerw 5
+innerh 5
+ndots 9000
+dotsize 3
+seed 21458
+coher 100
+noiseupd 0
+noiselimit 0
+dotlife 0
+# sigma 10 10
+enddef
+
+start 3
+seg 0
+onoff 0 1
+onoff 1 1
+seg 1000
+# pos 1 -5 0
+# winvel 1 1 0
+patvel 1 10 10
+seg 11000
+# pos 1 -5 0
+winvel 1 0 0
+patvel 1 0 0
+stop 12000
+
+delay 1
+
+# Animation: Testing grating target
+load 1
+type grating
+aperture oval
+flags 0x0100         # dynamic orientation enabled
+rgbmean 0x808080
+rgbcon 0x323232
+outerw 44
+outerh 26
+spatialf 0.5 0.5
+driftaxis 45
+gratphase 0
+sigma 5 5
+enddef
+
+start 11
+seg 0
+onoff 0 1
+seg 1000
+patvel 0 5 0
+seg 2000
+patvel 0 5 5
+seg 3000
+patvel 0 0 5
+seg 4000
+patvel 0 -5 5
+seg 5000
+patvel 0 -5 0
+seg 6000
+patvel 0 -5 -5
+seg 7000
+patvel 0 0 -5
+seg 8000
+patvel 0 5 -5
+seg 9000
+patvel 0 0 0
+seg 10000
+pos 0 7.19 0.9
+patvel 0 0 0
+stop 15000
+
+delay 1
+
+# Animation: Testing out plaid targets.
+load 2
+type plaid
+aperture oval
+flags 0xC                       // squarewave gratings that move independently
+rgbmean 0x808080 0x303030
+rgbcon 0x323232 0x161616
+outerw 10
+outerh 10
+spatialf 1 1
+driftaxis 45 135
+gratphase 0 0
+sigma 0 0
+enddef
+
+type plaid
+aperture oval
+flags 0x4                      // squarewave grating that move as single pattern
+rgbmean 0x808080 0x303030
+rgbcon 0x323232 0x161616
+outerw 10
+outerh 10
+spatialf 1 1
+driftaxis 45 135
+gratphase 0 0
+sigma 0 0
+enddef
+
+start 6
+seg 0
+onoff 0 1
+pos 0 6 0
+onoff 1 1
+pos 1 -6 0
+seg 1000
+pos 0 0 0
+pos 1 0 0
+patvel 0 5 5
+patvel 1 5 5
+seg 2000
+patvel 0 -5 5
+patvel 1 -5 5
+seg 3000
+patvel 0 -5 -5
+patvel 1 -5 -5
+seg 4000
+patvel 0 5 -5
+patvel 1 5 -5
+seg 5000
+patvel 0 0 0
+patvel 1 0 0
+stop 6000
+
+delay 1
+
+# Animation: Rightward and upward motion of a green point target, while a diagonal bar sweeps across
+# screen from botleft to topright.  Tests "point" and "bar" targets.
+load 2
+type point
+rgbmean 0x00ff00
+dotsize 10
+enddef
+type bar
+rgbmean 0x00ffff
+outerw 0.25
+outerh 10
+driftaxis 45
+enddef
+
+start 5
+seg 0                         # point at origin for 1 second; bar still off
+onoff 0 1
+seg 1000                      # point jumps to left, then moves rightward at 10deg/s for 2 seconds
+pos 0 -10 0
+winvel 0 10 0
+onoff 1 1                     # bar appears ctr'd at -12,-12, sweeps upward at 45deg for rest of trial
+pos 1 -12 -12
+winvel 1 5 5
+seg 3000                      # tgt jumps back to origin and stays there for 1 second
+pos 0 -10 0
+winvel 0 0 0
+pos 1 0 0
+seg 4000                      # tgt jumps down, then moves upward at 10deg/s for 2 seconds
+pos 0 0 -10
+winvel 0 0 10
+seg 6000                      # tgt jumps back to origin and stays there for 1 second
+pos 0 0 -10
+winvel 0 0 0
+stop 7000
+
+delay 2
+
+# Test multiple sessions
+bye
+delay 2
+
+hello
+setbkg 0x0000FF
+setsync 20 9
+delay 2
+bye
+delay 2
+
+hello
+setbkg 0x00FF00
+setsync 10 9
+delay 2
+bye
+delay 2
+
+hello
+setbkg 0xFF0000
+setsync 5 9
+delay 2
+bye
+exit
