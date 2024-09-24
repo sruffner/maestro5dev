@@ -331,13 +331,11 @@ FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,20,21,20,20
     LTEXT           "Maestro",IDC_STATIC,44,18,26,8,SS_NOPREFIX
-    LTEXT           "Copyright (C) 2000-2024",IDC_STATIC,44,38,77,8
+    LTEXT           "Copyright (C) 2000-2025",IDC_STATIC,44,38,77,8
     DEFPUSHBUTTON   "OK",IDOK,272,7,32,14,WS_GROUP
-    LTEXT           "Version 4.2.1 (Apr 2023)",IDC_STATIC,44,28,77,8
-    LTEXT           "Inquiries:  Steve Lisberger (lisberger@neuro.duke.edu)",IDC_STATIC,20,74,172,8
-    LTEXT           "Duke University, Durham NC  USA",IDC_STATIC,53,94,151,8
+    LTEXT           "Version 5.0.0 (TBD 2024)",IDC_STATIC,44,28,77,8
+    LTEXT           "Inquiries:  Scott Ruffner (sruffner@srscicomp.com)",IDC_STATIC,20,74,172,8
     LTEXT           "Online User's Guide:  https://sites.google.com/a/srscicomp.com/maestro",IDC_STATIC,19,59,255,8
-    LTEXT           "Lisberger Laboratory",IDC_STATIC,53,84,147,8
 END
 
 IDD_TARGFORM DIALOGEX 0, 0, 368, 310
@@ -919,8 +917,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 4,2,1,0
- PRODUCTVERSION 4,2,1,0
+ FILEVERSION 5,0,0,0
+ PRODUCTVERSION 5,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -935,15 +933,15 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "Comments", "This program interacts with several specific hardware devices through a partner process that runs in the Real Time Extension (RTX) to Windows from IntervalZero, Inc."
-            VALUE "CompanyName", "Duke University/Lisberger Lab"
+            VALUE "Comments", "This program interacts with several specific hardware devices through a partner process that runs in the 64-bit Real Time Extension (RTX64) to Windows 11 from IntervalZero, Inc."
+            VALUE "CompanyName", "Duke University/Lisberger Lab and Scott Ruffner Scientific Computing"
             VALUE "FileDescription", "Maestro"
-            VALUE "FileVersion", "4.2.1.0"
+            VALUE "FileVersion", "5.0.0.0"
             VALUE "InternalName", "maestro"
-            VALUE "LegalCopyright", "Copyright (C) 2000-2024"
+            VALUE "LegalCopyright", "Copyright (C) 2000-2025"
             VALUE "OriginalFilename", "maestro.exe"
             VALUE "ProductName", "Maestro -- Stimulus Control & Data Acquisition for Experiments in Visual Neuroscience"
-            VALUE "ProductVersion", "4.2.1.0"
+            VALUE "ProductVersion", "5.0.0.0"
         END
     END
     BLOCK "VarFileInfo"
