@@ -1,6 +1,10 @@
 # Maestro
 
-<mark>NOTE: As of Jan 2025, I am no longer actively developing **Maestro/RMVideo**. I have made this repo available for 
+<mark>I am currently porting Maestro to run under Windows 11 Professional (update 23H2) and RTX64 4.5. The new version
+will be released as Maestro 5.0.0. The source code for the last working release, Maestro 4.2.1, is available at
+`src/maestro4.2.1_codebase`.</mark>
+
+<mark>NOTE: As of Jan 2025, I will no longer be actively developing **Maestro/RMVideo**. I have made this repo available for 
 anyone in the neuroscience community that continues to use the application and might wish to fork the repo to adapt or 
 modify the program for their own purposes.</mark>
 
@@ -68,6 +72,8 @@ Windows 10/11:
 - `external/includes/eyelink`: _Eyelink_-related header files required to build `maestro.exe`.
 - `external/includes/rmvideo/rmvideo_common.h` : A header file required to build both `maestro.exe` and **RMVideo**. It 
 defines structures and constants that implement the communication interface between **Maestro** and **RMVideo**.
+- `installer`: Files needed to build the self-extracting installer for **Maestro** version 5.x.
+- `sample_experiments`: Sample **Maestro** experiment documents (used for testing).
 - `src`: The root source folder, containing all source code, resource and other supporting files:
   - `cxdriver`: Source code for building `cxdriver.rtss`, the hardware controller for **Maestro** that runs as a separate 
   RTX64 process. 
@@ -82,12 +88,11 @@ defines structures and constants that implement the communication interface betw
     - `doc`: Contains some sample xorg.conf files and `msimcmds.txt`, a file containing a simulated **Maestro** command
     sequence. It is used to test **RMVideo** without connecting to **Maestro**.
     - `media_bup`: Contains some sample image and video files used to test **RMVideo**.
-  - `maestro4.2.1_codebase`: For reference, this contains the state of the **Maestro** codebase for Version 4.2.1 (supportin
+  - `maestro4.2.1_codebase`: For reference, this contains the state of the **Maestro** codebase for Version 4.2.1 (supporting
   Win10/RTX64 3.4), before I began porting the code to Windows 11/RTX64 4.5. In addition to the `cxdriver` and `gui` source 
   folders, it includes:
-    - `installer`: Files needed to build the self-extracting installer for **Maestro**.
-    - `maestroExp`: Sample **Maestro** experiment documents (used for testing).
-    - `visual_studio` : Project files for building `maestro.exe` and `cxdriver.rtss` in Visual Studio 2017.
+    - `installer`: Files needed to build the self-extracting installer for **Maestro 4.x**.
+    - `visual_studio` : Project files for building `maestro.exe` and `cxdriver.rtss` for **Maestro 4.x** in Visual Studio 2017.
   - `utilties_for_matlab`:
     - `miscellaneous`, `rmvplaid`: _Matlab_ scripts implementing a number of **Maestro/RMVideo**-related tools. All of these
     are [described](https://sites.google.com/a/srscicomp.com/maestro/data-analysis/supported-matlab-tools/other-functions)
