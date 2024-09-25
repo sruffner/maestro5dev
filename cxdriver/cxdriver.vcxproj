@@ -43,10 +43,7 @@
     <ClCompile Include="C:\maestro5dev\src\cxdriver\devices\cxanalogout.cpp" />
     <ClCompile Include="C:\maestro5dev\src\cxdriver\devices\cxeventtimer.cpp" />
     <ClCompile Include="C:\maestro5dev\src\cxdriver\devices\cxrmvideo.cpp" />
-    <ClCompile Include="C:\maestro5dev\src\cxdriver\devices\cxscope.cpp" />
     <ClCompile Include="C:\maestro5dev\src\cxdriver\devices\ni6363.cpp" />
-    <ClCompile Include="C:\maestro5dev\src\cxdriver\devices\xydakar.cpp" />
-    <ClCompile Include="C:\maestro5dev\src\cxdriver\devices\xydetroit.cpp" />
     <ClCompile Include="C:\maestro5dev\src\cxdriver\suspend.cpp" />
     <ClCompile Include="C:\maestro5dev\src\gui\util.cpp" />
   </ItemGroup>
@@ -64,12 +61,9 @@
     <ClInclude Include="C:\maestro5dev\src\cxdriver\devices\cxanalogout.h" />
     <ClInclude Include="C:\maestro5dev\src\cxdriver\devices\cxeventtimer.h" />
     <ClInclude Include="C:\maestro5dev\src\cxdriver\devices\cxrmvideo.h" />
-    <ClInclude Include="C:\maestro5dev\src\cxdriver\devices\cxscope.h" />
     <ClInclude Include="C:\maestro5dev\src\cxdriver\devices\ni6363.h" />
     <ClInclude Include="C:\maestro5dev\src\cxdriver\devices\ni6363regs.h" />
     <ClInclude Include="C:\maestro5dev\src\cxdriver\devices\ni6363types.h" />
-    <ClInclude Include="C:\maestro5dev\src\cxdriver\devices\xydakar.h" />
-    <ClInclude Include="C:\maestro5dev\src\cxdriver\devices\xydetroit.h" />
     <ClInclude Include="C:\maestro5dev\src\cxdriver\suspend.h" />
     <ClInclude Include="C:\maestro5dev\src\gui\util.h" />
   </ItemGroup>

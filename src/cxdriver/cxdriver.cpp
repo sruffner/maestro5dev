@@ -1,14 +1,14 @@
 /**=====================================================================================================================
- cxdriver.cpp : Implementation of class CCxDriver, MaestroRTSS's "application object".
+ cxdriver.cpp : Implementation of class CCxDriver, the the RTX64-based hardware and experiment controller for Maestro.
 
  AUTHOR:  saruffner
 
  DESCRIPTION:
 
  CREDITS:
- 1) Real-Time eXtension (RTX) to Windows by IntervalZero (www.intervalzero.com). The MaestroRTSS app is designed to 
- run as an "RTSS" process within the RTX subsystem. RTX gives Windows real-time-like characteristics and provides kernel
- access for direct communications with hardware devices -- obviating the need to write kernel-mode device drivers.
+ 1) Real-Time eXtension (RTX) to Windows by IntervalZero (www.intervalzero.com). The cxdriver.rtss app is designed to 
+ run as an "RTSS" process within the RTX64 subsystem. RTX64 gives Windows real-time-like characteristics and provides 
+ kernel access for direct communications with hardware -- obviating the need to write kernel-mode device drivers.
 
 
  REVISION HISTORY:
@@ -186,6 +186,8 @@
  the DIO event timer via CCxEventTimer::SetDOBusyWaits(). This provides a mechanism by which the user can ultimately
  have some low-level control over the busy waits after each step in CCxEventTimer::SetDO(). See CCxEventTimer for
  details and rationale.
+ 24sep2024-- While support for the XYScope platform was dropped in Maestro 4.0, all XYScope-related code remained in
+ cxdriver.*. Removed all such code for Maestro 5.0.
 ========================================================================================================================
 */
 
@@ -225,9 +227,6 @@ const float CCxDriver::VEL_TOAIRAW =  10.88260708f;
 const int CCxDriver::TRIALSCANINTVUS = 1000; 
 const int CCxDriver::CONTSCANINTVUS = 2000;
 const int CCxDriver::SPIKESAMPINTVUS = 40;
-
-// default XYScope refresh period in Continuous Mode (ms)
-const int CCxDriver::DEF_XYFRAME = 4; 
 
 // minimum interval between triggered marker pulses
 const double CCxDriver::MIN_MARKERINTVUS = 900.0; 
@@ -492,25 +491,27 @@ CLEANUP:
 
 
 /**
- Start the device manager, which creates device function "objects" for all MaestroRTSS-related hardware resources in the 
- host system: an analog input board; an event timer DIO device; an analog output board; a DSP board controlling the "XY 
- scope"; and an interface to the RMVideo application, which runs on a separate workstation. If no physical device is 
- found for a device class, the device manager creates a "placeholder" representing the absence of that device.
+ Start the device manager, which creates device function "objects" for all Maestro-related hardware resources in the 
+ host system. As of Maestro 4.0, there are really only two supported devices: the PCIe-6363 multifunction DAQ board
+ providing AI, AO, and event timer DIO functionality in one device; and an interface to the RMVideo application, which 
+ runs on a separate workstation. If no physical device is found for a device class, the device manager creates a 
+ "placeholder" representing the absence of that device.
  
  The device manager is responsible for finding and acquiring the physical devices. The runtime engine accesses the
  hardware functionality only through abstract device interfaces (for AI, AO, DIO timer, etc); it has no knowledge of the
  actual hardware on which these functions are realized. See CCxDeviceMgr.
  
- Hardware is "registered" with the MaestroRTSS IPC object to tell MaestroGUI whether or not a given device function is
- available. If no devices are found, MaestroRTSS will shut down (this call returns FALSE). Note that runtime operation 
- (trial or continuous mode) is not possible without both the AI and DIO timer boards; test and calib mode is available 
- as long as one of the AI, AO, or DIO timer functions is available.
+ Hardware is "registered" with the Maestro-CXDRIVER RTSS IPC object to tell MaestroGUI whether or not a given device 
+ function is available. If no devices are found, CXDRIVER will shut down (this call returns FALSE). Note that runtime 
+ operation (trial or continuous mode) is not possible without both the AI and DIO timer functionality; test and calib 
+ mode is available as long as one of the AI, AO, or DIO timer functions is available.
 
  If the AI device supports "fast calibration" (eg, loading the board's calibration constants from non-volatile EEPROM),
  that calibration happens here during startup. This was important when Maestro used the PCI-MIO16E1 for AI -- since it
- is essential that its calibration constants be reloaded whenever the host system was power-cycled.
+ is essential that its calibration constants be reloaded whenever the host system was power-cycled. Not applicable to
+ the PCIe-6363.
   
- Warning/error/status messages are posted to MastroGUI via IPC.   
+ Warning/error/status messages are posted to MastroGUI via IPC.
 
  @return TRUE if at least ONE relevant hardware device was found & successfully configured; FALSE if no device was 
  found or if there was a fatal memory allocation error.
@@ -570,7 +571,6 @@ BOOL RTFCNDCL CCxDriver::OpenHardwareResources()
 
    CCxRMVideo* pRMV = m_DevMgr.GetRMVideo();
    if((m_DevMgr.GetTimer())->IsOn()) dwHWState |= CX_F_TMRAVAIL;
-   if((m_DevMgr.GetScope())->IsOn()) dwHWState |= CX_F_XYAVAIL;
    if(pRMV->IsOn()) dwHWState |= CX_F_RMVAVAIL;
 
    m_masterIO.SetHardwareStatus(dwHWState);
@@ -1714,12 +1714,15 @@ VOID RTFCNDCL CCxDriver::RunTrialMode()
  then the normal fixation check occurs. If only Fix2 is defined, NO fixation check occurs -- so you can't check only 
  fixation for the R eye.
 
+ 12) (24sep2024) Removed all XYScope-related code -- the XYScope platform and related hardware devices are no longer
+ supported. Leaving XYScope-related constants and flag bits alone to make sure we don't break code.
+
  @returns The trial result (some combination of IPC flag bits (CX_FT_DONE, etc.).
 ======================================================================================================================*/
 // The following flag bits are used only in this fcn!!!!
 //
 const DWORD T_USERMV     = ((DWORD) (1<<0)); // RMVideo is used for target display during trial
-const DWORD T_USEXY     = ((DWORD) (1<<1));  // XY scope video is used for target display during trial
+const DWORD T_USEXY     = ((DWORD) (1<<1));  // [deprecated] XY scope video is used for target display during trial
 const DWORD T_USECHAIR  = ((DWORD) (1<<2));  // "hard" target CX_CHAIR is used during the trial
 const DWORD T_USEAO     = ((DWORD) (1<<5));  // AO device is required during trial
 const DWORD T_CHECKSACC = ((DWORD) (1<<7));  // enables saccade checking during one of the saccade-related special ops
@@ -1731,7 +1734,7 @@ const DWORD T_SKIPPED   = ((DWORD) (1<<11)); // part of special segment was skip
 const DWORD T_SELECTED  = ((DWORD) (1<<12)); // tgt selected during "selByFix" or "chooseFix" op
 const DWORD T_ENDSEL    = ((DWORD) (1<<13)); // set if tgt selection forced at end of special seg in "selByFix" ops
 const DWORD T_INSACCADE = ((DWORD) (1<<14)); // in the midst of a saccade during "selectByFix" segment
-const DWORD T_DELAYSKIP = ((DWORD) (1<<15)); // when XY scope used, "skipOnSaccade" action delayed till end of XY frame
+const DWORD T_DELAYSKIP = ((DWORD) (1<<15)); // [deprec] "skipOnSaccade" action delayed til end of XYScope frame
 const DWORD T_ISSEARCH  = ((DWORD) (1<<16)); // the special operation in effect is "searchTask"
 const DWORD T_SOUGHT    = ((DWORD) (1<<17)); // "searchTask" op only: if set, then eye vel >= sacc thresh during task
 const DWORD T_CHKRESP   = ((DWORD) (1<<18)); // subject resp checking enabled for at least one seg of trial
@@ -1833,8 +1836,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
       pTraj->ptPosPat.Zero();
       pTraj->remDotLife = 0.0f;
 
-      // init ordinal pos of each target in RMVideo's animated target list. For XYScope, this is done in response to
-      // the XYTARGETUSED trial code.
+      // init ordinal pos of each target in RMVideo's animated target list.
       pTraj->iUpdatePos = -1; 
       if(tgt.wType == CX_RMVTARG)
       {
@@ -1860,10 +1862,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
       return(CX_FT_ERROR | CX_FT_DONE);
    }
 
-   // zero buffers used to store current update vectors for any XYScope and RMVideo targets
-   ::memset(&(m_ptXYWindow[0]), 0, MAX_TRIALTARGS*sizeof(CFPoint));
-   ::memset(&(m_ptXYPattern[0]), 0, MAX_TRIALTARGS*sizeof(CFPoint));
-   ::memset(&(m_wXYUpdIntv[0]), 0, MAX_TRIALTARGS*sizeof(WORD));
+   // zero buffers used to store current update vectors for any RMVideo targets
    ::memset(&(m_RMVUpdVecs[0]), 0, 3*MAX_TRIALTARGS*sizeof(RMVTGTVEC));
 
    // reset perturbation manager: no perturbations in use
@@ -1874,7 +1873,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    CCxAnalogIn* pAI = m_DevMgr.GetAI(); 
    CCxAnalogOut* pAO = m_DevMgr.GetAO();
    CCxRMVideo* pRMV = m_DevMgr.GetRMVideo();
-   CCxScope* pXYScope = m_DevMgr.GetScope();
    
    // for integration w/external system: write "start" char, followed by null-terminated trial name and trial data file
    // name (NOT the full path). If null data file, write special "noDataFile" code instead, still followed by null-term.
@@ -1902,8 +1900,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    m_viScanInterval = 1; 
    const CFPoint dT = CFPoint(0.001 * m_viScanInterval);  
 
-   int nXYTgts = 0;                                                     // # of XY scope tgts participating in trial
-
    int nSegs = 0;                                                       // # of segments in trial
    int iCurrSeg = -1;                                                   // the current segment
    int iSaveSeg = -1;                                                   // if >= 0, save data rec from this seg onward
@@ -1923,9 +1919,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    int iBehavRespType = -1; 
    float fRPDWindow[4]; 
    for(i=0; i<4; i++) fRPDWindow[i] = 0.0f;  
-
-   int nInterleaved = 0;                                                // >0 engages interleaving of first N XY tgts
-   int nILSlot = 0;                                                     // the current interleave slot
 
    // init reward pulse lengths; mid-trial reward pulse length and intv (intv<=0: deliver at END of each enabled seg).
    // NOTE: Reward pulse 1 or 2 may be zero-length -- indicating that reward is withheld even if fixation rqmts met.
@@ -2046,17 +2039,9 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                nMTRLen = (int) tc.time;
                break;
 
-            // add target to the set of XYScope targets used during the trial. If target is interleaved, assign it to
-            // the next available interleave slot.
+            // the XYScope is DEPRECATED. If we receive this trial code (we shouldn't!), we skip over it.
             case XYTARGETUSED : 
                tc = m_masterIO.GetTrialCode( ++iCode );
-               m_traj[tc.code].iUpdatePos = nXYTgts;
-               ++nXYTgts;
-               if(tc.time > 0 && nInterleaved < tc.time)
-               {
-                  m_traj[tc.code].iILSlot = nInterleaved;
-                  ++nInterleaved;
-               }
                break;
 
             // start/enable SGM pulse sequencer in this segment; save SGM parameters to be used.
@@ -2091,7 +2076,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                if(pTraj->wType == CX_XYTARG || pTraj->wType == CX_RMVTARG) pSeg->tgtFlags[tc.code] &= ~TF_TGTON;
                break;
 
-            // these pertain to target "pattern" velocity, applicable only to the XYScope and RMVideo targets...
+            // these pertain to target "pattern" velocity, applicable only to RMVideo targets...
             case INSIDE_HVEL : 
             case INSIDE_HSLOVEL : 
             case INSIDE_VVEL : 
@@ -2107,13 +2092,9 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                if(i == INSIDE_HVEL || i == INSIDE_HSLOVEL) pSeg->tgtPatVel[tc.code].SetH(dDummy);
                else pSeg->tgtPatVel[tc.code].SetV(dDummy);
 
-               // for certain XYScope target types, set nonzero motion flag even if only the dot pattern moves
-               if((pTraj->wType == CX_XYTARG) && (pTraj->iSubType == SURROUND || pTraj->iSubType == RECTANNU) &&
-                   (dDummy != 0.0))
-                  pTraj->bIsMoving = TRUE;
                break;
 
-            // these pertain to target "pattern" acceleration, applicable only to the XYScope and RMVideo targets...
+            // these pertain to target "pattern" acceleration, applicable only to the RMVideo targets...
             case INSIDE_HACC : 
             case INSIDE_HSLOACC : 
             case INSIDE_VACC : 
@@ -2129,10 +2110,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                if(i == INSIDE_HACC || i == INSIDE_HSLOACC) pSeg->tgtPatAcc[tc.code].SetH(dDummy);
                else pSeg->tgtPatAcc[tc.code].SetV(dDummy);
 
-               // for certain XYScope target types, set nonzero motion flag even if only the dot pattern moves
-               if( (pTraj->wType == CX_XYTARG) && (pTraj->iSubType == SURROUND || pTraj->iSubType == RECTANNU) &&
-                   (dDummy != 0.0) )
-                  pTraj->bIsMoving = TRUE;
                break;
 
             case TARGET_HVEL : 
@@ -2150,8 +2127,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                if(i == TARGET_HVEL || i == TARGET_HSLOVEL) pSeg->tgtVel[tc.code].SetH(dDummy);
                else pSeg->tgtVel[tc.code].SetV(dDummy);
 
-               // set nonzero motion flag for XYScope target
-               if(pTraj->wType == CX_XYTARG && dDummy != 0.0) pTraj->bIsMoving = TRUE;
                break;
 
             case TARGET_HACC : 
@@ -2169,8 +2144,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                if(i == TARGET_HACC || i == TARGET_HSLOACC) pSeg->tgtAcc[tc.code].SetH(dDummy);
                else pSeg->tgtAcc[tc.code].SetV(dDummy);
 
-               // set nonzero motion flag for XYScope target
-               if(pTraj->wType == CX_XYTARG && dDummy != 0.0) pTraj->bIsMoving = TRUE;
                break;
 
             // ignored for CHAIR, which cannot be instantaneously repositioned. NOTE that if you get HPOSREL, you won't
@@ -2207,19 +2180,15 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                      break;
                }
 
-               // set nonzero motion flag for XYScope target that is repositioned in a segment OTHER THAN the first
-               if(pTraj->wType == CX_XYTARG && iCurrSeg > 0 && dDummy != 0.0) pTraj->bIsMoving = TRUE;
                break;
 
-            // perturbation waveform. Read in the defining codes and pass them to the perturbation mgr. If we perturb an
-            // XYScope target, go ahead and set its nonzero motion flag.
+            // perturbation waveform. Read in the defining codes and pass them to the perturbation mgr.
             case TARGET_PERTURB :
                pertTC[0] = tc;
                for(i = 1; i <= 4; i++) pertTC[i] = m_masterIO.GetTrialCode(++iCode);
 
                pTraj = &(m_traj[pertTC[1].code]); 
                m_pertMgr.ProcessTrialCodes(&(pertTC[0])); 
-               if(pTraj->wType == CX_XYTARG && pertTC[2].code != 0) pTraj->bIsMoving = TRUE;
                break;
 
             // segment marker pulse on DO<1..11>. Optionally start RMVideo vertical sync spot flash ('time1' != 0).
@@ -2256,12 +2225,9 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                pSeg->tgtFlags[tc.code] |= (WORD) (VSTAB_MASK & tc.time);
                break;
 
-            // change XYScope update interval (subdivided if interleaving). NOTE: MaestroGUI adjust segment duration to
-            // ensure each segment starts at the beginning of an XYScope refresh.
+            // the XYScope is DEPRECATED. If we receive this trial code (we shouldn't!), we skip over it.
             case DELTAT : 
                tc = m_masterIO.GetTrialCode(++iCode);
-               pSeg->iXYUpdIntv = tc.code;
-               if(nInterleaved > 1) pSeg->iXYUpdIntv /= nInterleaved;
                break; 
 
             // mark segment at which we start recording and saving data (NOTE: ADCOFF obsolete).
@@ -2405,7 +2371,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
 
             // update motion of tgt window and pattern during 1ms tick. For RMV_RANDOMDOTS with RMV_F_WRTSCREEN set,
             // tgt pattern motion is WRT screen center not target center. In this case, pattern is adjusted to account
-            // for a large displacement of target window at the segment boundary (as is done for XYScope)
+            // for a large displacement of target window at the segment boundary
             pTraj->ptPosWin += (pTraj->pos - pTraj->prevPos); 
             pTraj->ptPosPat += pTraj->prevPatVel * dT; 
             if((pSeg->tStart == nRMVLeadTime) && (pTraj->iSubType == RMV_RANDOMDOTS) && 
@@ -2512,11 +2478,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
          w = pRMV->GetScreenW_deg() / 2.0;
          h = pRMV->GetScreenH_deg() / 2.0;
       }
-      else if(m_traj[m_seg[iSaccSeg].iCurrFix1].wType == CX_XYTARG)
-      {
-         w = pXYScope->GetScreenW_deg() / 2.0;
-         h = pXYScope->GetScreenH_deg() / 2.0;
-      }
       searchBounds.Set(w, h);
       
       // we reuse the segment grace period to specify the required DURATION that eye must be on a target to satisfy
@@ -2551,17 +2512,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    // pending marker pulses 
    DWORD dwMarkers = 0; 
 
-   // send target information to XYScope controller; ABORT on failure
-   if((nXYTgts > 0) && !SendXYScopeParameters_TM())
-   {
-      ::sprintf_s(m_strMsg, "(!!) XY scope dev error (%s).  Trial aborted!", pXYScope->GetLastDeviceError());
-      m_masterIO.Message(m_strMsg);
-      pTimer->WriteChar(ABORT_CHARCODE); 
-      pTimer->WriteChar(STOP_CHARCODE);
-      m_suspendMgr.ChangeTiming(iOldOn, iOldOff);
-      return(CX_FT_ERROR | CX_FT_DONE);
-   }
-
    // load definitions of RMVideo targets participating in trial; ABORT on failure (error msg already posted).
    if((nRMVTgts >0) && !LoadRMVideoTargets()) 
    {
@@ -2571,9 +2521,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
       return(CX_FT_ERROR | CX_FT_DONE);
    }
 
-   // initialize XY interleave slot #
-   nILSlot = 0; 
-
    // zero the last sample from each AI channel that was processed by compression algorithm
    for(i = 0; i < CX_AIO_MAXN+1; i++) m_shLastComp[i] = 0; 
 
@@ -2581,9 +2528,8 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    m_nEvents = 0; 
    DWORD dwEventsThisTick = 0; 
 
-   // arm eye-tgt plot update and XYScope update countdown timers; latter is zero so XYScope is updated on first tick
+   // arm eye-tgt plot update countdown timer
    m_viPlotUpdateMS = EYEANIMATEINTV;
-   m_viXYUpdateMS = 0; 
 
    // if no failsafe segment specified, then data is saved only if trial finishes
    if(iFailsafeTime < 0) iFailsafeTime = nTrialTime; 
@@ -2778,15 +2724,16 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
          vStabEyePos *= (1.0/POS_TOAIRAW);
       }
 
+      // TODO: CONTINUE HERE -- Need to get the usage of T_DELAYSKIP right with regard to RMVideo targets!
+      // 
       // BEGIN: IMPLEMENT DELAYED SKIP
-      // The "skipOnSaccade" feature is tricky when XYScope or RMVideo targets are in use, since their update intervals
-      // are longer than a trial "tick". In the case of XYScope, the skip must be delayed so that it occurs on an 
+      // The "skipOnSaccade" feature is tricky for RMVideo targets, since their update intervals are longer than a 
+      // trial "tick". In the case of the now-deprecated XYScope, the skip was delayed so that it occurred on an 
       // XYScope update frame boundary. In the case of RMVideo, we don't have to delay, but we do have to adjust the
       // target update vector currently being prepared so that it reflects the skip in time. There will still be a 
       // delay of 2 frames before the RMVideo targets respond, but that's unavoidable.
       //
-      // It will never be the case that both video platforms are used simultaneously. If neither is in use, then we 
-      // don't need the delay.
+      // If there are no RMVideo targets in use, then we don't need the delay.
       if((dwFlags & T_DELAYSKIP) != 0 && ((dwFlags & T_USEXY) == 0 || m_viXYUpdateMS <= 0))
       {
          dwFlags &= ~T_DELAYSKIP;

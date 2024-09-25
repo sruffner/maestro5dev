@@ -1,36 +1,38 @@
 //===================================================================================================================== 
 //
-// device.cpp : Implementation of CDevice, ABSTRACT base class for objects representing devices on the ISA or PCI bus.
+// device.cpp : Implementation of CDevice, ABSTRACT base class for objects representing devices on the PCI Express Bus.
 //
 // AUTHOR:  saruffner
 //
 // DESCRIPTION:
-// CDevice is an attempt to provide a base class for all MaestroRTSS device interfaces, which encapsulate hardware 
-// devices used by MaestroRTSS -- all of which are housed on either the ISA or PCI/PCIExpress bus. CDevice provides 
+// CDevice is an attempt to provide a base class for all CXDRIVER device interfaces, which encapsulate hardware 
+// devices used by CXDRIVER -- all of which (as of Version 5.0) are housed on the PCIExpress bus. CDevice provides 
 // storage for the PCI bus configuration info for a device, as well as a method for searching the PCI bus for a specific
 // device and retrieving its PCI configuration info. It supports attaching a single ISR to hardware device interrupts --
 // but only if the device resides on the PCI/PCIExpress bus. There is no built-in support for ISA devices, but for 
-// completeness' sake, CDevice represents these devices as well (Maestro3 will introduce support for a PCIExpress-based
-// National Instruments' card that will replace existing ISA cards used for the analog output and DIO event timer 
-// functionality). Finally, since several MaestroRTSS devices use a Texas Instruments' TMS320C4x or C6x digital signal 
-// processor, CDevice provides the framework for downloading core programs onto the DSP.
+// completeness' sake, CDevice represents these devices as well.
+// 
+// As of Maestro 4.x, support was dropped for all ISA and legacy PCI boards that were supported in Maestro 2.x/3.x --
+// including the Spectrum Signal Processing DSP boards (Dakar and Detroit) on which the deprecated XYScope controller
+// was implemented. While unsupported in 4.x, the CCxScope interface and the implementing classes for the Dakar
+// and Detroit were kept in the codebase. These were removed as of Maestro 5.x. ESSENTIALLY, Maestro 5.x ONLY SUPPORTS
+// TWO DEVICES: the PCIe-6363 and an RTX64-supported network card for communications with RMVideo. That's it!
 //
 // Since CDevice uses the RTX API for kernel-mode access, it is limited for use in the RTX environment (see CREDITS).
 //
 // ==> Creating the device object and "opening" a connection to the physical device.
 // The CDevice constructor requires a DevInfo struct and a device number. The device information includes flags that 
-// indicate the device's peripheral bus (PCI or ISA), and whether it contains one of the TI DSPs. For PCI devices, 
-// vendor, device, subvendor, and subsystem IDs are provided in order to locate the device on the PCI bus (the last two 
-// IDs are optional and should be 0 if not used). The device number refers to the Nth occurrence of the physical 
-// device on the host's PCI bus -- thus allowing us to handle multiple instances of the same device.
+// indicate the device's peripheral bus (PCI or ISA), and whether it contains one of the TI DSPs (now deprecated). For 
+// PCI devices, vendor, device, subvendor, and subsystem IDs are provided in order to locate the device on the PCI bus 
+// (the last two IDs are optional and should be 0 if not used). The device number refers to the Nth occurrence of the 
+// physical device on the host's PCI bus -- thus allowing us to handle multiple instances of the same device.
 //
 // After the device object is constructed, Open() establishes communications with the actual device. This method, 
 // which should not be overridden, performs the following sequence:  
 //    (1) [PCI devices only] Locates the device and saves its PCI configuration information. Various public attributes 
 //        expose this configuration info. 
 //    (2) Maps device resources.
-//    (3) Resets the device [devices lacking a TI DSP], or 
-//        resets the device and loads the COFF executable [TI DSP dev only].
+//    (3) Resets the device [devices lacking a DSP], or resets device and loads the COFF executable [TI DSP dev only].
 //    (4) Initializes the device.  
 // Close() performs the reverse sequence of tasks to close the connection to the physical device. These methods rely 
 // on a number of virtual or pure virtual methods that must be overridden in any practical implementation of CDevice:
@@ -40,8 +42,8 @@
 //    UnmapDeviceResources() ==> [required] Releases the resources acquired by MapDeviceResources(). CDevice uses this 
 //       to clean up if an error occurs while opening a connection, or when closing the connection with Close().
 //    DeviceReset() ==> [optional] perform a "hard reset" of the device. CDevice::DeviceReset() does nothing and 
-//       returns TRUE. Any firmware load required after the device reset should be performed here. For TIC6x/C4x 
-//       devices, this method is required, but the firmware load is taken care of by CDevice::LoadTIDeviceCOFF(). See 
+//       returns TRUE. Any firmware load required after the device reset should be performed here. For DSP devices, 
+//       this method is required, but the firmware load is taken care of by CDevice::LoadTIDeviceCOFF(). See 
 //       next section.
 //    OnOpen() ==> [optional] Any device-specific work associated with opening a connection. This method is invoked 
 //       by CDevice::Open() after the device is "opened". It is a good place to put a device-specific "sanity check" 
@@ -50,8 +52,8 @@
 //    Init() ==> [required] Device-specific initialization. This method should leave the device in an idle "startup" 
 //       state, with any hardware interrupts disabled.
 //
-// ==> Loading COFF executable onto devices using the TI TMS320C4x/C6x DSP.
-// Because COFF loading is tedious, yet very similar for all the TI DSP-based boards used by MaestroRTSS thus far, we 
+// ==> Loading COFF executable onto devices using the TI TMS320C4x/C6x DSP [DEPRECATED]
+// Because COFF loading is tedious, yet very similar for all the TI DSP-based boards used by CXDRIVER in the past, we 
 // chose to implement it in CDevice. LoadTIDeviceCOFF() does the work, but it requires a number of virtual methods to 
 // perform device-specific work:
 //
@@ -68,18 +70,21 @@
 // derived classes that do NOT represent a TI DSP device, CDevice provides empty "placeholder" implementations for each 
 // of these virtual methods.
 //
-// ==> "Subdevice" concept: When multiple MaestroRTSS device functions are implemented on a single physical device. 
-// Maestro3 introduces support for an up-to-date data acquisition card for the PCIExpress bus -- the PCIe-6363 from 
-// National Instruments. This is a multifunction device that will be able to implement three different MaestroRTSS
-// hardware device interfaces on a single card: the analog input, analog output, and digital I/O event timer functions.
-// However, the CDevice framework was not originally designed for this kind of situation, so we had to make some HACKY
-// changes in order to make things work. Two overridable CDevice methods were added:
+// NOTE: As of version 4.x, Maestro does not offer support for any DSP-based boards. So there's no longer a need for
+// loading the COFF executable. The functions remain, just in case...
+// 
+// ==> "Subdevice" concept: When multiple CXDRIVER device functions are implemented on a single physical device. 
+// Maestro3 introduced support for an up-to-date data acquisition card for the PCIExpress bus -- the PCIe-6363 from 
+// National Instruments. This is a multifunction device that implements three different hardware device interfaces on
+// a single card: the analog input, analog output, and digital I/O event timer functions. However, the CDevice framework
+// was not originally designed for this kind of situation, so we had to make some HACKY changes in order to make things
+// work. Two overridable CDevice methods were added:
 //		IsSubDevice() : Returns TRUE if the device object represents one of multiple subdevice functions implemented on a
 // single parent device. The default CDevice implementation returns FALSE.
 //    GetParentDevice() : Returns a pointer to the parent device object. The default implementation returns NULL.
 //
 // The CDevice::Open() method -- which cannot be overridden in derived classes -- has been revised to check whether or
-// not the object represents a "subdevice" by calling IsSubFunction(). If so, then it cannot open the subdevice unless
+// not the object represents a "subdevice" by calling IsSubDevice(). If so, then it cannot open the subdevice unless
 // the parent device is open. Also, it copies device information like slot number, bus number, and PCI configuration 
 // information from the parent device object, since they're really the same physical device.
 //
@@ -123,6 +128,8 @@
 // MaestroRTSS device functions implemented on a single physical device, which is the case for the NI PCIe-6363.
 // 07nov2017-- Mods to fix compilation issues in VS2017 for Win10/RTX64 build.
 // 18sep2024-- A/o RTX64 4.0, RtAllocate/FreeLockedMemory are deprecated. Replaced with RtAllocate/FreeLocalMemory.
+// 24sep2024-- A/o Maestro 5.x, only supported device are the PCIe-6363 and an RTX64-supported network card. A lot of
+// functionality in CDevice isn't really needed, but I decided to leave it in place...
 //===================================================================================================================== 
 
 #include "device.h"
@@ -421,7 +428,7 @@ BOOL RTFCNDCL CDevice::SetInterruptHandler(BOOLEAN (RTFCNDCL *pIntHandler)(PVOID
    else
    {
       aip.AttachVersion = ATTACH_MESSAGE_BASED;
-	  aip.MessageBased.pThreadAttributes = NULL;
+	   aip.MessageBased.pThreadAttributes = NULL;
       aip.MessageBased.StackSize = (ULONG) 0;
       aip.MessageBased.pRoutine = pIntHandler;
       aip.MessageBased.Context = pContext;
@@ -578,6 +585,9 @@ VOID RTFCNDCL CDevice::ClearPCICfgInfo()
 
 
 //=== BEGIN:  COFF (common object file format) information. =========================================================== 
+// 
+// DEPRECATED! -- We no longer support any DSP boards, so we could remove all the code below this line, after removing
+// all references to it in CDevice::Open().
 // 
 // BACKGROUND:  The DSP boards we support thus far use TI processors.  DSP core programs that run on these procs are 
 // stored as COFF files on hard disk; the COFF file is parsed into sections and downloaded to the DSP board.  In this  
