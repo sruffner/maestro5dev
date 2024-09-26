@@ -1,5 +1,5 @@
 //======================================================================================================================
-// cxdriver.h : Declaration of MaestroRTSS's application object, CCxDriver.
+// cxdriver.h : Declaration of Maestro's RTSS-based hardware and experiment controller, CCxDriver.
 //======================================================================================================================
 
 #if !defined(CXDRIVER_H__INCLUDED_)
@@ -88,7 +88,7 @@ private:
    struct CTrialTraj 
    {
       WORD     wType;                              //    target type - for quick reference
-      int      iSubType;                           //    [CX_RMVTARG or CX_XYTARG only] - target subtype
+      int      iSubType;                           //    [CX_RMVTARG only] - target subtype
       int      iFlags;                             //    [CX_RMVTARG only] - target flags
       
       CFPoint  pos;                                //    tgt position at start of current tick, in deg subtended at eye
@@ -111,7 +111,7 @@ private:
       CFPoint  ptPosPat;                           //       outside of tgt's interleave slot
       float    remDotLife;                         //    dot life "remainder" for FCDOTLIFE tgt when dotlife units are
                                                    //       in 0.01deg travelled.  units = 0.01deg/tick.
-      int      iUpdatePos;                         //    ordinal pos of this tgt in the set of XY tgts partic in trial
+      int      iUpdatePos;                         //    ordinal pos of this tgt in the set of tgts partic in trial
       int      iILSlot;                            //    if interleaving, tgt is updated in this interleave slot #
       BOOL     bIsOn;                              //    if TRUE, target is currently turned ON
       BOOL     bIsMoving;                          //    if TRUE, then tgt window moves at some point during trial; for
@@ -192,7 +192,6 @@ private:
       CONTRUN     def;                             //    the run definition
 
       BOOL        bUsesChair;                      //    TRUE if corresponding stimulus platform is used during run
-      BOOL        bUsesXYseq;
       BOOL        bUsesPSGM;
 
       int         tLastUpdate;                     //    timepoint (within duty cycle) of last trajectory update (ms)
@@ -204,18 +203,6 @@ private:
       DWORD       dwMarkers;                       //    marker pulses to be delivered on next update
 
       int         tStartPSGM;                      //    timepoint (within duty cycle) at which SGM seq is started (ms)
-
-                                                   //    XYseq motion control variables:
-      PSTIMCHAN   pXYseq;                          //    the one-and-only enabled XYseq stimulus in the current run
-      CFPoint     ptVec[MAX_XYSEQVECS+1];          //    precomputed "per-refresh" pos displacement (H,V) in deg for
-                                                   //    each possible motion vector; last entry is always (0,0)
-      int         iCurrVec[MAXTGTSINXYSEQ];        //    index of current motion vector applied to each XY tgt in seq
-      int         tCurrSeg,                        //    curr motion seg began at this time t'=tActual-tStart (ms)
-                  iCurrSparseTgt;                  //    index of XY tgt currently moving in a "sparse" XYseq stimulus
-      BOOL        bInitialUpdate;                  //    TRUE for first update of XYseq at "t=0" (to init tgt locs)
-      BOOL        bXYseqOn;                        //    TRUE while XYseq running (may be off for part of duty cycle)
-      BOOL        bSparse;                         //    TRUE for "sparse" seq, FALSE otherwise.
-      CRand16     randGen;                         //    pseudo-rand# generator for XYseq
    };
 
 
@@ -392,7 +379,7 @@ private:
 
    VOID RTFCNDCL UpdateFixRewSettings();                 // update fixation/reward settings (CX_FIXREWSETTINGS cmd)
 
-   VOID RTFCNDCL UpdateVideoDisplaysAndAck();            // update display params for XY & RM video (CX_SETDISPLAY cmd)
+   VOID RTFCNDCL UpdateVideoDisplaysAndAck();            // update display params for RMVideo (CX_SETDISPLAY cmd)
    VOID RTFCNDCL UpdateVideoDisplays(int* piParms);      // alternate version
 
    BOOL RTFCNDCL LoadRMVideoTargets();                   // load any RMVideo tgts to be animated in Trial or Cont mode

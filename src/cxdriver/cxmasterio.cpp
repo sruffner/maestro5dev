@@ -457,7 +457,7 @@ BOOL RTFCNDCL CCxMasterIO::IsUsingRMVTargets()
 //                MapTrialTargetIndex(): ordinal pos of trial target in the "current target list"; -1 if invalid.
 //                GetTrialTarget():  TRUE if successful, FALSE otherwise.
 //                GetTrialTargetType():  tgt type if successful, 0 otherwise.
-//                GetTrialTargetSubtype(): tgt subtype for XYScope or RMVideo targets, -1 otherwise.
+//                GetTrialTargetSubtype(): tgt subtype for RMVideo targets, -1 otherwise.
 //
 int RTFCNDCL CCxMasterIO::GetNumTrialTargets()
 {
@@ -495,10 +495,10 @@ WORD RTFCNDCL CCxMasterIO::GetTrialTargetType( int i )
 int RTFCNDCL CCxMasterIO::GetTrialTargetSubtype( int i )
 {
    WORD wType = GetTrialTargetType( i );
-   if( wType == CX_XYTARG || wType == CX_RMVTARG )
+   if(wType == CX_RMVTARG)
    {
       CXTARGET* pTg = &(m_pvIPC->targets[ m_pvIPC->iTgMap[i] ]);
-      return( (wType == CX_XYTARG) ? pTg->u.xy.type : pTg->u.rmv.iType );
+      return( pTg->u.rmv.iType );
    }
    return( -1 );
 }
@@ -566,20 +566,6 @@ BOOL RTFCNDCL CCxMasterIO::GetTaggedSection( int i, TRIALSECT& sect )
    if( bOk )
       sect = m_pvIPC->trialSections[i];
    return( bOk );
-}
-
-//=== GetTrialAltXYDotSeed ============================================================================================
-//
-//    Retrieve the alternate XY random dot seed for the current trial defined in IPC.  Valid only in CX_TRIALMODE.
-//
-//    ARGS:       NONE.
-//
-//    RETURNS:    If negative, ignore (no alternate seed defined).  If 0, auto-generate the seed.  Else, returned value
-//                is the seed that should be used to generate XY target random-dot patterns for the current trial.
-//
-int RTFCNDCL CCxMasterIO::GetTrialAltXYDotSeed()
-{
-   return( (GetMode() == CX_TRIALMODE) ? m_pvIPC->iXYDotSeedAlt : -1 );
 }
 
 
