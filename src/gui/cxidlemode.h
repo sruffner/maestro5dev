@@ -35,7 +35,7 @@ class CCxIdleMode : public CCxModeControl
 //===================================================================================================================== 
 private:
    CCxFixRewDlg*     m_pFixRewDlg;              // ptr to the "Fixation/Reward" dialog
-   CCxVideoDspDlg*   m_pVideoDspDlg;            // ptr to the "Video Display" dialog
+   CCxVideoDspDlg*   m_pVideoDspDlg;            // ptr to the "RMVideo Display" dialog
    CCxRMVStoreDlg*   m_pRMVStoreDlg;            // ptr to the "RMVideo Media" dialog
    CCxEyelinkDlg*    m_pEyelinkDlg;             // ptr to the "Eyelink" dialog
 

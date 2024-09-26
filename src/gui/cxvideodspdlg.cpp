@@ -1,46 +1,38 @@
 //=====================================================================================================================
 //
-// cxvideodspdlg.cpp : Declaration of CCxVideoDspDlg, a MAESTRO control panel dialog page for modifying the current XY
-//                     scope and RMVideo framebuffer display configurations.
+// cxvideodspdlg.cpp : Declaration of CCxVideoDspDlg, a Maestro control panel dialog page for modifying the current
+//                     RMVideo display configuration.
 //
 // AUTHOR:  saruffner
 //
 // DESCRIPTION:
-// MAESTRO realizes the CX_XYTARG and CX_RMVTARG target types on two kinds of video displays:  an XY oscilloscope
-// driven by a DSP and "dotter" board, and a computer monitor driven by the OpenGL application RMVideo (which runs on a
-// separate Linux workstation and communicates with MAESTRO over a private, dedicated Ethernet link).  Certain
-// configurable parameters are associated with each of these displays.  The CCxSettings object encapsulates some of 
-// these parameters, among other application-level settings.
+// Since V4.0 (when support for the XYScope display was dropped), the only video stimulus display is RMVideo, an OpenGL
+// application running on a separate Linux workstation and communicating with Maestro over a private, dedicated Ethernet
+// link. A number of configurable parameters are associated with the RMVideo display. The CCxSettings object manages
+// some of these parameters, among other application-level settings.
 //
-// CCxVideoDspDlg serves as the user's "window" into the current state of the video display settings.  We implement it
-// as a dialog page within the MAESTRO master mode control panel (CCxControlPanel) so that we can provide the user with
-// convenient access to the display configuration in any operational mode, as need be. Each MAESTRO op mode is governed 
+// CCxVideoDspDlg serves as the user's "window" into the current state of the RMVideo display settings. We implement it
+// as a dialog page within the Maestro master mode control panel (CCxControlPanel) so that we can provide the user with
+// convenient access to the display configuration in any operational mode, as need be. Each Maestro op mode is governed 
 // by a mode controller object derived from CCxModeControl. Mode control dialogs like CCxVideoDspDlg get access to the 
 // current mode controller via the base class method CCxControlPanelDlg::GetCurrentModeCtrl().
 //
-// The video display configuration is sent to MAESTRODRIVER (via the current mode controller) whenever ANY video
-// setting is changed.  While this is somewhat inefficient, it ensures that the settings shown on the dialog are always
-// in synch with MAESTRODRIVER's video display hardware. Also note that, in certain MAESTRO runtime states, changes to
-// the video display configuration are not permissible (see CCxModeControl::CanUpdateVideoCfg()). RMVideo's display mode
-// and gamma-correction factors may only be changed in IdleMode. When a display parameter is not modifiable in the 
-// current operational state, the relevant controls on this dialog will be disabled.
+// The video display configuration is sent to CXDRIVER (via the current mode controller) whenever ANY RMVideo display
+// setting is changed. While this is somewhat inefficient, it ensures that the settings shown on the dialog are always
+// in sync with the RMVideo display hardware. Also note that, in certain Maestro runtime states, changes to the video
+// display configuration are not permissible (see CCxModeControl::CanUpdateVideoCfg()). RMVideo's display mode and
+// gamma-correction factors may only be changed in IdleMode. When a display parameter is not modifiable in the current
+// operational state, the relevant controls on this dialog will be disabled.
 //
 // ==> Summary of controls housed on the dialog
 //
-//    IDC_DISP_XY_DIST ... IDC_DISP_XY_SEED [numeric edit]:  Current XY scope display geometry, draw cycle timing
-//       parameters, and the fixed seed value for generating the random-dot patterns of XY scope targets.
-//    IDC_DISP_XY_AUTO and IDC_DISP_XY_FIXED [radio btn]:  This mutually exclusive pair of radio buttons selects the
-//       mode for choosing the seed used to generate random-dot patterns.  Whenever a trial or continuous-mode run is
-//       executed, we query the CCxVideoDsp object for a new seed.  If the fixed (or manual) mode is chosen, the same
-//       fixed seed value is provided on every request.  If the auto mode is chosen, a different seed is randomly
-//       generated for each request.
-//    IDC_DISP_FB_DIST ... IDC_DISP_FB_BLU [numeric edit]:  Current RMVideo display geometry and background color.
-//    IDC_DISP_FB_GRAY [check box]:  Often, users are only interested in presenting grayscale backgrounds on the
-//       RMVideo display.  If this box is checked, they only enter the luminance value in one edit control, for the
-//       RED component.  The other two components are updated to take on the same value, and the corresponding edit
+//    IDC_DISP_FB_DIST ... IDC_DISP_FB_BLU [numeric edit]: Current RMVideo display geometry and background color.
+//    IDC_DISP_FB_GRAY [check box]: Often, users are only interested in presenting grayscale backgrounds on the
+//       RMVideo display. If this box is checked, they only enter the luminance value in one edit control, for the
+//       RED component. The other two components are updated to take on the same value, and the corresponding edit
 //       controls are updated to reflect the value in the RED control.
-//    IDC_DISP_XYFIELD, IDC_DISP_FBFIELD [readonly edit]: These readouts indicate the current "field of view" in visual 
-//    degrees on the XY scope and RMVideo display, based on the current geometry.
+//    IDC_DISP_FBFIELD [readonly edit]: This readout indicates the current "field of view" in visual degrees on the 
+//    RMVideo display, based on the current geometry.
 //    IDC_DISP_RMVMODE [combo]: Combo box selects the RMVideo display mode. Available modes are listed in the dropdown.
 //    IDC_DISP_GAMMA_R .. IDC_DISP_GAMMA_B [numeric edit]: Current RMVideo monitor gamma-correction factors. Values are
 //    range-restricted to [0.800 .. 3.000].
@@ -51,32 +43,8 @@
 //    flash spot (square) size is in mm. If spot size is 0, the feature is disabled. CCxSettings restricts the allowed
 //    range for these parameters.
 //    
-//
-// [**NOTE:  All read-write edit controls on the dialog, IDC_DISP_XY_DIST...IDC_DISP_SYNCSZ, must span a contiguous
-// range of values so that we can use the macro ON_CONTROL_RANGE in the message map.  The same is true for the pair
-// of radio btn controls.]
-//
-// ==> The MAESTRO "Mode Control" Framework.
-// MAESTRO's master mode control panel CCxControlPanel is implemented as a dockable dialog bar containing one or more
-// tabbed dialogs.  All dialogs that affect runtime state in any MAESTRO operational mode are installed in this
-// container, although only a subset of them will be accessible in any given mode.  In addition to its role as a
-// dialog container, CCxControlPanel constructs a "mode controller" object for each op mode, and it handles mode
-// switches by invoking appropriate methods on the relevant mode controllers.  Each mode controller, interacting with
-// the operator via some subset of the mode control panel dialogs, encapsulates the runtime behavior of MAESTRO and
-// MAESTRODRIVER in a particular operational mode.  To communicate with MAESTRODRIVER, it must invoke methods on the
-// MAESTRO runtime interface, CCxRuntime.  By design, the mode controller should insulate the mode control dialogs from
-// CCxRuntime.  In other words, it provides all the methods needed by the dialogs to realize the desired functionality
-// of the operational mode that controller and the associated dialogs represent.  Multiple dialogs allow us to break up
-// that functionality into logically grouped, more manageable chunks.
-//
-// We define two ABSTRACT classes that serve as the foundations for this "mode control" framework.  CCxModeControl is
-// the base class for all MAESTRO mode controller objects, while CCxControlPanelDlg is the base class for any dialog
-// that is installed in CCxControlPanel.  CCxModeControl handles tasks that are common to all mode controllers and
-// defines a set of abstract methods that any realizable mode controller must implement; CCxControlPanelDlg does the
-// same for mode control dialog objects.
-//
-// See the implementation files for CCxControlPanel, CCxControlPanelDlg, and CCxModeControl for more details.
-//
+// [**NOTE:  All read-write edit controls on the dialog, IDC_DISP_FB_DIST...IDC_DISP_SYNCSZ, must span a contiguous
+// range of values so that we can use the macro ON_CONTROL_RANGE in the message map.]
 //
 // CREDITS:
 // (1) CCxVideoDspDlg is ultimately built upon the CSizingTabDlgBar/CSzDlgBarDlg framework which, in turn, is based on
@@ -102,6 +70,7 @@
 // margin. As of Maestro v4.0.0. These new document settings are sent to MaestroDRIVER with the other video display
 // settings.
 // 25sep2018-- Removed sync flash margin setting and corresponding dialog control IDC_DISP_SYNCMARG.
+// 26sep2024-- For v5.0: removing all XYScope-related UI elements. The XYScope platform is deprecated.
 //=====================================================================================================================
 
 
@@ -127,8 +96,7 @@ IMPLEMENT_DYNCREATE( CCxVideoDspDlg, CCxControlPanelDlg )
 
 BEGIN_MESSAGE_MAP( CCxVideoDspDlg, CCxControlPanelDlg )
    ON_CONTROL( CBN_SELCHANGE, IDC_DISP_RMVMODE, OnRMVModeChange )
-   ON_CONTROL_RANGE( EN_KILLFOCUS, IDC_DISP_XY_DIST, IDC_DISP_SYNCSZ, OnChange )
-   ON_CONTROL_RANGE( BN_CLICKED, IDC_DISP_XY_AUTO, IDC_DISP_XY_FIXED, OnChange )
+   ON_CONTROL_RANGE( EN_KILLFOCUS, IDC_DISP_FB_DIST, IDC_DISP_SYNCSZ, OnChange )
    ON_BN_CLICKED( IDC_DISP_FB_GRAY, OnGrayscale )
 END_MESSAGE_MAP()
 
@@ -157,19 +125,16 @@ void CCxVideoDspDlg::OnRMVModeChange()
 
 //=== OnChange ========================================================================================================
 //
-//    Update a parameter in the video display configuration IAW a detected change in the corresponding control.  We
-//    handle two different notifications here:
-//       1) BN_CLICKED ==> User clicked one of the mutually exclusive radio-button pair IDC_DISP_XY_AUTO, _FIXED.  Our
-//          only response is to update the pertinent flag in the display configuration.
-//       2) EN_KILLFOCUS ==> When any of the edit controls on the form loses the focus, we update the corresponding
-//          parameter in the display configuration. Any illegal value is auto-corrected.
-//    If the selected video setting has actually changed as a result of the user's action, we inform the doc/view
-//    framework and also send the new video display configuration to CXDRIVER.
+//    Update a parameter in the video display configuration IAW a detected change in the corresponding control. Here
+//    we handle EN_FILLFOCUS notifications from any of the edit controls on the form. The corresponding parameter in 
+//    the display configuration is updated. Any illegal value is auto-corrected. If the selected video setting has 
+//    actually changed as a result of the user's action, we inform the doc/view framework and also send the new video 
+//    display configuration to CXDRIVER.
 //
 //    !!!IMPORTANT!!!
 //    During GUI creation at application startup, an edit control in this dialog may lose the focus -- generating an
-//    EN_KILLFOCUS notification.  However, GUI creation occurs BEFORE the CCxDoc exists -- in which case there's no
-//    application settings object available.  In this case, OnChange() does nothing.
+//    EN_KILLFOCUS notification. However, GUI creation occurs BEFORE the CCxDoc exists -- in which case there's no
+//    application settings object available. In this case, OnChange() does nothing.
 //
 //    ARGS:       id -- [in] resource ID of the child control that sent the notification.
 //
@@ -180,11 +145,11 @@ void CCxVideoDspDlg::OnChange( UINT id )
    CCxSettings* pSet = GetSettings();                                // retrieve the application settings object
    if( pSet == NULL ) return;                                        // trap EN_KILLFOCUS during GUI creation phase
 
-   int iNew, iOld, iCorr;                                            // new, old, & (possibly) corrected values of a
-   BOOL bNew, bOld, bCorr;                                           // particular setting...
+   // new, old, & (possibly) corrected values of a particular setting...
+   int iNew{}, iOld{}, iCorr{}; 
+   BOOL bNew{}, bOld{}, bCorr{};
 
-   BOOL bUpdateFovXY = (id==IDC_DISP_XY_DIST) || (id==IDC_DISP_XY_W) || (id==IDC_DISP_XY_H);
-   BOOL bUpdateFovFB = (id==IDC_DISP_FB_DIST) || (id==IDC_DISP_FB_W) || (id==IDC_DISP_FB_H);
+   BOOL bUpdateFov = (id==IDC_DISP_FB_DIST) || (id==IDC_DISP_FB_W) || (id==IDC_DISP_FB_H);
 
    // the RMVideo gamma-correction factors are handled differently, since they are NOT application settings
    if(id == IDC_DISP_GAMMA_R || id == IDC_DISP_GAMMA_G || id == IDC_DISP_GAMMA_B)
@@ -205,59 +170,9 @@ void CCxVideoDspDlg::OnChange( UINT id )
       return;
    }
    
-   switch( id )                                                      // update param; if it was corrected, update the
-   {                                                                 // corres. control with corrected value
-      case IDC_DISP_XY_DIST :
-         iOld = pSet->GetXYDistToEye();
-         iNew = m_edXYDistToEye.AsInteger();
-         iCorr = pSet->SetXYDistToEye( iNew );
-         if( iNew != iCorr ) m_edXYDistToEye.SetWindowText( iCorr );
-         break;
-      case IDC_DISP_XY_W :
-         iOld = pSet->GetXYWidth();
-         iNew = m_edXYWidth.AsInteger();
-         iCorr = pSet->SetXYWidth( iNew );
-         if( iNew != iCorr ) m_edXYWidth.SetWindowText( iCorr );
-         break;
-      case IDC_DISP_XY_H :
-         iOld = pSet->GetXYHeight();
-         iNew = m_edXYHeight.AsInteger();
-         iCorr = pSet->SetXYHeight( iNew );
-         if( iNew != iCorr ) m_edXYHeight.SetWindowText( iCorr );
-         break;
-      case IDC_DISP_XY_DELAY :
-         iOld = pSet->GetXYDrawDelay();
-         iNew = m_edXYDrawDelay.AsInteger();
-         iCorr = pSet->SetXYDrawDelay( iNew );
-         if( iNew != iCorr ) m_edXYDrawDelay.SetWindowText( iCorr );
-         break;
-      case IDC_DISP_XY_DUR :
-         iOld = pSet->GetXYDrawDur();
-         iNew = m_edXYDrawDur.AsInteger();
-         iCorr = pSet->SetXYDrawDur( iNew );
-         if( iNew != iCorr ) m_edXYDrawDur.SetWindowText( iCorr );
-         break;
-      case IDC_DISP_XY_SEED :
-         iOld = int( pSet->GetFixedXYDotSeedValue() );
-         iNew = m_edXYSeedVal.AsInteger();
-         iCorr = int( pSet->SetFixedXYDotSeedValue( (DWORD) iNew ) );
-         if( iNew != iCorr ) m_edXYSeedVal.SetWindowText( iCorr );
-         break;
-
-      case IDC_DISP_XY_AUTO :
-      case IDC_DISP_XY_FIXED :
-         bOld = pSet->IsXYDotSeedFixed();
-         bNew = BOOL(m_btnIsFixed.GetCheck() != 0);
-         bCorr = pSet->SetXYDotSeedFixed( bNew );
-         if( bNew != bCorr )
-         {
-            m_btnIsFixed.SetCheck( bCorr ? 1 : 0 );
-            m_btnIsAuto.SetCheck( bCorr ? 0 : 1 );
-         }
-         iOld = bOld ? 1 : 0;
-         iCorr = bCorr ? 1 : 0;
-         break;
-
+   // update the relevant parameter. If it was corrected, update control with corrected value.
+   switch( id ) 
+   { 
       case IDC_DISP_FB_DIST :
          iOld = pSet->GetFBDistToEye();
          iNew = m_edFBDistToEye.AsInteger();
@@ -316,14 +231,16 @@ void CCxVideoDspDlg::OnChange( UINT id )
          iCorr = pSet->SetRMVSyncFlashSize(iNew);
          if(iNew != iCorr) m_edRMVSyncSize.SetWindowText(iCorr);
          break;
+      default:
+         return;
    }
 
-   // if a video display setting has indeed changed, send the new video display cfg to MAESTRODRIVER; if necessary,
+   // if a video display setting has indeed changed, send the new video display cfg to CXDRIVER; if necessary,
    // update one of the FOV readouts, and notify doc/view framework.
    if( iOld != iCorr )
    {
       GetCurrentModeCtrl()->UpdateVideoCfg();
-      ReloadFieldOfView(bUpdateFovXY, bUpdateFovFB);
+      if(bUpdateFov) ReloadFieldOfView();
       Notify(); 
    }
 }
@@ -331,15 +248,11 @@ void CCxVideoDspDlg::OnChange( UINT id )
 
 //=== OnGrayscale =====================================================================================================
 //
-//    Handle BN_CLICKED message from IDC_DISP_FB_GRAY.  This check box toggles the use of grayscale mode to specify the
-//    FB video background color in controls IDC_DISP_FB_RED..IDC_DISP_FB_BLU.  When grayscale mode is turned ON, the
+//    Handle BN_CLICKED message from IDC_DISP_FB_GRAY. This check box toggles the use of grayscale mode to specify the
+//    RMVideo background color in controls IDC_DISP_FB_RED..IDC_DISP_FB_BLU. When grayscale mode is turned ON, the
 //    current value for "red" luminance is copied to the "blue" and "green" components, and the "blue" and "green"
-//    controls are disabled.  When grayscale mode is turned OFF, the components are left unchanged, but the "blue" and
+//    controls are disabled. When grayscale mode is turned OFF, the components are left unchanged, but the "blue" and
 //    "green" controls are re-enabled.
-//
-//    ARGS:       NONE.
-//
-//    RETURNS:    NONE.
 //
 void CCxVideoDspDlg::OnGrayscale()
 {
@@ -388,19 +301,7 @@ BOOL CCxVideoDspDlg::OnInitDialog()
 {
    CCxControlPanelDlg::OnInitDialog();                                     // let base class do its thing...
 
-   m_edXYDistToEye.SubclassDlgItem( IDC_DISP_XY_DIST, (CWnd*) this );      // subclass & restrict format of all numeric
-   m_edXYDistToEye.SetFormat( TRUE, TRUE, 4, 0 );                          // edit ctrls on dialog
-   m_edXYWidth.SubclassDlgItem( IDC_DISP_XY_W, (CWnd*) this );
-   m_edXYWidth.SetFormat( TRUE, TRUE, 4, 0 );
-   m_edXYHeight.SubclassDlgItem( IDC_DISP_XY_H, (CWnd*) this );
-   m_edXYHeight.SetFormat( TRUE, TRUE, 4, 0 );
-   m_edXYDrawDelay.SubclassDlgItem( IDC_DISP_XY_DELAY, (CWnd*) this );
-   m_edXYDrawDelay.SetFormat( TRUE, TRUE, 2, 0 );
-   m_edXYDrawDur.SubclassDlgItem( IDC_DISP_XY_DUR, (CWnd*) this );
-   m_edXYDrawDur.SetFormat( TRUE, TRUE, 3, 0 );
-   m_edXYSeedVal.SubclassDlgItem( IDC_DISP_XY_SEED, (CWnd*) this );
-   m_edXYSeedVal.SetFormat( TRUE, TRUE, 8, 0 );
-
+   // subclass & restrict format of all numeric edit ctrls on dialog
    m_edFBDistToEye.SubclassDlgItem( IDC_DISP_FB_DIST, (CWnd*) this );
    m_edFBDistToEye.SetFormat( TRUE, TRUE, 4, 0 );
    m_edFBWidth.SubclassDlgItem( IDC_DISP_FB_W, (CWnd*) this );
@@ -428,13 +329,11 @@ BOOL CCxVideoDspDlg::OnInitDialog()
 
    m_cbRMVMode.SubclassDlgItem(IDC_DISP_RMVMODE, (CWnd*) this );
 
-   m_btnIsFixed.SubclassDlgItem( IDC_DISP_XY_FIXED, (CWnd*) this );        // subclass button controls on dialog
-   m_btnIsAuto.SubclassDlgItem( IDC_DISP_XY_AUTO, (CWnd*) this );
+   // grayscale button unchecked initially
    m_btnIsGray.SubclassDlgItem( IDC_DISP_FB_GRAY, (CWnd*) this );
+   m_btnIsGray.SetCheck( 0 );
 
-   m_btnIsGray.SetCheck( 0 );                                              // grayscale button unchecked initially
-
-   m_bIsXYEnabled = m_edXYDistToEye.IsWindowEnabled();                     // initial enable state of controls
+   // initial enable state of controls
    m_bIsFBEnabled = m_edFBDistToEye.IsWindowEnabled();
 
    return( TRUE );
@@ -443,46 +342,22 @@ BOOL CCxVideoDspDlg::OnInitDialog()
 
 //=== Refresh [base override] =========================================================================================
 //
-//    Call this method to refresh the appearance of the dialog whenever the MAESTRO runtime state changes.
+//    Call this method to refresh the appearance of the dialog whenever the Maestro runtime state changes.
 //
 //    Here we update the ena/disabled state of the dialog's controls as needed:
-//       1) If the XY scope hardware is not available, the corresponding set of controls are disabled.  Analogously for
-//          the RMVideo display.  If neither video display is available, ALL controls on form are disabled!
-//       2) If the MAESTRO runtime state currently forbids updating the video display configuration, ALL controls on
+//       1) If the RMVideo display is not available, then all controls on the dialog are disabled. 
+//       2) If the Maestro runtime state currently forbids updating the video display configuration, all controls on
 //          form are disabled. The RMVideo display mode and monitor gamma may be changed only in IdleMode.
-//
-//    ARGS:       NONE.
-//
-//    RETURNS:    NONE.
 //
 VOID CCxVideoDspDlg::Refresh()
 {
    CCxModeControl* pCtrl = GetCurrentModeCtrl();                           // the current mode controller
-
-   BOOL bXYEnabled = FALSE;                                                // determine the new enable state for ctrls
-   BOOL bFBEnabled = FALSE;
-   if( pCtrl->CanUpdateVideoCfg() )                                        // if video display updates are possible:
+   
+   // update controls' enabled state as needed
+   BOOL bEnabled = pCtrl->CanUpdateVideoCfg() && pCtrl->IsRMVideoAvailable();
+   if(bEnabled != m_bIsFBEnabled) 
    {
-      bXYEnabled = pCtrl->IsXYAvailable();                                 //    enable XY ctrls if hardware is there
-      bFBEnabled = pCtrl->IsRMVideoAvailable();                            //    enable RMVideo ctrls if it is there
-   }
-
-   if((bXYEnabled && !m_bIsXYEnabled) || (m_bIsXYEnabled && !bXYEnabled))  // update XY ctrls' enable state as needed
-   {
-      m_bIsXYEnabled = bXYEnabled;
-      m_edXYDistToEye.EnableWindow( m_bIsXYEnabled );
-      m_edXYWidth.EnableWindow( m_bIsXYEnabled );
-      m_edXYHeight.EnableWindow( m_bIsXYEnabled );
-      m_edXYDrawDelay.EnableWindow( m_bIsXYEnabled );
-      m_edXYDrawDur.EnableWindow( m_bIsXYEnabled );
-      m_edXYSeedVal.EnableWindow( m_bIsXYEnabled );
-      m_btnIsFixed.EnableWindow( m_bIsXYEnabled );
-      m_btnIsAuto.EnableWindow( m_bIsXYEnabled );
-   }
-
-   if((bFBEnabled && !m_bIsFBEnabled) || (m_bIsFBEnabled && !bFBEnabled))  // update FB ctrls' enable state as needed
-   {
-      m_bIsFBEnabled = bFBEnabled;
+      m_bIsFBEnabled = bEnabled;
       m_edFBDistToEye.EnableWindow( m_bIsFBEnabled );
       m_edFBWidth.EnableWindow( m_bIsFBEnabled );
       m_edFBHeight.EnableWindow( m_bIsFBEnabled );
@@ -499,20 +374,20 @@ VOID CCxVideoDspDlg::Refresh()
    
    // RMVideo display mode and monitor gamma are NOT part of the original video configuration (they are not application
    // settings). They can be manipulated only in IdleMode.
-   bFBEnabled = pCtrl->CanUpdateRMV();
-   m_edRMVGammaRed.EnableWindow(bFBEnabled);
-   m_edRMVGammaGrn.EnableWindow(bFBEnabled);
-   m_edRMVGammaBlu.EnableWindow(bFBEnabled);
-   m_cbRMVMode.EnableWindow(bFBEnabled && (pCtrl->GetNumRMVideoModes() > 1));
+   bEnabled = pCtrl->CanUpdateRMV();
+   m_edRMVGammaRed.EnableWindow(bEnabled);
+   m_edRMVGammaGrn.EnableWindow(bEnabled);
+   m_edRMVGammaBlu.EnableWindow(bEnabled);
+   m_cbRMVMode.EnableWindow(bEnabled && (pCtrl->GetNumRMVideoModes() > 1));
 }
 
 
 //=== OnUpdate [base override] ========================================================================================
 //
-//    CCxControlPanelDlg::OnUpdate() is a MAESTRO-specific extension of MFC's mechanism -- aka, CView::OnUpdate() --
+//    CCxControlPanelDlg::OnUpdate() is a Maestro-specific extension of MFC's mechanism -- aka, CView::OnUpdate() --
 //    for informing all document views when one of those views causes a change in the active document's contents.  It
-//    passes on the MAESTRO-specific doc/view hint (CCxViewHint) to the MAESTRO control panel dialogs, which may
-//    contain document data.  When the hint object is NULL, the call is analogous to CView::OnInitialUpdate(); in SDI
+//    passes on the Maestro-specific doc/view hint (CCxViewHint) to the Maestro control panel dialogs, which may
+//    contain document data. When the hint object is NULL, the call is analogous to CView::OnInitialUpdate(); in SDI
 //    apps, this call is made each time a new document is created/opened -- giving us an opportunity to perform any
 //    "per-document" initializations.
 //
@@ -540,7 +415,7 @@ VOID CCxVideoDspDlg::OnUpdate( CCxViewHint* pHint )
 
 //=== GetSettings  ====================================================================================================
 //
-//    Retrieve the current MAESTRO "application settings" object, which includes video display settings as a subset.
+//    Retrieve the current Maestro "application settings" object, which includes RMVideo display settings as a subset.
 //
 //    ARGS:       NONE.
 //
@@ -555,26 +430,12 @@ CCxSettings* CCxVideoDspDlg::GetSettings()
 
 //=== Load ============================================================================================================
 //
-//    Reload the current MAESTRO video display settings into the controls on this form, and refresh the enable state of
+//    Reload the current RMVideo display settings into the controls on this form, and refresh the enable state of
 //    all controls.
-//
-//    ARGS:       NONE.
-//
-//    RETURNS:    NONE.
 //
 VOID CCxVideoDspDlg::Load()
 {
    CCxSettings* pSet = GetSettings();                                      // retrieve current application settings
-
-   m_edXYDistToEye.SetWindowText( pSet->GetXYDistToEye() );                // load current video settings into ctrls
-   m_edXYWidth.SetWindowText( pSet->GetXYWidth() );
-   m_edXYHeight.SetWindowText( pSet->GetXYHeight() );
-   m_edXYDrawDelay.SetWindowText( pSet->GetXYDrawDelay() );
-   m_edXYDrawDur.SetWindowText( pSet->GetXYDrawDur() );
-   m_edXYSeedVal.SetWindowText( (int) pSet->GetFixedXYDotSeedValue() );
-   BOOL bIsFixed = pSet->IsXYDotSeedFixed();
-   m_btnIsFixed.SetCheck( bIsFixed ? 1 : 0 );
-   m_btnIsAuto.SetCheck( bIsFixed ? 0 : 1 );
 
    m_edFBDistToEye.SetWindowText( pSet->GetFBDistToEye() );
    m_edFBWidth.SetWindowText( pSet->GetFBWidth() );
@@ -597,7 +458,7 @@ VOID CCxVideoDspDlg::Load()
    m_edRMVSyncDur.SetWindowText(pSet->GetRMVSyncFlashDuration());
    m_edRMVSyncSize.SetWindowText(pSet->GetRMVSyncFlashSize());
 
-   ReloadFieldOfView( TRUE, TRUE );                                        // load field of view readouts
+   ReloadFieldOfView();
 
    // the RMVideo display mode and gamma-correction factors are NOT application settings
    CCxModeControl* pModeCtrl = GetCurrentModeCtrl();
@@ -629,48 +490,26 @@ VOID CCxVideoDspDlg::Load()
 
 //=== ReloadFieldOfView ===============================================================================================
 //
-//    Whenever the display geometry for the XY scope or RMVideo display changes, the effective field of view (in deg
-//    subtended at the subject's eye, which are the units the user works with on the Maestro GUI) covered by the
-//    display will change.  This method calculates the current field of view for each display platform based on the
-//    current geometry and stuffs strings of the form "0.00 x 0.00 deg" in the readout controls IDC_DISP_XYFIELD and
-//    IDC_DISP_FBFIELD.
+//    Whenever the display geometry for the RMVideo display changes, the effective field of view (in deg subtended at 
+//    the subject's eye, which are the units the user works with on the Maestro GUI) covered by the display will change. 
+//    This method calculates the current field of view for each display platform based on the current geometry and 
+//    stuffs a string of the form "0.00 x 0.00 deg" into the readout control IDC_DISP_FBFIELD.
 //
-//    ARGS:       bXY -- [in] if set, the method updates the "field of view" readout for the XY scope.
-//                bFB -- [in] if set, the method updates the "field of view" readout for the RMVideo display.
-//
-//    RETURNS:    NONE.
-//
-VOID CCxVideoDspDlg::ReloadFieldOfView( BOOL bXY, BOOL bFB )
+VOID CCxVideoDspDlg::ReloadFieldOfView()
 {
-   CCxSettings* pSet = GetSettings();                                      // retrieve current application settings
+   CCxSettings* pSet = GetSettings(); 
    CString str;
-   if( bXY )                                                               // update XY scope FOV readout
-   {
-      double d = pSet->GetXYDistToEye();
-      double w = pSet->GetXYWidth();
-      double h = pSet->GetXYHeight();
-      str.Format("%.2f x %.2f deg", cMath::toDegrees(atan2(w/2.0, d)) * 2.0, cMath::toDegrees(atan2(h/2.0, d)) * 2.0);
-      SetDlgItemText( IDC_DISP_XYFIELD, str );
-   }
-
-   if( bFB )                                                               // update RMVideo FOV readout
-   {
-      double d = pSet->GetFBDistToEye();
-      double w = pSet->GetFBWidth();
-      double h = pSet->GetFBHeight();
-      str.Format("%.2f x %.2f deg", cMath::toDegrees(atan2(w/2.0, d)) * 2.0, cMath::toDegrees(atan2(h/2.0, d)) * 2.0);
-      SetDlgItemText( IDC_DISP_FBFIELD, str );
-   }
+   double d = pSet->GetFBDistToEye();
+   double w = pSet->GetFBWidth();
+   double h = pSet->GetFBHeight();
+   str.Format("%.2f x %.2f deg", cMath::toDegrees(atan2(w / 2.0, d)) * 2.0, cMath::toDegrees(atan2(h / 2.0, d)) * 2.0);
+   SetDlgItemText(IDC_DISP_FBFIELD, str);
 }
 
 //=== Notify ==========================================================================================================
 //
-//    Notify the MAESTRO document and attached views (and other control panel dialogs) whenever video display settings
+//    Notify the Maestro document and attached views (and other control panel dialogs) whenever video display settings
 //    are changed in this dialog.
-//
-//    ARGS:       NONE.
-//
-//    RETURNS:    NONE.
 //
 VOID CCxVideoDspDlg::Notify()
 {

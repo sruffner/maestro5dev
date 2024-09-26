@@ -261,12 +261,6 @@
 #define IDC_FIX_REWOVR                  1810
 #define IDC_FIX_REWBEEP                 1811
 #define IDC_FIX_RESETREW                1812
-#define IDC_DISP_XY_DIST                1900
-#define IDC_DISP_XY_W                   1901
-#define IDC_DISP_XY_H                   1902
-#define IDC_DISP_XY_DELAY               1903
-#define IDC_DISP_XY_DUR                 1904
-#define IDC_DISP_XY_SEED                1905
 #define IDC_DISP_FB_DIST                1906
 #define IDC_DISP_FB_W                   1907
 #define IDC_DISP_FB_H                   1908
@@ -278,11 +272,8 @@
 #define IDC_DISP_GAMMA_B                1914
 #define IDC_DISP_SYNCDUR                1915
 #define IDC_DISP_SYNCSZ                 1916
-#define IDC_DISP_XYFIELD                1920
 #define IDC_DISP_FBFIELD                1921
 #define IDC_DISP_RMVMODE                1925
-#define IDC_DISP_XY_AUTO                1930
-#define IDC_DISP_XY_FIXED               1931
 #define IDC_DISP_FB_GRAY                1932
 #define IDC_PERT_GRID                   2000
 #define IDC_RPD_CURR                    2000
