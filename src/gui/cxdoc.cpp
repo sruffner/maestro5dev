@@ -311,6 +311,9 @@ void CCxDoc::DeleteContents()
 //       6:  Marks initial release of Maestro 4 for Win10 64-bit. Some changes to CCxSettings and CCxTrial to 
 //           implement a "time sync flash" in the top-left corner of the RMVideo display, but no changes to the
 //           CCxDoc itself -- so no migration needed.
+//       7:  Officially dropped support for CX_XYTARG targets; the XYScope platform has been deprecated since Maestro
+//           4.0, but we removed it from the UI in V5.0. After deserialization of a version<7 doc, all trials and
+//           stimulus runs employing any XYScope targets are removed, then all defined XYScope targets.
 //
 //    ARGS:       ar -- the serialization archive.
 //
@@ -365,6 +368,17 @@ void CCxDoc::Serialize( CArchive& ar )
          ::AfxThrowArchiveException(CArchiveException::genericException);
       }
    }
+
+   // migrate from older version to version 7: CX_XYTARG targets no longer supported
+   if(!ar.IsStoring() && (wVersion < 7))
+   {
+      if(!MigrateToVersion7())
+      {
+         ((CCntrlxApp*)AfxGetApp())->LogMessage("Unable to migrate pre-Maestro 5 document to Maestro 5 (schema version 7)!");
+         ::AfxThrowArchiveException(CArchiveException::genericException);
+      }
+   }
+
    ASSERT_VALID( this );
 }
 
@@ -455,7 +469,7 @@ VOID CCxDoc::GetTrialKeysIn(const WORD wParent, CWordArray& wArKeys) const
 }
 
 /**
- Check the children of the specified trial subset collection to see if it contains any non-empty trial subsets.
+ Check the children of the specified trial set to see if it contains any non-empty trial subsets.
  @param wSet Unique key identifying a trial set.
  @return True if specified trial set contains at least one subset with one or more trial objects; else false. Also 
  returns false if the specified key does not identify a trial set.
@@ -476,6 +490,32 @@ BOOL CCxDoc::HasTrialSubsets(const WORD wSet) const
 
    return(hasSubset);
 }
+
+
+/**
+ Is the trial set empty? A trial set containing only empty subsets is considered to be empty.
+ @param wSet Unique key identifying a trial set.
+ @return True if specified trial set is empty or contains only empty subsets; else false. Also
+ returns false if the specified key does not identify a trial set.
+*/
+
+BOOL CCxDoc::IsTrialSetEmpty(const WORD wSet) const
+{
+   if(!(ObjExists(wSet) && (GetObjType(wSet) == CX_TRIALSET))) return(FALSE);
+
+   POSITION pos = GetFirstChildObj(wSet);
+   WORD wKid;
+   CTreeObj* pObj;
+   while(pos != NULL)
+   {
+      GetNextChildObj(pos, wKid, pObj);
+      WORD wType = GetObjType(wKid);
+      if((wType == CX_TRIAL) || ((wType == CX_TRIALSUBSET) && (GetFirstChildObj(wKid) != NULL)))
+         return(FALSE);
+   }
+   return(TRUE);
+}
+
 
 /** GetChairTarget, GetDefaultChannelConfig
  Retrieve the unique key assigned to the predefined target object representing the animal chair, or the predefined 
@@ -831,7 +871,7 @@ BOOL CCxDoc::CopySelectedObjectsFromDocument( CCxDoc* pSrcDoc, CWordArray& wArKe
          WORD srcParentType = srcParent->DataType();
          WORD baseType;
          if( srcParentType == CX_TRIALSET ) baseType = CX_TRIALBASE;
-         else if( srcParentType = CX_TARGSET ) baseType = CX_TARGBASE;
+         else if( srcParentType == CX_TARGSET ) baseType = CX_TARGBASE;
          else baseType = CX_CONTRUNBASE;
          WORD baseKey = GetBaseObj(baseType);
          ASSERT(baseKey != CX_NULLOBJ_KEY);
@@ -1246,11 +1286,10 @@ BOOL CCxDoc::ValidChildType( const WORD dstType, const WORD type ) const
          bOK = (type == CX_CONTRUN);
          break;
       case CX_TARGBASE :                                          // user-defined target types & target sets allowed
-         bOK = (type == CX_TARGSET) || (type == CX_XYTARG) ||     // in the target subtree
-               (type == CX_RMVTARG);
+         bOK = (type == CX_TARGSET) || (type == CX_RMVTARG);
          break;
       case CX_TARGSET :                                           // all user-defined target types allowed in a tgt set
-         bOK = (type == CX_XYTARG) || (type == CX_RMVTARG);
+         bOK = (type == CX_RMVTARG);
          break;
       case CX_CHANBASE :                                          // there are no "channel cfg sets"; only chan cfg
          bOK = (type == CX_CHANCFG);                              // data objects allowed in this subtree
@@ -1284,7 +1323,6 @@ LPCTSTR CCxDoc::GetObjBasename( const WORD type ) const
       case CX_CONTRUNSET : return( _T("runset") );       break;
       case CX_CONTRUN :    return( _T("run") );          break;
       case CX_TARGSET :    return( _T("targset") );      break;
-      case CX_XYTARG :     return( _T("xytarg") );       break;
       case CX_RMVTARG :    return( _T("rmvideoTgt") );   break;
       case CX_CHANCFG :    return( _T("chancfg") );      break;
       case CX_PERTURB :    return( _T("pert") );         break;
@@ -1408,4 +1446,163 @@ BOOL CCxDoc::MigrateToVersion4()
    m_Objects.RemoveTree(wPredef, FALSE);
 
    return(TRUE);
+}
+
+
+/**
+ This method is called by Serialize() to migrate a pre-version 7 experiment document to version 7. Version 7 was 
+ introduced with the release of Maestro 5.0, which removes the XYScope platform from the UI; the XYScope has not been 
+ supported since the release of V4.0.
+
+ The following tasks are performed.
+    (1) All trials and stimulus runs that use any XYScope target are removed. If a trial set or subset becomes empty 
+    as a result, that set/subset is also deleted. Similarly for stimulus run sets.
+    (2) With all dependencies removed, all CX_XYTARG targets are removed, as well as any target sets that are emptied
+    as a result.
+
+ @return True if migration is successful, false otherwise. In the event of failure, an exception should be thrown
+ indicating that it was not possible to migrate the experiment document to version 7.
+*/
+BOOL CCxDoc::MigrateToVersion7()
+{
+   // iterate over all trial sets and subsets, removing any trials that depend on XYScope targets
+   POSITION pos = GetFirstChildObj(GetBaseObj(CX_TRIALBASE));
+   while(pos != NULL)
+   {
+      WORD wSet;
+      CTreeObj* pSet;
+      GetNextChildObj(pos, wSet, pSet);
+
+      // for each trial set, collect the keys of all trials in that set -- or in a trial subset if present -- that
+      // depend on an XYScope target. We don't delete as we iterate, as this can mess up the iteration!
+      CWordArray trialsToDelete;
+      trialsToDelete.RemoveAll();
+      POSITION pos2 = GetFirstChildObj(wSet);
+      while(pos2 != NULL)
+      {
+         WORD wChild;
+         CTreeObj* pChild;
+         GetNextChildObj(pos2, wChild, pChild);
+         if(pChild->DataType() == CX_TRIALSUBSET)
+         {
+            POSITION pos3 = GetFirstChildObj(wChild);
+            while(pos3 != NULL)
+            {
+               WORD wTrial;
+               CTreeObj* pTrial;
+               GetNextChildObj(pos3, wTrial, pTrial);
+               if(DoesTrialOrRunUseXYScope(pTrial))
+                  trialsToDelete.Add(wTrial);
+            }
+         }
+         else if(DoesTrialOrRunUseXYScope(pChild))
+            trialsToDelete.Add(wChild);
+      }
+
+      // remove all trials marked for deletion
+      for(int i = 0; i < trialsToDelete.GetSize(); i++) RemoveObj(trialsToDelete.GetAt(i));
+   }
+
+   // iterate over the trial tree again, removing any trial sets that are empty (or contain only empty subsets)
+   CWordArray setsToDelete;
+   setsToDelete.RemoveAll();
+   pos = GetFirstChildObj(GetBaseObj(CX_TRIALBASE));
+   while(pos != NULL)
+   {
+      WORD wSet;
+      CTreeObj* pSet;
+      GetNextChildObj(pos, wSet, pSet);
+      if(IsTrialSetEmpty(wSet))
+         setsToDelete.Add(wSet);
+   }
+   for(int i = 0; i < setsToDelete.GetSize(); i++) m_Objects.RemoveTree(setsToDelete.GetAt(i), FALSE);
+
+   // iterate over all stimulus run sets, removing any runs that depend on XYScope targets. Remember any run sets
+   // that are empty as a result.
+   CWordArray emptySets;
+   emptySets.RemoveAll();
+   pos = GetFirstChildObj(GetBaseObj(CX_CONTRUNBASE));
+   while(pos != NULL)
+   {
+      WORD wSet;
+      CTreeObj* pSet;
+      GetNextChildObj(pos, wSet, pSet);
+
+      // for each stimulus run set, collect the keys of all runs in that set that depend on any XYScope target
+      BOOL runKept = FALSE;
+      CWordArray runsToDelete;
+      runsToDelete.RemoveAll();
+      POSITION pos2 = GetFirstChildObj(wSet);
+      while(pos2 != NULL)
+      {
+         WORD wChild;
+         CTreeObj* pChild;
+         GetNextChildObj(pos2, wChild, pChild);
+         if(DoesTrialOrRunUseXYScope(pChild))
+            runsToDelete.Add(wChild);
+         else
+            runKept = TRUE;
+      }
+
+      // remove all runs in the run set that were marked for deletion. Mark run set for deletion if all runs removed.
+      for(int i = 0; i < runsToDelete.GetSize(); i++) RemoveObj(runsToDelete.GetAt(i));
+      if(!runKept) emptySets.Add(wSet);
+   }
+   for(int i = 0; i < emptySets.GetSize(); i++) RemoveObj(emptySets.GetAt(i));
+
+   // iterate over target subtree, collecting all XYScope targets as well as any target subsets that will be empty
+   // once the XYScope targets are removed.
+   CWordArray xyTargets;
+   xyTargets.RemoveAll();
+   emptySets.RemoveAll();
+   pos = GetFirstChildObj(GetBaseObj(CX_TARGBASE));
+   while(pos != NULL)
+   {
+      WORD wChild;
+      CTreeObj* pChild;
+      GetNextChildObj(pos, wChild, pChild);
+      if(pChild->DataType() == CX_XYTARG)
+         xyTargets.Add(wChild);
+      else if(pChild->DataType() == CX_TARGSET)
+      {
+         BOOL targKept = FALSE;
+         POSITION pos3 = GetFirstChildObj(wChild);
+         while(pos3 != NULL)
+         {
+            WORD wTarg;
+            CTreeObj* pTarg;
+            GetNextChildObj(pos3, wTarg, pTarg);
+            if(pTarg->DataType() == CX_XYTARG)
+               xyTargets.Add(wTarg);
+            else
+               targKept = TRUE;
+         }
+         if(!targKept) emptySets.Add(wChild);
+      }
+   }
+
+   // finally, remove all XYScope targets, then any target sets that are empty as a result
+   for(int i = 0; i < xyTargets.GetSize(); i++) RemoveObj(xyTargets.GetAt(i));
+   for(int i = 0; i < emptySets.GetSize(); i++) RemoveObj(emptySets.GetAt(i));
+
+   return(TRUE);
+}
+
+/** 
+Helper method for MigrateToVersion7(): Returns TRUE if specified object is a trial or stimulus run that depends on an
+XYScope target (CX_XYTARG).
+*/
+BOOL CCxDoc::DoesTrialOrRunUseXYScope(CTreeObj* pTreeObj) const
+{
+   if((pTreeObj != NULL) && (pTreeObj->DataType() == CX_TRIAL || pTreeObj->DataType() == CX_CONTRUN))
+   {
+      CWordArray wDepAr;
+      wDepAr.RemoveAll();
+      pTreeObj->GetDependencies(wDepAr);
+      for(int i = 0; i < wDepAr.GetSize(); i++)
+      {
+         if(CX_XYTARG == GetObjType(wDepAr.GetAt(i))) return(TRUE);
+      }
+   }
+   return(FALSE);
 }
