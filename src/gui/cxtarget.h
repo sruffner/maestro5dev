@@ -94,13 +94,8 @@ public:
    BOOL SetParams( PU_TGPARMS pTgt, BOOL& bChanged );    // update target's parameters, with auto-correct
 
    void Serialize( CArchive& ar );                       // for reading/writing target parameters from/to disk file
-   BOOL Import(CStringArray& strArDefn,CString& strMsg); // set target IAW cntrlxUNIX-style, text-based definition
 
 private:
-   static BOOL ImportXY( CStringArray& strArDefn,        // helper methods for importing XY or RMVideo tgt
-                         U_TGPARMS& tgt );
-   static BOOL ImportFB( CStringArray& strArDefn,
-                         U_TGPARMS& tgt );
    static VOID ConvertOldFBVideoToRMVideo(               // translates old FB video tgt defn to a similar RMVideo tgt
       PFBPARMS pFB, PRMVTGTDEF pRMV );                   // (RMVideo introduced in Maestro v2.0)
 

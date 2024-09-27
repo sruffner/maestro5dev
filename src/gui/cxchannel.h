@@ -164,11 +164,11 @@ public:
 
    int GetRecordedAIChannels( int* piChan ) const;       // retrieve list of AI channels selected for recording 
 
-   BOOL GetChannel( const int iPos, ChInfo& chInfo );    // retrieve all of a channel's attributes...
-   BOOL GetChannel( ChType cht, int nCh, ChInfo& chInfo ) 
+   BOOL GetChannel( const int iPos, ChInfo& chInfo ) const;    // retrieve all of a channel's attributes...
+   BOOL GetChannel(ChType cht, int nCh, ChInfo& chInfo) const
    { return( GetChannel( GetPos( cht, nCh ), chInfo ) ); }
 
-   BOOL GetNextDisplayed( int& iNext, ChInfo& chInfo );  // for enumerating channels currently tagged for display
+   BOOL GetNextDisplayed( int& iNext, ChInfo& chInfo ) const;  // for enumerating channels currently tagged for display
 
    int GetOffset( const int iPos ) const;                // methods for retrieving individual attrib (by cardinal pos)
    int GetGain( const int iPos ) const; 
@@ -211,7 +211,6 @@ public:
    BOOL SetDispRange( int& yMin, int& yMax );            // set the vertical display range
 
    void Serialize( CArchive& ar );                       // for reading/writing channel configuration from/to disk file
-   BOOL Import(CStringArray& strArDefn,CString& strMsg); // set chan cfg IAW cntrlxUNIX-style, text-based definition
 
 
 //===================================================================================================================== 

@@ -137,7 +137,6 @@ BEGIN
         MENUITEM "&Save\tCtrl+S",               ID_FILE_SAVE
         MENUITEM "Save &As...",                 ID_FILE_SAVE_AS
         MENUITEM SEPARATOR
-        MENUITEM "&Import...",                  ID_FILE_IMPORT
         MENUITEM "Import &JMX doc...",          ID_FILE_JMXIMPORT
         MENUITEM "Copy selection to...",        ID_FILE_COPYREMOTE
         MENUITEM SEPARATOR

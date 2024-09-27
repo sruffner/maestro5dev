@@ -119,7 +119,6 @@
     <ClInclude Include="C:\maestro5dev\src\gui\cxfileedit.h" />
     <ClInclude Include="C:\maestro5dev\src\gui\cxfixrewdlg.h" />
     <ClInclude Include="C:\maestro5dev\src\gui\cxidlemode.h" />
-    <ClInclude Include="C:\maestro5dev\src\gui\cximporter.h" />
     <ClInclude Include="C:\maestro5dev\src\gui\cxmainframe.h" />
     <ClInclude Include="C:\maestro5dev\src\gui\cxmodecontrol.h" />
     <ClInclude Include="C:\maestro5dev\src\gui\cxmovefilequeue.h" />
@@ -203,7 +202,6 @@
     <ClCompile Include="C:\maestro5dev\src\gui\cxfileedit.cpp" />
     <ClCompile Include="C:\maestro5dev\src\gui\cxfixrewdlg.cpp" />
     <ClCompile Include="C:\maestro5dev\src\gui\cxidlemode.cpp" />
-    <ClCompile Include="C:\maestro5dev\src\gui\cximporter.cpp" />
     <ClCompile Include="C:\maestro5dev\src\gui\cxmainframe.cpp" />
     <ClCompile Include="C:\maestro5dev\src\gui\cxmodecontrol.cpp" />
     <ClCompile Include="C:\maestro5dev\src\gui\cxmovefilequeue.cpp" />

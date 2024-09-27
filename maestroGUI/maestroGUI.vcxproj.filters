@@ -69,9 +69,6 @@
     <ClInclude Include="C:\maestro5dev\src\gui\cxidlemode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="C:\maestro5dev\src\gui\cximporter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="C:\maestro5dev\src\gui\cxmainframe.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -312,9 +309,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\maestro5dev\src\gui\cxidlemode.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\maestro5dev\src\gui\cximporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\maestro5dev\src\gui\cxmainframe.cpp">

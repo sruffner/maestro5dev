@@ -360,7 +360,6 @@
 #define ID_RUN_TGT_CENTER               32889
 #define ID_RUN_TGT_INS                  32890
 #define ID_RUN_TGT_APPEND               32891
-#define ID_FILE_IMPORT                  33000
 #define ID_HELP_USRGUIDE                33007
 #define ID_FILE_COPYREMOTE              33008
 #define IDS_COPYREMOTE_FILEDLGTITLE     33008

@@ -266,7 +266,6 @@ public:
 
    VOID Clear();                                         // destroy all stimuli & empty XYseq target list
    void Serialize( CArchive& ar );                       // for reading/writing run object from/to disk file
-   BOOL Import(CStringArray& strArDefn,CString& strMsg); // set stim run IAW cntrlxUNIX-style, text-based definition
 
 
 //===================================================================================================================== 

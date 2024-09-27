@@ -360,8 +360,6 @@ public:
 
    VOID Clear();                                         // empty trial and set trial header to defaults
    void Serialize( CArchive& ar );                       // for reading/writing trial object from/to disk file
-   BOOL Import( CStringArray& strArDefn,                 // set trial IAW cntrlxUNIX-style, text-based definition
-      const CMap<CString, LPCTSTR, WORD, WORD>& importMap, CString& strMsg );
 
 
 //=====================================================================================================================

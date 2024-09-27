@@ -255,7 +255,7 @@ protected:
    // migrates to version 7, removing all XYScope targets and the trials and stimulus runs that used them.
    BOOL CCxDoc::MigrateToVersion7();
    // helper method for MigrateToVersion7()
-   BOOL CCxDoc::DoesTrialOrRunUseXYScope(CTreeObj* pTreeObj) const
+   BOOL CCxDoc::DoesTrialOrRunUseXYScope(CTreeObj* pTreeObj) const;
 };
 
 #endif // !defined(CXDOC_H__INCLUDED_)
