@@ -1,29 +1,27 @@
 //=====================================================================================================================
 //
-// cxsettings.cpp : Implementation of class CCxSettings, encapsulating MAESTRO application settings that are serialized
-//                  in the MAESTRO "experiment" document (CCxDoc).
+// cxsettings.cpp : Implementation of class CCxSettings, encapsulating Maestro application settings that are serialized
+//                  in the Maestro "experiment" document (CCxDoc).
 //
 // AUTHOR:  saruffner
 //
 // DESCRIPTION:
 // CCxSettings is a "catch-all" object that holds the current values of all "persistent" application-level settings,
-// such as the video display configuration, fixation requirements, and reward options.  By storing such settings in an
-// object that is serialized with the MAESTRO experiment document (CCxDoc), the user does not have to reenter all the
+// such as the RMVideo display configuration, fixation requirements, and reward options. By storing such settings in an
+// object that is serialized with the Maestro experiment document (CCxDoc), the user does not have to reenter all the
 // settings as appropriate to the experiment -- saving setup time.
 //
-// CCxSettings is not a MAESTRO data object like a target or trial object.  There exists only one CCxSettings object in
-// each CCxDoc, and it is NOT part of the document's "object tree".  CCxDoc instantiates and provides access to the
-// settings object.  Various views and control panel dialogs in the MAESTRO GUI display/modify the settings.
+// CCxSettings is not a Maestro data object like a target or trial object. There exists only one CCxSettings object in
+// each CCxDoc, and it is NOT part of the document's "object tree". CCxDoc instantiates and provides access to the
+// settings object. Various views and control panel dialogs in the Maestro GUI display/modify the settings.
 //
 // ==> Description of application settings available in CCxSettings.
 //
-// 1) Video display configuration parameters.  The two modifiable target types in MAESTRO are realized on two kinds of
-// video display hardware.  XYScope targets (type CX_XYTARG) are displayed on an XY oscilloscope driven by an in-house
-// "dotter" board which, in turn, is controlled by a DSP card in the computer.  RMVideo targets (CX_RMVTARG) are
-// realized on a high-resolution computer monitor driven by a modern video card controlled by the OpenGL application
-// RMVideo, which runs on a separate Linux workstation and communicates with MAESTRO over a private, dedicated Ethernet
-// link.  The user can adjust several parameters associated with each kind of video display:  display geometry,
-// RMVideo display background color, and XY scope timing.  All such display parameters are maintained in CCxSettings.
+// 1) RMVideo display configuration parameters. RMVideo targets (CX_RMVTARG) are realized on a high-resolution computer 
+// monitor driven by a modern video card controlled by the OpenGL application  RMVideo, which runs on a separate Linux
+// workstation and communicates with Maestro over a private, dedicated Ethernet link. The user can adjust several 
+// parameters associated this video display: display geometry, background color, and a few others. These display 
+// parameters are maintained in CCxSettings.
 //
 // 2) Fixation requirements and reward options.  Included here are fixation requirements for ContMode:  horizontal and
 // vertical fixation accuracy, fixation duration (length of time subject must maintain fixation to "earn" a reward),
@@ -53,18 +51,18 @@
 // stabilization feature. Persistence of this parameter began in Maestro v4.1.1.
 //
 // ==> Importing defn from an ASCII text file.
-// MAESTRO succeeds the cross-platform cntrlxUNIX/PC application, in which the GUI was hosted on a UNIX workstation
-// ("cntrlxUNIX") and the hardware controller resided on a WindowsNT PC ("cntrlxPC").  In that system, the various data
-// objects (targets, channel configurations, trials, etc.) could be defined in ASCII-text "definition files".  MAESTRO
-// supports importing MAESTRO data objects from such definition files IAW the procedure outlined in CCxImporter.  Each
+// Maestro succeeds the cross-platform cntrlxUNIX/PC application, in which the GUI was hosted on a UNIX workstation
+// ("cntrlxUNIX") and the hardware controller resided on a WindowsNT PC ("cntrlxPC"). In that system, the various data
+// objects (targets, channel configurations, trials, etc.) could be defined in ASCII-text "definition files". Maestro
+// supports importing Maestro data objects from such definition files IAW the procedure outlined in CCxImporter. Each
 // data class provides an Import() method that takes a CStringArray and reinitializes itself IAW the definition
-// contained therein.  Thus, the details of translating the cntrlxUNIX-style text definition to the MAESTRO data object
+// contained therein. Thus, the details of translating the cntrlxUNIX-style text definition to the Maestro data object
 // is encapsulated in the data object itself, but the details of opening text files and interacting with the user are
 // handled elsewhere.
 //
-// In the case of the application settings object, only the video display settings could be defined in a text file in
-// cntrlxUNIX.  CCxSettings::Import() supports importing these video display settings, but it also supports importing
-// the fixation/reward settings as well.  See the method description for details.
+// In the case of the application settings object, only the RMVideo display settings could be defined in a text file in
+// cntrlxUNIX; furthermore, CCxSettings::Import() supports importing these video display settings, but it also supports
+// importing the fixation/reward settings as well.  See the method description for details.
 //
 // REVISION HISTORY:
 // 16oct2002-- Began development.  Absorbs functionality of former CCxVideoDsp, which held video display parameters.
@@ -106,6 +104,9 @@
 // insert it into m_dwFlags only while serializing. The version # is not maintained in m_dwFlags.
 // 26may2020-- Added new paramter specifying a global reward pulse length multiplier. This parameter always defaults to
 // 1.0 and -- unlike other parameters in CCxSettings -- it is NOT persisted in the experiment document.
+// 26sep2024-- The XYScope platform, unsupported since Maestro V4.0, is removed entirely a/o V5.0. Mods throughout to
+// eliminate XYScope-related code. This requires migrating older documents that contain XYScope-related display
+// parameters. The new version is 3.
 //=====================================================================================================================
 
 
@@ -130,21 +131,16 @@ IMPLEMENT_SERIAL( CCxSettings, CObject, 1 )
 // CONSTANTS INITIALIZED
 //=====================================================================================================================
 
-const DWORD CCxSettings::F_XYFIXSEED   = (DWORD)(1<<0);     // bit flag settings
+const DWORD CCxSettings::F_XYFIXSEED   = (DWORD)(1<<0); 
 const DWORD CCxSettings::F_TRIALREWOVR = (DWORD)(1<<1);
 const DWORD CCxSettings::F_REWBEEPENA  = (DWORD)(1 << 2);
 
 // this version number is stored in bits 23-16 of m_dwFlags during serialization and removed and checked during 
 // deserialization. We could not use VERSIONABLE_SCHEMA b/c we had not introduced it from the beginning!
-const DWORD CCxSettings::CURRVERSION = 2; 
+const DWORD CCxSettings::CURRVERSION = 3; 
 
 const int CCxSettings::MINDIM             = 50;             // allowed range for display geometry parameters (mm)
 const int CCxSettings::MAXDIM             = 5000;
-const int CCxSettings::MINDELAY_XY        = 1;              // allowed range for XY scope timing params (100-ns ticks)
-const int CCxSettings::MAXDELAY_XY        = 15;
-const int CCxSettings::MINDUR_XY          = 1;
-const int CCxSettings::MAXDUR_XY          = 254;
-const int CCxSettings::MAXCYCLE_XY        = 255;
 const int CCxSettings::MINRGB_RMV         = 0;              // allowed range for RMVideo background color specification
 const int CCxSettings::MAXRGB_RMV         = 255;
 
@@ -186,13 +182,6 @@ VOID CCxSettings::Copy( const CCxSettings& src )
 {
    m_dwFlags = src.m_dwFlags;
 
-   m_iDistToEyeXY = src.m_iDistToEyeXY;
-   m_iWidthXY = src.m_iWidthXY;
-   m_iHeightXY = src.m_iHeightXY;
-   m_iDrawDelay = src.m_iDrawDelay;
-   m_iDrawDur = src.m_iDrawDur;
-   m_dwDotSeed = src.m_dwDotSeed;
-
    m_iDistToEyeRMV = src.m_iDistToEyeRMV;
    m_iWidthRMV = src.m_iWidthRMV;
    m_iHeightRMV = src.m_iHeightRMV;
@@ -222,13 +211,6 @@ VOID CCxSettings::Copy( const CCxSettings& src )
 //
 //    RETURNS:    the actual value taken for the parameter, range-limited or possibly unchanged.
 //
-BOOL CCxSettings::SetXYDotSeedFixed( BOOL bEna )
-{
-   if( bEna ) m_dwFlags |= F_XYFIXSEED;
-   else m_dwFlags &= ~F_XYFIXSEED;
-   return( bEna );
-}
-
 BOOL CCxSettings::SetTrialRewLenOverride( BOOL bEna )
 {
    if( bEna ) m_dwFlags |= F_TRIALREWOVR;
@@ -241,44 +223,6 @@ BOOL CCxSettings::SetRewardBeepEnabled( BOOL bEna )
    if( bEna ) m_dwFlags |= F_REWBEEPENA;
    else m_dwFlags &= ~F_REWBEEPENA;
    return( bEna );
-}
-
-int CCxSettings::SetXYDistToEye( int i )
-{
-   m_iDistToEyeXY = (i<MINDIM) ? MINDIM : ((i>MAXDIM) ? MAXDIM : i);
-   return( m_iDistToEyeXY );
-}
-
-int CCxSettings::SetXYWidth( int i )
-{
-   m_iWidthXY = (i<MINDIM) ? MINDIM : ((i>MAXDIM) ? MAXDIM : i);
-   return( m_iWidthXY );
-}
-
-int CCxSettings::SetXYHeight( int i )
-{
-   m_iHeightXY = (i<MINDIM) ? MINDIM : ((i>MAXDIM) ? MAXDIM : i);
-   return( m_iHeightXY );
-}
-
-int CCxSettings::SetXYDrawDelay( int i )
-{
-   if( i + m_iDrawDur > MAXCYCLE_XY ) i = MAXCYCLE_XY - m_iDrawDur;        // draw cycle dur + delay cannot exceed max
-   m_iDrawDelay = (i<MINDELAY_XY) ? MINDELAY_XY : ((i>MAXDELAY_XY) ? MAXDELAY_XY : i);
-   return( m_iDrawDelay );
-}
-
-int CCxSettings::SetXYDrawDur( int i )
-{
-   if( i + m_iDrawDelay > MAXCYCLE_XY ) i = MAXCYCLE_XY - m_iDrawDelay;    // draw cycle dur + delay cannot exceed max
-   m_iDrawDur = (i<MINDUR_XY) ? MINDUR_XY : ((i>MAXDUR_XY) ? MAXDUR_XY : i);
-   return( m_iDrawDur );
-}
-
-DWORD CCxSettings::SetFixedXYDotSeedValue( DWORD dwSeed )
-{
-   m_dwDotSeed = dwSeed;
-   return( m_dwDotSeed );
 }
 
 int CCxSettings::SetFBDistToEye( int i )
@@ -401,37 +345,10 @@ int CCxSettings::GetScaledRewardPulseLen(int len)
    return((int)(len*m_fRewMult + 0.5f));
 }
 
-//=== ConvertXYPixToDeg ===============================================================================================
-//
-//    Converts XY scope pixels to deg subtended at eye.  In the XY scope coordinate system, coordinates are expressed
-//    in pixels restricted to the range [0..65535], with the bottom-left corner of the screen at (0,0) and the top-rt
-//    corner at (65535, 65535).  In the hardware-independent CNTRLX coordinate system, coordinates are expressed in deg
-//    subtended at the eye, with the origin at (0,0).  In the case of the XY scope, it is assumed that the subject's
-//    line-of-sight passes through the center of the scope screen at a perpendicular angle -- so (32767,32767) in pix
-//    corresponds to (0,0) deg.  This method uses the current XY scope display geometry to convert any arbitrary coord
-//    in pixels to deg.
-//
-//    ARGS:       iPix  -- [in] a coord or measurement in the XY scope coord system, in pixels.
-//                bHor  -- [in] TRUE if coord is along H axis; else V axis.
-//
-//    RETURNS:    the same coord translated into deg subtended at eye, based on curr XY display settings.
-//
-double CCxSettings::ConvertXYPixToDeg( int iPix, BOOL bHor ) const
-{
-   ASSERT( m_iDistToEyeXY > 0 );                               // this should ALWAYS be the case
-
-   iPix = (iPix < 0) ? 0 : ((iPix > 65535) ? 65535 : iPix);    // pix restricted to [0..65535]
-   double dRes = double(iPix)/65536.0;                         // pixels --> mm on display screen
-   dRes *= double( bHor ? m_iWidthXY : m_iHeightXY );
-   dRes = ::atan2( dRes, double(m_iDistToEyeXY) );             // mm --> radians subtended at eye
-   dRes *= 180.0/3.141593;                                     // radians --> deg
-   return( dRes );
-}
-
 
 //=== RestoreDefaultVideoSettings =====================================================================================
 //
-//    Restores those settings related to the MAESTRO video display configuration to their default values.
+//    Restores those settings related to the Maestro video display configuration to their default values.
 //
 //    ARGS:       NONE
 //
@@ -440,12 +357,7 @@ double CCxSettings::ConvertXYPixToDeg( int iPix, BOOL bHor ) const
 VOID CCxSettings::RestoreDefaultVideoSettings()
 {
    m_dwFlags &= ~F_XYFIXSEED;
-   m_iDistToEyeXY = 800;
-   m_iWidthXY = 300;
-   m_iHeightXY = 300;
-   m_iDrawDelay = 10;
-   m_iDrawDur = 1;
-   m_dwDotSeed = 0;
+
    m_iDistToEyeRMV = 800;
    m_iWidthRMV = 400;
    m_iHeightRMV = 300;
@@ -477,8 +389,6 @@ VOID CCxSettings::RestoreDefaults()
    m_iAudioRewLen = 0;
 
    m_iVStabWinLen = MIN_VSTABWIN;
-
-   m_randNumGen.SetSeed( 0x12345678 );
 }
 
 
@@ -505,6 +415,7 @@ VOID CCxSettings::RestoreDefaults()
 //    Version 0xCD: Pre-Maestro 4.0.0 status. To migrate, all RMVideo time sync flash parameters are set to 0.
 //    Version 0x01: (as of Maestro 4.0.0) Added RMVideo time sync flash duration and spot size settings.
 //    Version 0x02: (as of Maestro 4.1.1) Added velocity stabilization window length.
+//    Version 0x03: (as of Maestro 5.0.0) Removed all XYScope-related parameters.
 //
 //    ARGS:       ar -- [in] the serialization archive.
 //
@@ -523,8 +434,7 @@ void CCxSettings::Serialize( CArchive& ar )
       // insert version number into m_dwFlags when storing -- it's not actually part of the bit flags!
       DWORD dw = m_dwFlags | (CURRVERSION << 16);
 
-      ar << dw << m_dwDotSeed;
-      ar << m_iDistToEyeXY << m_iWidthXY << m_iHeightXY << m_iDrawDelay << m_iDrawDur;
+      ar << dw;
       ar << m_iDistToEyeRMV << m_iWidthRMV << m_iHeightRMV;
       for( i = 0; i < 3; i++ ) ar << m_iBkgColor[i];
       ar << m_iFixDur << m_fFixAccH << m_fFixAccV;
@@ -538,17 +448,17 @@ void CCxSettings::Serialize( CArchive& ar )
       DWORD version = (m_dwFlags >> 16) & 0x0FF;
       m_dwFlags &= (F_XYFIXSEED | F_TRIALREWOVR | F_REWBEEPENA);
 
-      ar >> m_dwDotSeed;
-      ar >> i; SetXYDistToEye( i );
-      ar >> i; SetXYWidth( i );
-      ar >> i; SetXYHeight( i );
-                                                                                 // have to be careful w/ XY timing
-      ar >> i;                                                                   // params; values are interdependent!
-      m_iDrawDelay = (i<MINDELAY_XY) ? MINDELAY_XY : ((i>MAXDELAY_XY) ? MAXDELAY_XY : i);
-      ar >> i;
-      m_iDrawDur = (i<MINDUR_XY) ? MINDUR_XY : ((i>MAXDUR_XY) ? MAXDUR_XY : i);
-      if( m_iDrawDelay + m_iDrawDur > MAXCYCLE_XY )
-         m_iDrawDelay = MAXCYCLE_XY - m_iDrawDur;
+      // when reading in pre-version 3 doc, need to skip over all XYScope parameters
+      if (version != 3)
+      {
+         DWORD dwTemp;
+         ar >> dwTemp;  // fixed dot seed value
+         ar >> i;       // dist to eye
+         ar >> i;       // display width
+         ar >> i;       // display height
+         ar >> i;       // draw delay
+         ar >> i;       // draw duration
+      }
 
       ar >> i; SetFBDistToEye( i );
       ar >> i; SetFBWidth( i );
@@ -571,12 +481,12 @@ void CCxSettings::Serialize( CArchive& ar )
       m_iRMVSyncFlashDur = 1;
       m_iRMVSyncFlashSize = 0;
       m_iVStabWinLen = MIN_VSTABWIN;
-      if(version >= 1 && version <= 2)
+      if(version >= 1 && version <= 3)
       {
          ar >> i; SetRMVSyncFlashSize(i);
          ar >> i; SetRMVSyncFlashDuration(i);
 
-         if(version == 2) { ar >> i; SetVStabWinLen(i); }
+         if(version >= 2) { ar >> i; SetVStabWinLen(i); }
       }
    }
 
@@ -588,12 +498,12 @@ void CCxSettings::Serialize( CArchive& ar )
 //
 //    Reinitialize the application settings object IAW a cntrlxUNIX-style, text-based definition.
 //
-//    CntrlxUNIX was the GUI side of MAESTRO's predecessor, a dual-platform application with the GUI running on a UNIX
-//    workstation and the hardware controller hosted on a Windows PC.  To facilitate the move from cntrlxUNIX/PC to
-//    MAESTRO, MAESTRO provides support for reading cntrlxUNIX object definition files.
+//    CntrlxUNIX was the GUI side of Maestro's predecessor, a dual-platform application with the GUI running on a UNIX
+//    workstation and the hardware controller hosted on a Windows PC. To facilitate the move from cntrlxUNIX/PC to
+//    Maestro, Maestro provides support for reading cntrlxUNIX object definition files.
 //
 //    In the case of application settings, cntrlxUNIX only supported defining the video display parameters via text
-//    file.  For completeness, this method also supports defining the other application settings in the same text file.
+//    file. For completeness, this method also supports defining the other application settings in the same text file.
 //    The following line-by-line format is expected:
 //
 //       DISPLAY_FOR_CNTRLX86                This MUST be the first line.
@@ -603,11 +513,6 @@ void CCxSettings::Serialize( CArchive& ar )
 //    appear more than once, in which case the last such line will hold the parameter value that's actually imported.
 //    Any parameter that is NOT defined in the text file will retain whatever value it had prior to the import.
 //
-//       DISTANCE_XY <d>                     where d = distance from eye to XY scope screen, in mm (INT).
-//       WIDTH_XY <w>                        where w = width of XY scope display, in mm (INT).
-//       HEIGHT_XY <h>                       where h = height of XY scope display, in mm (INT).
-//       DELAY_XY <del>                      where del = dot draw cycle delay, in 100-ns ticks (INT).
-//       ONDUR_XY <dur>                      where dur = dot draw cycle "ON" duration, in 100-ns ticks (INT).
 //       DISTANCE_FB <d>                     where d = distance from eye to RMVideo display, in mm (INT).
 //       WIDTH_FB <w>                        where w = width of RMVideo display, in mm (INT).
 //       HEIGHT_FB <h>                       where h = height of RMVideo display, in mm (INT).
@@ -620,9 +525,6 @@ void CCxSettings::Serialize( CArchive& ar )
 //    the method will parse the lines below to import the other parameters encapsulated by this application settings
 //    object...
 //
-//       AUTO_XY  <auto>                     where <auto> = 0 (fixed seed) or nonzero (seed randomly selected each
-//                                              time XY targets are generated). (INT)
-//       SEED_XY  <seed>                     where <seed> = the fixed seed value for XY target generation (nonneg INT).
 //       FIX_DUR  <dur>                      where <dur> = fixation duration in msecs (INT).
 //       FIX_ACC  <h> <v>                    where <h> = horiz fixation accuracy in deg, <v> = V fix acc (FLOATs).
 //       REWARD_LEN <r1> <r2>                where <r1>,<r2> = lengths of reward pulses 1 and 2, in msecs (INTs).
@@ -631,8 +533,9 @@ void CCxSettings::Serialize( CArchive& ar )
 //       TRIAL_OVR <ovr>                     where <ovr> = trial reward pulse override flag (0=unset, nonzero=set).
 //       BEEP_ENABLE <beep>                  where <beep> = reward indicator beep flag (0=disabled, nonzero=enabled).
 //
-//    Any lines starting with unrecognized keywords are simply skipped.  Any out-of-range parameter values will be
-//    auto-corrected.  If the import fails b/c of a format error, the settings object is restored to its initial state.
+//    Any lines starting with unrecognized keywords are simply skipped. This includes keywords related to the XYScope
+//    display, which was removed entirely in Maestro V5.0. Any out-of-range parameter values will be auto-corrected. 
+//    If the import fails b/c of a format error, the settings object is restored to its initial state.
 //
 //    ARGS:       strArDefn   -- [in] the cntrlxUNIX-style definition as a series of text strings.
 //                strMsg      -- [out] if there's an error, this should contain brief description of the error.
@@ -658,7 +561,7 @@ BOOL CCxSettings::Import( CStringArray& strArDefn, CString& strMsg )
    CCxSettings saveSettings;                                            // make a copy of current state, in case
    saveSettings.Copy( *this );                                          // import fails and we must restore orig state
 
-   char keyword[20];                                                    // keyword (e.g., "DISTANCE_XY") in text line
+   char keyword[20];                                                    // keyword (e.g., "DISTANCE_FB") in text line
    float f1, f2, f3;                                                    // parameter values as floats
 
    int i = 2;                                                           // BEGIN: parse remaining lines
@@ -670,16 +573,6 @@ BOOL CCxSettings::Import( CStringArray& strArDefn, CString& strMsg )
       { 
          bOk = FALSE; strMsg = BADFMTMSG; strMsg += _T("(line)");
       }
-      else if( ::strcmp( keyword, "DISTANCE_XY" ) == 0 )
-         SetXYDistToEye( int(f1) );
-      else if( ::strcmp( keyword, "WIDTH_XY" ) == 0 )
-         SetXYWidth( int(f1) );
-      else if( ::strcmp( keyword, "HEIGHT_XY" ) == 0 )
-         SetXYHeight( int(f1) );
-      else if( ::strcmp( keyword, "DELAY_XY" ) == 0 )
-         SetXYDrawDelay( int(f1) );
-      else if( ::strcmp( keyword, "ONDUR_XY" ) == 0 )
-         SetXYDrawDur( int(f1) );
       else if( ::strcmp( keyword, "DISTANCE_FB" ) == 0 )
          SetFBDistToEye( int(f1) );
       else if( ::strcmp( keyword, "WIDTH_FB" ) == 0 )
@@ -699,10 +592,6 @@ BOOL CCxSettings::Import( CStringArray& strArDefn, CString& strMsg )
             SetFBBkgBlu( int( (f3*255.0f)/1000.0f ) );
          }
       }
-      else if( ::strcmp( keyword, "AUTO_XY" ) == 0 )
-         SetXYDotSeedFixed( BOOL(f1==0.0f) );
-      else if( ::strcmp( keyword, "SEED_XY" ) == 0 )
-         SetFixedXYDotSeedValue( DWORD(f1) );
       else if( ::strcmp( keyword, "FIX_DUR" ) == 0 )
          SetFixDuration( int(f1) );
       else if( ::strcmp( keyword, "FIX_ACC" ) == 0 )                    //    2 params assoc w/ FIX_ACC keyword
@@ -768,12 +657,6 @@ void CCxSettings::Dump( CDumpContext& dc ) const
    str.Format( "Bit flag settings: 0x%08x", m_dwFlags );
    dc << str;
 
-   str.Format( "XY scope display geometry (mm): distToEye = %d, w = %d, h = %d\n",
-               m_iDistToEyeXY, m_iWidthXY, m_iHeightXY );
-   dc << str;
-   str.Format( "XY scope timing (100-ns): delay to ON pulse = %d, ON pulse dur = %d\n", m_iDrawDelay, m_iDrawDur );
-   dc << str;
-
    str.Format( "RMVideo display geometry (mm): distToEye = %d, w = %d, h = %d\n",
                m_iDistToEyeRMV, m_iWidthRMV, m_iHeightRMV );
    dc << str;
@@ -805,12 +688,6 @@ void CCxSettings::Dump( CDumpContext& dc ) const
 void CCxSettings::AssertValid() const
 {
    CObject::AssertValid();
-   ASSERT( m_iDistToEyeXY >= MINDIM && m_iDistToEyeXY <= MAXDIM );
-   ASSERT( m_iWidthXY >= MINDIM && m_iWidthXY <= MAXDIM );
-   ASSERT( m_iHeightXY >= MINDIM && m_iHeightXY <= MAXDIM );
-   ASSERT( m_iDrawDelay >= MINDELAY_XY && m_iDrawDelay <= MAXDELAY_XY );
-   ASSERT( m_iDrawDur >= MINDUR_XY && m_iDrawDur <= MAXDUR_XY );
-   ASSERT( (m_iDrawDelay + m_iDrawDur) <= MAXCYCLE_XY );
 
    ASSERT( m_iDistToEyeRMV >= MINDIM && m_iDistToEyeRMV <= MAXDIM );
    ASSERT( m_iWidthRMV >= MINDIM && m_iWidthRMV <= MAXDIM );
