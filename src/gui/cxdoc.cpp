@@ -498,7 +498,6 @@ BOOL CCxDoc::HasTrialSubsets(const WORD wSet) const
  @return True if specified trial set is empty or contains only empty subsets; else false. Also
  returns false if the specified key does not identify a trial set.
 */
-
 BOOL CCxDoc::IsTrialSetEmpty(const WORD wSet) const
 {
    if(!(ObjExists(wSet) && (GetObjType(wSet) == CX_TRIALSET))) return(FALSE);
@@ -516,6 +515,22 @@ BOOL CCxDoc::IsTrialSetEmpty(const WORD wSet) const
    return(TRUE);
 }
 
+/** Excise all trial sets that are empty or contain only empty trial subsets. */
+BOOL CCxDoc::RemoveEmptyTrialSets()
+{
+   CWordArray setsToDelete;
+   setsToDelete.RemoveAll();
+   POSITION pos = GetFirstChildObj(GetBaseObj(CX_TRIALBASE));
+   while(pos != NULL)
+   {
+      WORD wSet;
+      CTreeObj* pSet;
+      GetNextChildObj(pos, wSet, pSet);
+      if(IsTrialSetEmpty(wSet))
+         setsToDelete.Add(wSet);
+   }
+   for(int i = 0; i < setsToDelete.GetSize(); i++) m_Objects.RemoveTree(setsToDelete.GetAt(i), FALSE);
+}
 
 /** GetChairTarget, GetDefaultChannelConfig
  Retrieve the unique key assigned to the predefined target object representing the animal chair, or the predefined 
@@ -1504,18 +1519,7 @@ BOOL CCxDoc::MigrateToVersion7()
    }
 
    // iterate over the trial tree again, removing any trial sets that are empty (or contain only empty subsets)
-   CWordArray setsToDelete;
-   setsToDelete.RemoveAll();
-   pos = GetFirstChildObj(GetBaseObj(CX_TRIALBASE));
-   while(pos != NULL)
-   {
-      WORD wSet;
-      CTreeObj* pSet;
-      GetNextChildObj(pos, wSet, pSet);
-      if(IsTrialSetEmpty(wSet))
-         setsToDelete.Add(wSet);
-   }
-   for(int i = 0; i < setsToDelete.GetSize(); i++) m_Objects.RemoveTree(setsToDelete.GetAt(i), FALSE);
+   RemoveEmptyTrialSets();
 
    // iterate over all stimulus run sets, removing any runs that depend on XYScope targets. Remember any run sets
    // that are empty as a result.

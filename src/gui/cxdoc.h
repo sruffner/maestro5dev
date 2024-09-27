@@ -91,6 +91,8 @@ public:
 
    // is trial set empty (or only contains empty trial subsets)
    BOOL IsTrialSetEmpty(const WORD wSet) const;
+   // excise any trial sets that are empty (or contain only empty trial subsets)
+   BOOL RemoveEmptyTrialSets();
 
    // get key of the predefined "CHAIR" target or the predefined "default" channel configuration
    WORD GetChairTarget() const; 

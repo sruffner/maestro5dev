@@ -80,6 +80,8 @@ BOOL JMXDocImporter::DoImport(LPCTSTR filePath, CCxDoc* pDoc, CString& errMsg)
    m_chanCfgsMap.RemoveAll();
    m_pertsMap.RemoveAll();
    m_targetsMap.RemoveAll();
+   m_xyTgtsSkipped.RemoveAll();
+
    
    // reset the experiment document now. If unable to do so, abort
    if(!pDoc->OnNewDocument())
@@ -105,6 +107,11 @@ BOOL JMXDocImporter::DoImport(LPCTSTR filePath, CCxDoc* pDoc, CString& errMsg)
    if(ok) ok = ImportTargetSets(pJMXDoc->AsObject(), pDoc, errMsg);
    if(ok) ok = ImportTrialSets(pJMXDoc->AsObject(), pDoc, errMsg);
    
+   // if there were XYScope targets in the JMXDoc, any trials using them would be skipped over, resulting perhaps
+   // in some empty trial sets -- which we remove.
+   if(ok && !m_xyTgtsSkipped.IsEmpty())
+      pDoc->RemoveEmptyTrialSets();
+
    delete pJMXDoc;
    
    if(!ok) pDoc->OnNewDocument();
@@ -122,6 +129,8 @@ BOOL JMXDocImporter::DoImport(LPCTSTR filePath, CCxDoc* pDoc, CString& errMsg)
  * be included in a JMX document. To avoid breaking existing JMX documents, it is stored as the 8th parameter in the
  * field settings.other = [D P1 P2 OVRIDE? VARATIO AUDIOREW BEEP? VSTABWIN]. If only 7 parameters are found, then the
  * VStab window length is left unchanged.
+ * 3) As of Maestro 5.0, the XYScope platform -- unsupported since V4.0 -- is dropped entirely. SO the "settings.xy"
+ * field in the JMX doc, which lists the XYScope display parameters, is ignored.
  *
  * @param pJMX Pointer to the JMX document object (a JSON object).
  * @param pDoc Pointer to the Maestro experiment document.
@@ -152,23 +161,6 @@ BOOL JMXDocImporter::ImportSettings(JSONObject* pJMX, CCxDoc* pDoc, CString& err
    
    JSONObject* pJMXSettings = pValue->AsObject();
    CCxSettings* pSettings = pDoc->GetSettings();
-   
-   // settings.xy = [w h d del dur fix? seed], all integer values
-   ok = pJMXSettings->Lookup("xy", pValue) && pValue->IsArray() && (pValue->AsArray()->GetSize() == 7);
-   for(i=0; ok && i<7; i++) ok = pValue->AsArray()->ElementAt(i)->IsNumber();
-   if(!ok)
-   {
-      errMsg = "Missing or invalid field: 'settings.xy'";
-      return(FALSE);
-   }
-   
-   pSettings->SetXYWidth((int) pValue->AsArray()->ElementAt(0)->AsNumber());
-   pSettings->SetXYHeight((int) pValue->AsArray()->ElementAt(1)->AsNumber());
-   pSettings->SetXYDistToEye((int) pValue->AsArray()->ElementAt(2)->AsNumber());
-   pSettings->SetXYDrawDelay((int) pValue->AsArray()->ElementAt(3)->AsNumber());
-   pSettings->SetXYDrawDur((int) pValue->AsArray()->ElementAt(4)->AsNumber());
-   pSettings->SetXYDotSeedFixed(BOOL(pValue->AsArray()->ElementAt(5)->AsNumber() != 0));
-   pSettings->SetFixedXYDotSeedValue((DWORD) pValue->AsArray()->ElementAt(6)->AsNumber());
    
    // settings.rmv = [w h d bkg] if V<3; else [w h d bkg sz dur]; all integer values
    int nEl = (version >= 3) ? 6 : 4;
@@ -553,6 +545,7 @@ BOOL JMXDocImporter::ImportTargetSets(JSONObject* pJMX, CCxDoc* pDoc, CString& e
       importedSetsMap.SetAt(setName, wTgSetKey);
       
       // import all the targets in the set
+      BOOL bSetEmpty = TRUE;
       for(int iTgt = 0; iTgt < pJSONTargets->GetSize(); iTgt++)
       {
          JSONObject* pJSONTarget = NULL;
@@ -587,226 +580,36 @@ BOOL JMXDocImporter::ImportTargetSets(JSONObject* pJMX, CCxDoc* pDoc, CString& e
          if(m_targetsMap.Lookup(fullName, wTgtKey))
             continue;
 
-         // import the target
-         if(isXYScope) wTgtKey = ImportXYTarget(pDoc, wTgSetKey, tgtName, type, pJSONParams, errMsg);
-         else wTgtKey = ImportRMVTarget(pDoc, wTgSetKey, tgtName, type, pJSONParams, errMsg);
+         // the XYScope platform is unsupported since Maestro 4.0, and is removed entirely in V5.0. We skip over every
+         // XYScope target in the JMX Document, but keep track of them so we can skip every trial that uses one. 
+         if(isXYScope)
+         {
+            m_xyTgtsSkipped.SetAt(fullName, (WORD) 0);
+            continue;
+         }
+
+         // import the RMVideo target (a/o Maestro 5.0, it is the only valid user-defined target type!)
+         wTgtKey = ImportRMVTarget(pDoc, wTgSetKey, tgtName, type, pJSONParams, errMsg);
          if(wTgtKey == CX_NULLOBJ_KEY) return(FALSE);
          
+         // at least one target added, so the set is not empty.
+         bSetEmpty = FALSE;
+
          // add target pathname ("set/tgt") and key to our internal map so we can find the target object key when 
          // importing a trial.
          m_targetsMap.SetAt(fullName, wTgtKey);
       }
+
+      // if the set contained only XYScope targets, which are obsolete and no longer imported, then it will be empty.
+      // In that case, remove it.
+      if(bSetEmpty)
+      {
+         pDoc->RemoveObj(wTgSetKey);
+         importedSetsMap.RemoveKey(setName);
+      }
    }
    
    return(TRUE);
-}
-
-/**
- * Helper method for ImportTargetSets(). It imports a single XYScope target definition into the Maestro experiment 
- * document (CCxDoc).
- *
- * The JSON array listing the target's defining parameters is a sequence of ('name', value) pairs, where 'name' is
- * the parameter name. If a parameter is omitted from the array, then it is set to a default value. The recognized
- * XYScope target types are listed below, along with the names of applicable parameters. Default parameter values are
- * listed in parentheses.
- *    'rectdot'    : 'ndots' (100), 'dim' ([w spacing] = [10 0]) 
- *    'center'     : 'ndots' (100), 'dim' ([w h] = [10 10]) 
- *    'surround'   : 'ndots' (100), 'dim' ([w h] = [10 10])
- *    'rectannu'   : 'ndots' (100), 'dim' ([w h iw ih ix iy] = [10 10 5 5 0 0]) 
- *    'optcenter'  : 'ndots' (100), 'dim' ([w h] = [10 10])
- *    'oc_dotlife' : 'ndots' (100), 'dim' ([w h] = [10 10]), 'dotlf' ([1 32767])
- *    'flowfield'  : 'ndots' (100), 'dim' ([or ir] = [30 0.5]) 
- *    'bar'        : 'ndots' (100), 'dim' ([w h daxis] = [10 10 0]) 
- *    'noisydir'   : 'ndots' (100), 'dim' ([w h] = [10 10]), 'dotlf' ([1 32767]), 'noise' [45 10]
- *    'oc_coherent': 'ndots' (100), 'dim' ([w h] = [10 10]), 'pct' (100)
- *    'noisyspeed' : 'ndots' (100), 'dim' ([w h] = [10 10]), 'dotlf' ([1 32767]), 'noise' [100 10 0]
- *
- * @param pDoc Pointer to the Maestro experiment document.
- * @param wSet Key of the target set under which imported target should be stored.
- * @param name The target's name.
- * @param type The target type -- one of the strings listed above.
- * @param pParams Pointer to JSON array of parameter (name, value) pairs defining the target. Method assumes this
- * array contains an even number of elements.
- * @param errMsg Reference to a CString in which an error description is stored should the import fail.
- * @return The key of the imported target object; CX_NULLOBJ_KEY if import fails for whatever reason.
- */
-WORD JMXDocImporter::ImportXYTarget(
-      CCxDoc* pDoc, WORD wSet, LPCTSTR name, LPCTSTR type, JSONArray* pParams, CString& errMsg)
-{
-   int i, j;
-
-   // get name of target set (for use in building error message)
-   CString setName = pDoc->GetObjName(wSet);
-   
-   // convert JMX target type name to Maestro target type integer ID
-   CString strType = type;
-   int iTgtType = -1;
-   for(i=0; i<NUMXYTYPES; i++) if(strType.Compare(STR_JMXTGTTYPES_XY[i]) == 0)
-   {
-      iTgtType = i;
-      break;
-   }
-   if(iTgtType == -1)
-   {
-      errMsg.Format("Cannot import XYScope target %s in set %s: Bad target type.", name, setName);
-      return(CX_NULLOBJ_KEY);
-   }
-   
-   // insert new target object under the specified target set
-   int wKey = pDoc->InsertObj(wSet, CX_XYTARG, name);
-   if(wKey == CX_NULLOBJ_KEY)
-   {
-      errMsg.Format("Cannot import XYScope target %s in set %s: low memory or document full", name, setName);
-      return(CX_NULLOBJ_KEY);
-   }
-   
-   // if target name was changed upon insertion, fail -- assume original target name is invalid.
-   if(pDoc->GetObjName(wKey).Compare(name) != 0)
-   {
-      errMsg.Format("Invalid/duplicate name for target in set %s: %s", setName, name);
-      return(CX_NULLOBJ_KEY);
-   }
-
-   // prepare default parametric definition of target IAW type
-   U_TGPARMS tgParms;
-   CCxTarget* pTgt = (CCxTarget*) pDoc->GetObject(wKey);
-   pTgt->GetParams(&tgParms);
-   
-   tgParms.xy.type = iTgtType;
-   tgParms.xy.ndots = 100;
-   tgParms.xy.iDotLfUnits = DOTLFINMS;
-   tgParms.xy.fDotLife = 32767;
-   tgParms.xy.fRectW = 10.0f;
-   tgParms.xy.fRectH = 10.0f;
-   switch(iTgtType)
-   {
-      case RECTDOT :
-         tgParms.xy.fRectH = 0.0f;
-         break;
-      case RECTANNU :
-         tgParms.xy.fInnerW = tgParms.xy.fInnerH = 5.0f;
-         tgParms.xy.fInnerX = tgParms.xy.fInnerY = 0.0f;
-         break;
-      case FLOWFIELD :
-         tgParms.xy.fRectW = 30.0f;
-         tgParms.xy.fInnerW = 0.5f;
-         break;
-      case ORIENTEDBAR :
-         tgParms.xy.fInnerW = 0.0f;
-         break;
-      case NOISYDIR :
-         tgParms.xy.fInnerW = 45;
-         tgParms.xy.fInnerH = 10;
-         break;
-      case COHERENTFC :
-         tgParms.xy.fInnerW = 100;
-         break;
-      case NOISYSPEED :
-         tgParms.xy.fInnerW = 100;
-         tgParms.xy.fInnerH = 10;
-         tgParms.xy.fInnerX = 0;
-         break;
-   }
-   
-   // examine name,value array and update target definition accordingly. We don't validate values only
-   // structure (eg, 'dim' must be a two- or six-element array of numbers). We let SetParams() auto-correct
-   // any invalid parameters.
-   for(i=0; i<pParams->GetSize(); i+=2)
-   {
-      CString paramName = pParams->ElementAt(i)->AsString();
-      JSONValue* pValue = pParams->ElementAt(i+1);
-      
-      BOOL ok = FALSE;
-      if(paramName.Compare("ndots") == 0)
-      {
-         ok = pValue->IsNumber();
-         if(ok) tgParms.xy.ndots = (int) pValue->AsNumber();
-      }
-      else if(paramName.Compare("dim") == 0)
-      {
-         JSONArray* pArVals = pValue->AsArray();
-         ok = pArVals != NULL;
-         if(ok)
-         {
-            INT_PTR nVals = pArVals->GetSize();
-            ok = (iTgtType==ORIENTEDBAR && nVals==3) || (iTgtType==RECTANNU && nVals==6) || (nVals==2);
-            for(j=0; ok && j<nVals; j++) ok = pArVals->ElementAt(j)->IsNumber();
-         }
-         
-         if(ok) switch(iTgtType)
-         {
-            case FLOWFIELD :
-               tgParms.xy.fRectW = (float) pArVals->ElementAt(0)->AsNumber();
-               tgParms.xy.fInnerW = (float) pArVals->ElementAt(1)->AsNumber();
-               break;
-            case ORIENTEDBAR :
-               tgParms.xy.fRectW = (float) pArVals->ElementAt(0)->AsNumber();
-               tgParms.xy.fRectH = (float) pArVals->ElementAt(1)->AsNumber();
-               tgParms.xy.fInnerW = (float) pArVals->ElementAt(2)->AsNumber();
-               break;
-            case RECTANNU :
-               tgParms.xy.fRectW = (float) pArVals->ElementAt(0)->AsNumber();
-               tgParms.xy.fRectH = (float) pArVals->ElementAt(1)->AsNumber();
-               tgParms.xy.fInnerW = (float) pArVals->ElementAt(2)->AsNumber();
-               tgParms.xy.fInnerH = (float) pArVals->ElementAt(3)->AsNumber();
-               tgParms.xy.fInnerX = (float) pArVals->ElementAt(4)->AsNumber();
-               tgParms.xy.fInnerY = (float) pArVals->ElementAt(5)->AsNumber();
-               break;
-            default :
-               tgParms.xy.fRectW = (float) pArVals->ElementAt(0)->AsNumber();
-               tgParms.xy.fRectH = (float) pArVals->ElementAt(1)->AsNumber();
-               break;
-         }
-      }
-      else if(paramName.Compare("dotlf") == 0)
-      {
-         // ignore if not applicable!
-         if(iTgtType != FCDOTLIFE && iTgtType != NOISYDIR && iTgtType != NOISYSPEED) continue;
-         
-         JSONArray* pArVals = pValue->AsArray();
-         ok = (pArVals != NULL) && (pArVals->GetSize() == 2);
-         for(j=0; ok && j<2; j++) ok = pArVals->ElementAt(j)->IsNumber();
-         
-         if(ok)
-         {
-            tgParms.xy.iDotLfUnits = (pArVals->ElementAt(0)->AsNumber() != 0) ? DOTLFINMS : DOTLFINDEG;
-            tgParms.xy.fDotLife = (float) pArVals->ElementAt(1)->AsNumber();
-         }
-      }
-      else if(paramName.Compare("pct") == 0)
-      {
-         if(iTgtType != COHERENTFC) continue;
-         ok = pValue->IsNumber();
-         if(ok) tgParms.xy.fInnerW = (float) pValue->AsNumber();
-      }
-      else if(paramName.Compare("noise") == 0)
-      {
-         if(iTgtType != NOISYDIR && iTgtType != NOISYSPEED) continue;
-         
-         JSONArray* pArVals = pValue->AsArray();
-         ok = (pArVals != NULL) && ((iTgtType == NOISYDIR && pArVals->GetSize() == 2) ||
-               (iTgtType == NOISYSPEED && pArVals->GetSize() == 3));
-         for(j=0; ok && j<pArVals->GetSize(); j++) ok = pArVals->ElementAt(j)->IsNumber();
-         
-         if(ok)
-         {
-            tgParms.xy.fInnerW = (float) pArVals->ElementAt(0)->AsNumber();
-            tgParms.xy.fInnerH = (float) pArVals->ElementAt(1)->AsNumber();
-            if(iTgtType == NOISYSPEED) tgParms.xy.fInnerX = (float) pArVals->ElementAt(2)->AsNumber();
-         }
-      }
-      
-      if(!ok)
-      {
-         errMsg.Format("Cannot import XYScope target %s in set %s: Bad parameter (%s)", name, setName, paramName);
-         return(CX_NULLOBJ_KEY);
-      }
-   }
-   
-   BOOL b;
-   pTgt->SetParams(&tgParms, b);
-   
-   return(wKey);
 }
 
 /**
@@ -1194,6 +997,8 @@ WORD JMXDocImporter::ImportRMVTarget(
  * Helper method for DoImport(). Consumes the "trialSets" field in the JMX document object, importing each trial set
  * defined into the Maestro experiment document (CCxDoc), along with all the trials an trial subsets defined within 
  * that set.
+ * 
+ * 27sep2024: Any trial that uses the obsolete XYScope platform is skipped over (rather than aborting import).
  *
  * @param pJMX Pointer to the JMX document object (a JSON object).
  * @param pDoc Pointer to the Maestro experiment document.
@@ -1309,6 +1114,9 @@ BOOL JMXDocImporter::ImportTrialSets(JSONObject* pJMX, CCxDoc* pDoc, CString& er
             wKidKey = ImportTrial(pDoc, wTrialSetKey, pJSONKid, strErr);
          if(wKidKey == CX_NULLOBJ_KEY)
          {
+            // skip over trials that aren't imported because they use old XYScope platform
+            if(strErr.IsEmpty())
+               continue;
             errMsg.Format("Failed to import %s %s in set %s from field 'trialSets': %s", 
                bIsSubset ? "subset" : "trial", kidName, setName, strErr);
             return(FALSE);
@@ -1397,6 +1205,9 @@ WORD JMXDocImporter::ImportTrialSubset(CCxDoc* pDoc, WORD wSet, JSONObject* pJSO
       wTrialKey = ImportTrial(pDoc, wSubsetKey, pJSONTrial, strErr);
       if(wTrialKey == CX_NULLOBJ_KEY)
       {
+         // skip over trials that aren't imported because they use old XYScope platform
+         if(strErr.IsEmpty())
+            continue;
          errMsg.Format("Failed to import %d-th trial %s in subset: %s", i, trialName, strErr);
          return(CX_NULLOBJ_KEY);
       }
@@ -1558,18 +1369,50 @@ WORD JMXDocImporter::ImportTrialSubset(CCxDoc* pDoc, WORD wSet, JSONObject* pJSO
  *       'patacc') of the first component grating, while MAG is taken as the drift velocity or acceleration of the 
  *       second component.
  *
+ * 27sep2024: A JMX document may still contain and use XYScope targets, which have been unsupported since Maestro 4.0
+ * and are removed entirely in Maestro 5.0. JMXDocImporter now "skips over" all XYScope targets defined in a JMXDoc,
+ * as well as any trials that use an XYScope target.
  *
  * @param pDoc Pointer to the Maestro experiment document.
  * @param wSet Key of the trial set under which imported trial should be stored.
  * @param pJSONTrial The trial definition as extracted from the JMX document.
  * @param errMsg Reference to a CString in which an error description is stored should the import fail.
- * @return The key of the imported trial object; CX_NULLOBJ_KEY if import fails for whatever reason.
+ * @return The key of the imported trial object; CX_NULLOBJ_KEY if import fails for whatever reason. SPECIAL CASE: If
+ * CX_NULLOBJ_KEY is returned by errMsg is an empty string, then the trial was skipped over because it uses an
+ * XYScope target. In this case, the import process should continue.
  */
 WORD JMXDocImporter::ImportTrial(CCxDoc* pDoc, WORD wSet, JSONObject* pJSONTrial, CString& errMsg)
 {
    int i, j, iTgt, iSeg;
    JSONValue* pValue;
-   
+
+   errMsg = _T("");
+
+   // STEP 0: Check for a trial that uses an XYScope target, which we no longer permit. In this case the trial is
+   // skipped over but an empty error string is returned -- indicating that the import should continue.
+   JSONArray* pArTgts = NULL;
+   BOOL ok = pJSONTrial->Lookup("tgts", pValue) && pValue->IsArray();
+   if(ok)
+   {
+      pArTgts = pValue->AsArray();
+      ok = pArTgts->GetSize() > 0 && pArTgts->GetSize() <= MAX_TRIALTARGS;
+   }
+   if(!ok)
+   {
+      errMsg = "Missing or invalid field 'tgts', or number of targets is invalid";
+      return(CX_NULLOBJ_KEY);
+   }
+   if(!m_xyTgtsSkipped.IsEmpty())
+   {
+      for(i = 0; i < pArTgts->GetSize(); i++)
+      {
+         CString tgtPath = pArTgts->ElementAt(i)->AsString();
+         WORD wKey;
+         if(m_xyTgtsSkipped.Lookup(tgtPath, wKey))
+            return(CX_NULLOBJ_KEY);
+      }
+   }
+
    // STEP 1: get the trial name and create a trial with that name under the parent set. Abort if unable to create the
    // trial or if the trial's name was modified during insertion.
    CString name;
@@ -1596,21 +1439,9 @@ WORD JMXDocImporter::ImportTrial(CCxDoc* pDoc, WORD wSet, JSONObject* pJSONTrial
 
    CCxTrial* pTrial = (CCxTrial*) pDoc->GetObject(wKey);
 
-
    // STEP 2: Insert all participating targets in the order listed in the 'tgts' field of the JMX trial object. Each
-   // named trial ('setname/trialname') must have already been imported, or the operation fails.
-   JSONArray* pArTgts = NULL;
-   BOOL ok = pJSONTrial->Lookup("tgts", pValue) && pValue->IsArray();
-   if(ok)
-   {
-      pArTgts = pValue->AsArray();
-      ok = pArTgts->GetSize() > 0 && pArTgts->GetSize() <= MAX_TRIALTARGS;
-   }
-   if(!ok)
-   {
-      errMsg = "Missing or invalid field 'tgts', or number of targets is invalid";
-      return(CX_NULLOBJ_KEY);
-   }
+   // named target ('setname/tgtname') must have already been imported, or the operation fails. Note that we retrieved
+   // the participating target names in STEP 0...
    for(i=0; i<pArTgts->GetSize(); i++)
    {
       CString tgtPath = pArTgts->ElementAt(i)->AsString();
@@ -1736,8 +1567,8 @@ WORD JMXDocImporter::ImportTrial(CCxDoc* pDoc, WORD wSet, JSONObject* pJSONTrial
          }
          else if(paramName.Compare("xyframe") == 0)
          {
-            ok = pValue->IsNumber();
-            if(ok) pTrial->SetXYFramePeriod(iSeg, (int) pValue->AsNumber());
+            // 27sep2024: XYScope platform dropped a/o Maestro 5. We simply ignore this parameter.
+            ok = TRUE;
          }
          else if(paramName.Compare("rmvsync") == 0)
          {
@@ -1802,8 +1633,7 @@ WORD JMXDocImporter::ImportTrial(CCxDoc* pDoc, WORD wSet, JSONObject* pJSONTrial
          ASSERT(pTgt != NULL);
          U_TGPARMS tgParms;
          pTgt->GetParams(&tgParms);
-         if(pTgt->DataType() == CX_XYTARG && tgParms.xy.type == FLOWFIELD) ignoreDir = TRUE;
-         else if(pTgt->DataType() == CX_RMVTARG)
+         if(pTgt->DataType() == CX_RMVTARG)
          {
             if(tgParms.rmv.iType == RMV_FLOWFIELD) 
                ignoreDir = TRUE;
@@ -2058,13 +1888,13 @@ WORD JMXDocImporter::ImportTrial(CCxDoc* pDoc, WORD wSet, JSONObject* pJSONTrial
       }
       else if(paramName.Compare("xydotseedalt") == 0)
       {
-         ok = pValue->IsNumber();
-         if(ok) hdr.iXYDotSeedAlt = (int) pValue->AsNumber(); 
+         // 27sep2024: XYScope platform dropped a/o Maestro 5. We simply ignore this parameter.
+         ok = TRUE;
       }
       else if(paramName.Compare("xyinterleave") == 0)
       {
-         ok = pValue->IsNumber();
-         if(ok) hdr.nXYInterleave = (int) pValue->AsNumber(); 
+         // 27sep2024: XYScope platform dropped a/o Maestro 5. We simply ignore this parameter.
+         ok = TRUE;
       }
       else if(paramName.Compare("rewpulses") == 0)
       {
@@ -2240,13 +2070,6 @@ LPCTSTR JMXDocImporter::STR_JMXCHANNELIDS[] =
 LPCTSTR JMXDocImporter::STR_JMXTRACECOLORNAMES[] =  
 {
    "white", "red", "green", "blue", "yellow", "magenta", "cyan", "dk green", "orange", "purple", "pink", "med gray"
-};
-
-/** Maps JMX XYScope target type token to corresponding integer type (0-based index) as required by CCxTarget. */
-LPCTSTR JMXDocImporter::STR_JMXTGTTYPES_XY[] =
-{
-   "rectdot", "center", "surround", "rectannu", "optcenter", "oc_dotlife", 
-   "flowfield", "bar", "noisydir", "oc_coherent", "noisyspeed"
 };
 
 /** Maps JMX RMVideo target type token to corresponding integer type (0-based index) as required by CCxTarget. */
