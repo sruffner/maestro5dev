@@ -168,7 +168,6 @@ BEGIN
     BEGIN
         POPUP "&New"
         BEGIN
-            MENUITEM "&XY Scope Target",            ID_OBJ_XYTGT
             MENUITEM "RM&Video Target",             ID_OBJ_FBTGT
             MENUITEM "&Trial",                      ID_OBJ_TRIAL
             MENUITEM "&Channel Config",             ID_OBJ_CHCFG

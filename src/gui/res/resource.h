@@ -301,7 +301,6 @@
 #define ID_VIEW_DATAPANEL               32801
 #define ID_VIEW_LOGPANEL                32802
 #define ID_VIEW_HISTPANEL               32803
-#define ID_OBJ_XYTGT                    32820
 #define ID_OBJ_FBTGT                    32821
 #define ID_OBJ_TRIAL                    32822
 #define ID_OBJ_CHCFG                    32823
