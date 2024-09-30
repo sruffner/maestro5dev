@@ -5,11 +5,11 @@
 // AUTHOR:  saruffner
 //
 // DESCRIPTION:
-// This class encapsulates the definition of a MAESTRO visual stimulus, or "target".  It provides a single entity for
+// This class encapsulates the definition of a MAESTRO visual stimulus, or "target". It provides a single entity for
 // storing the target's name, object data type***, and defining parameters (if any).  It also provides a set of
 // operations for accessing and/or modifying this information.
 //
-// Below are the three categories of targets supported by MAESTRO, based on the actual hardware on which they are
+// Below are the two categories of targets supported by MAESTRO, based on the actual hardware on which they are
 // "realized":
 //
 //       1) CX_CHAIR. The animal chair is driven by a servo controller using a velocity command signal delivered on a
@@ -17,10 +17,7 @@
 //          ****As of Maestro 3.0, this is the only remaining predefined, non-modifiable target supported. The
 //          CX_OKNDRUM target was never used in Maestro and was dropped in v1.5. The CX_FIBER* and CX_REDLED* targets
 //          were deprecated in v3.0.
-//       2) CX_XYTARG.  For XY scope targets.  Controlled by a digital signal processing (DSP) card, which controls an
-//          in-house dotter board, the outputs of which drive the X, Y, and trigger inputs on an XY oscilloscope.  This
-//          video target platform provides spot-like and random-dot pattern targets at high frame rates (up to 2ms).
-//       3) CX_RMVTARG.  For Remote Maestro Video (RMVideo) target.  RMVideo replaced the old VSG2/4 as our framebuffer
+//       2) CX_RMVTARG.  For Remote Maestro Video (RMVideo) target.  RMVideo replaced the old VSG2/4 as our framebuffer
 //          video solution.  The RMVideo server runs on a separate Linux workstation; MAESTRODRIVER talks to it over
 //          a private, dedicated Ethernet connection.  RMVideo implements a wide range of color targets, including
 //          XYScope-like targets and all the old VSG targets.  Introduced in Maestro v2.0. Major new target type,
@@ -28,7 +25,7 @@
 //          introduced in v3.3.1 (RMVideo v7) to support display of static images.
 //
 // [***NOTE:  Please do not confuse "MAESTRO object data type" with "target type", which refers to a specific kind of
-// target available on the XY scope or RMVideo display.  All XY target objects have a data type of CX_XYTARG, but the
+// target available on the RMVideo display. All RMVideo target objects have a data type of CX_RMVTARG, but the
 // physical type of the target is a modifiable parameter that takes on one of several possible values.  See also the
 // MAESTRO object definition file CXOBJ_IFC.H.]
 //
@@ -78,16 +75,16 @@
 // Dynamic allocation of modifiable parameters.
 // --------------------------------------------
 //
-// While CX_CHAIR has no modifiable parameters, XY and RMVideo targets require a variable number of parameters,
-// depending on the hardware platform and the particular type of target:  XY targets require 16-32 bytes of parameter
-// storage, while RMV targets need up to 136 bytes.  We're faced with a design decision -- provide member variables for
-// each possible parameter, or dynamically allocate parameter storage based on the target's data type?  We chose a
-// design in between these extremes:
+// While CX_CHAIR has no modifiable parameters, RMVideo targets (and the now-depecated XYScope targets) require a 
+// variable number of parameters, depending on the hardware platform and the particular type of target: XYScope targets
+// required 16-32 bytes of parameter storage, while RMVido targets need up to 136 bytes. We're faced with a design 
+// decision -- provide member variables for each possible parameter, or dynamically allocate parameter storage based on
+// the target's data type?  We chose a design in between these extremes:
 //       -- A single 'void*' member variable, m_pvParms, points to modifiable parameter storage.
-//       -- For XY targets, this points to an XYPARMS struct, which defines all possible XY target parameters.
+//       -- For XYScope targets, this points to an XYPARMS struct, which defines all possible XY target parameters.
 //       -- For RMVideo targets, this points to an RMVTGTDEF struct, which defines all possible RMVideo tgt params.
-//       -- For "hard" targets, m_pvParms is NULL.
-// Observe that allocation of parameter storage in this scheme depends entirely on the target's data type.  Target
+//       -- For non-modifiable targets, m_pvParms is NULL.
+// Observe that allocation of parameter storage in this scheme depends entirely on the target's data type. Target
 // objects will typically be created by CCxTreeMap in a two-step process.  First, the default CCxTarget constructor is
 // invoked to create the target object; this constructor does not allocate parameter storage.  Second, the Initialize()
 // method is called to properly initialize the new target object, including param storage allocation if needed.
@@ -100,22 +97,6 @@
 // (taking no arguments) to create an "empty" default object.  We provide a protected default constructor which creates
 // an "empty" target.  The Serialize() override reads in the actual data type and allocates param storage accordingly.
 //
-// ==> Importing defn from an ASCII text file.
-// MAESTRO succeeds the cross-platform cntrlxUNIX/PC application, in which the GUI was hosted on a UNIX workstation
-// ("cntrlxUNIX") and the hardware controller resided on a WindowsNT PC ("cntrlxPC").  In that system, the various data
-// objects (targets, channel configurations, trials, etc.) could be defined in ASCII-text "definition files".  MAESTRO
-// supports importing MAESTRO data objects from such definition files via the dedicated CCxImportDialog.  This dialog
-// is responsible for interacting with the user, opening the text files and reading the definitions into an array of
-// CString's, and creating new data objects as appropriate.  Each data class provides an Import() method that takes
-// a CStringArray and reinitializes itself IAW the definition contained therein.  Thus, the details of translating the
-// cntrlxUNIX-style text definition to the CNTRLX data object is encapsulated in the data object itself, but the
-// details of opening text files and interacting with the user are handled by a user-interface object.
-//
-// A cntrlxUNIX "target definition file" defined a single "XY scope" or "framebuffer video" target (the "hard-wired"
-// MAESTRO targets do not have modifiable parameters).  In this case, CCxImportDialog is responsible for creating a new
-// "blank" CCxTarget object and then passing on the text lines defining the target to CCxTarget::Import(), which
-// completes the import.  See CCxTarget::Import() for details.
-//
 // ==> Predefined target CX_OKNDRUM no longer supported as of Maestro v1.5.0.
 // The OKNDRUM was never used in Maestro, and we decided to remove it for version 1.5.0.  However, because of the way
 // in which experiment documents are serialized, all documents existing prior to v1.5.0 include a CCxTarget object that
@@ -123,6 +104,7 @@
 // are deserialized, but that only happens AFTER the CCxTarget object is constructed.  Therefore, CCxTarget can still
 // create an instance representing target type CX_OKNDRUM -- else, deserialization would always fail for pre-1.5.0
 // documents!!
+// 
 // ==> Predefined "optic bench" targets CX_FIBER* and CX_REDLED* no longer supported as of Maestro v3.0.
 // The optic bench targets fell out of use years ago, and it was decided to eliminate support for them in v3.0. However,
 // because of the way in which experiment documents are serialized, all documents existing prior to v3.0 include a 
@@ -131,6 +113,12 @@
 // Therefore, CCxTarget can still create an instance representing each of these target types -- else, deserialization 
 // would always fail for pre-3.0 documents!!
 // 
+// ==> The XYScope platform has not been supported since Maestro 4.0, and it is removed as of v5.0. However, CCxTarget
+// still supports deserializing an XYScope target object (CX_XYTARG) in order to be able to deserialize pre-5.0 
+// experiment documents containing such targets. AFTER deserialization, CCxDoc removes any XYScope targets, along with
+// any trials and stimulus runs that depend on them).
+// 
+
 // REVISION HISTORY:
 // 24feb2000-- Created.  Initial layout of the CCxTarget class.  The derived classes will be created later.
 // 10mar2000-- Change in strategy.  Rather than deriving classes from CCxTarget for each target category, we'll just
@@ -247,6 +235,9 @@
 // 07may2019-- Updated to support new "flicker" feature in RMVideo targets. Three int fields were added to RMVTGTDEF,
 //             specifying the flicker ON duration, OFF duration, and initial delay -- all in # of video frame periods.
 //             Feature is disabled if either the ON or OFF duration is zero. Schema version 9, eff. Maestro 4.1.0.
+// 30sep2024-- XYScope targets, not supported since V4.0, are officially deprecated as of Maestro 5.0. CCxTarget will
+//             still be able to create XYScope targets, however, in order to support deserialization and migration of
+//             older experiment documents.
 //=====================================================================================================================
 
 
@@ -271,42 +262,6 @@ IMPLEMENT_SERIAL( CCxTarget, CTreeObj, 9 | VERSIONABLE_SCHEMA )
 //=====================================================================================================================
 // CONSTANTS
 //=====================================================================================================================
-
-const int CCxTarget::ImportXYTypeMap[] =              // maps old cntrlxUNIX XY tgt types to their MAESTRO equivalents.
-{                                                     // NOTE that the types CENTER and SURROUND appear twice.  In the
-   CENTER,                                            // old cntrlxUNIX, there were two versions of each of these, one
-   SURROUND,                                          // one with a movable tgt window ("I_CENTER") and one without.
-   RECTDOT,                                           // In performance tests, there was little difference in animation
-   CENTER,                                            // speed between the two versions, so I eliminated the version
-   SURROUND,                                          // that lacked a movable tgt window....
-   FASTCENTER,
-   RECTANNU,
-   FCDOTLIFE,
-   FLOWFIELD,
-   ORIENTEDBAR,
-   NOISYDIR,                                          // can use old text defn files to define these newer tgt types!
-   COHERENTFC,
-   NOISYSPEED
-};
-
-const int CCxTarget::IMPORTHW_XY       = 1;           // cntrlxUNIX target hardware platform codes for XY & FB tgts
-const int CCxTarget::IMPORTHW_FB       = 0;           // NOTE that cntrlxUNIX used the old VSG FB video platform
-
-LPCTSTR CCxTarget::XYTYPENAMES[] =                    // GUI names for the XY scope target types
-{
-   "Spot/Rect Dot Array",
-   "Center",
-   "Surround",
-   "Rectangular Annulus",
-   "Optimized Center",
-   "Opt Center w/Finite Dotlife",
-   "Optical Flow Field",
-   "Oriented Bar/Line",
-   "Noisy Dots (Direction)",
-   "Opt Ctr w/Coherence",
-   "Noisy Dots (Speed)"
-};
-
 LPCTSTR CCxTarget::RMVTYPENAMES[] =                   // GUI names for the RMVideo target types
 {
    "Point",
@@ -452,52 +407,6 @@ BOOL CCxTarget::CopyRemoteObj(CTreeObj* pSrc, const CWordToWordMap& depKeyMap)
 }
 
 
-
-//=====================================================================================================================
-// ATTRIBUTES
-//=====================================================================================================================
-
-//=== HardwareInfo ====================================================================================================
-//
-//    Return a brief "one-line" description of the hardware platform on which target is realized.
-//
-//    ARGS:       desc  -- [in/out] (a CString reference) filled with text describing platform.
-//
-//    RETURNS:    NONE
-//
-//    THROWS:     CMemoryException if insufficient memory for CString manipulations.
-//
-VOID CCxTarget::HardwareInfo( CString& desc ) const
-{
-   ASSERT_VALID( this );
-
-   if( m_type == CX_XYTARG )
-      desc = _T("XY Scope (DSP/dotter board)");
-   else if( m_type == CX_RMVTARG )
-      desc = _T("Remote Maestro Video");
-   else
-      desc = _T("Turntable driven by dedicated AO channel");
-}
-
-
-//=== GetSubType ======================================================================================================
-//
-//    Retrieve the target subtype for XY or RMVideo targets.
-//
-//    ARGS:       NONE.
-//
-//    RETURNS:    if tgt is an XY or RMVideo tgt, the requested subtype; else -1.
-//
-int CCxTarget::GetSubType() const
-{
-   int iSubType = -1;
-   if( m_type == CX_XYTARG ) iSubType = ((PXYPARMS)m_pvParms)->type;
-   else if( m_type == CX_RMVTARG ) iSubType = ((PRMVTGTDEF)m_pvParms)->iType;
-   return( iSubType );
-}
-
-
-
 //=====================================================================================================================
 // OPERATIONS
 //=====================================================================================================================
@@ -530,11 +439,11 @@ BOOL CCxTarget::GetParams( PU_TGPARMS pTgt ) const
 
 //=== SetParams =======================================================================================================
 //
-//    Replace current parameter set with the one provided, auto-correcting any invalid parameters.  No effect on
+//    Replace current parameter set with the one provided, auto-correcting any invalid parameters. No effect on
 //    non-modifiable targets.
 //
-//    ARGS:       pTgt     -- [in/out] ptr to a union containing either an XY or RMV target parameter set.  If any
-//                            parameters are auto-corrected, those changes are reflected here.
+//    ARGS:       pTgt     -- [in/out] ptr to a union containing either an XYScope or RMVideo target parameter set. 
+//                            If any parameters are auto-corrected, those changes are reflected here.
 //                bChanged -- [out] TRUE if operation changed the value of any parameter.
 //
 //    RETURNS:    TRUE if the proposed parameters were accepted w/o correction, FALSE if any corrections were made.
@@ -905,6 +814,10 @@ BOOL CCxTarget::SetParams( PU_TGPARMS pTgt, BOOL& bChanged )
 //          existing documents. Effective Maestro v3.3.1.
 //       9: Added three integer-valued flicker parameters to RMVTGTDEF, applicable to all target types. Effective 
 //          Maestro 4.1.0.
+//       9: (30sep2024) XYScope target CX_XYTARG officially deprecated, effective Maestro 5.0.0. NO CHANGE HERE, as we
+//          must allow these obsolete target objects to be deserialized from an old document. CCxDoc takes care of
+//          removing these objects and any dependencies on them. Howver, any attempt to serialize an XYScope target
+//          will fail.
 //
 //    ARGS:       ar -- [in] the serialization archive.
 //
@@ -923,22 +836,12 @@ void CCxTarget::Serialize( CArchive& ar )
 
    if( ar.IsStoring() )                                                          // write to archive:
    {
-      if( m_type == CX_XYTARG )                                                  // archive *relevant* XY tgt params;
-      {                                                                          // save tgt type first; it determines
-         PXYPARMS pXY = (PXYPARMS)m_pvParms;                                     // what other params are relevant!
-         ar << pXY->type << pXY->ndots << pXY->fRectW << pXY->fRectH;
-         if( pXY->type == RECTANNU || pXY->type == NOISYDIR || pXY->type == NOISYSPEED )
-            ar << pXY->fInnerW << pXY->fInnerH;
-         else if( pXY->type == COHERENTFC || pXY->type == FLOWFIELD || pXY->type == ORIENTEDBAR)
-            ar << pXY->fInnerW;
-         if( pXY->type == FCDOTLIFE || pXY->type == NOISYDIR || pXY->type == NOISYSPEED )
-            ar << pXY->iDotLfUnits << pXY->fDotLife;
-         if( pXY->type == RECTANNU || pXY->type == NOISYSPEED)
-            ar << pXY->fInnerX;
-         if( pXY->type == RECTANNU) 
-            ar << pXY->fInnerY;
-      }
-      else if( m_type == CX_RMVTARG )                                            // analogously for RMV tgt params...
+      // cannot save XYScope targets, which are deprecated.
+      if(m_type == CX_XYTARG)
+         ::AfxThrowArchiveException(CArchiveException::genericException);
+
+      // archive *relevant RMVideo target params. Save tgt type first; it determines what other params are relevant!
+      if(m_type == CX_RMVTARG)
       {
          CString str;
          PRMVTGTDEF pRMV = (PRMVTGTDEF)m_pvParms;
