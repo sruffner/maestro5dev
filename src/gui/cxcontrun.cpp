@@ -1,16 +1,16 @@
 //=====================================================================================================================
 //
-// cxcontrun.cpp : Implementation of class CCxContRun, encapsulating a CNTRLX "continuous run object", and class
-//                 CCxStimulus, which encapsulates a single "stimulus channel" within a continuous-mode run.
+// cxcontrun.cpp : Implementation of class CCxContRun, encapsulating a Maestro "stimulus run", and class CCxStimulus,
+//                 which encapsulates a single "stimulus channel" within a run.
 //
 // AUTHOR:  saruffner
 //
 // DESCRIPTION:
-// This class encapsulates the definition of a CNTRLX "run", the experimental protocol object for ContMode (analogous
-// to the "trial" object in TrialMode).  CCxContRun provides a single entity for storing the complete defn of the run.
-// It also provides a set of operations for accessing and/or modifying this definition.  Each run is defined by a few
-// general parameters (duty period in ms, etc.) and a set of "stimulus channels".  Each channel describes a motion
-// trajectory for a particular stimulus type.  The following table details the types of stimulus channels currently
+// This class encapsulates the definition of a Maestro "stimulus run", the experimental protocol object for ContMode 
+// (analogous to the "trial" object in TrialMode). CCxContRun provides a single entity for storing the complete defn of
+// the run. It also provides a set of operations for accessing and/or modifying this definition. Each run is defined by
+// a few general parameters (duty period in ms, etc.) and a set of "stimulus channels". Each channel describes a motion
+// trajectory for a particular stimulus type. The following table details the types of stimulus channels currently
 // supported, and the motion modes available for each channel type:
 //
 //    TYPE                 MOTION MODE             TRAJECTORY DESCRIPTION
@@ -48,6 +48,7 @@
 //                         Biphasic pulse trains   Same as for "Pulse train", plus A2 & W2 to characterize second phase 
 //                                                 of the biphasic pulse.
 //
+//    ****** DEPRECATED -- XYScope not supported a/o Maestro 4.0. XYseq deprecated a/o V5.0. *************************
 //    XYSeq                *** XYSeq is a very specialized visual stimulus that generates random motion over a defined
 //                         set of XY scope targets.  It was originally introduced to efficiently characterize the
 //                         receptive fields of MT cells in anaesthesized animals.  The user defined the set of XY tgts
@@ -80,25 +81,25 @@
 // Because a stimulus channel may be defined by as many as 15 parameters, we encapsulate it by another class,
 // CCxStimulus, also defined here.  This design makes it relatively easy to work with channel objects as single
 // entities -- simplifying CCxContRun tasks such as "insert channel", "cut/copy/paste channel", etc.  NOTE, however,
-// that stimulus channels are not CNTRLX data objects:  they are not found as child nodes under a run object in the
-// CNTRLX object tree; rather, they are part of the "data" in a CCxContRun.  Also, while other classes can construct
-// and manipulate a CCxStimulus, CCxContRun exercises complete control over its stimulus channels.  For example, to
-// insert a channel into the run's channel list, callers must invoke a CCxContRun method which, in turn, constructs and
-// initializes a new CCxStimulus object and inserts that object into its channel list.  To modify the parameters of an
-// existing channel, callers must again use CCxContRun methods; the run object does not expose non-const references to
-// its stimulus channel objects.  The purpose of these restrictions is to emphasize the fact that stimulus channels are
-// meaningless outside a containing run object, and to prevent modifications of a channel (such as deleting it!!) that
-// make no sense in the context of the run in which it participates.  [Still, it is possible to copy & paste a stimulus
-// channel from one run object to another; see the CopyStimulus() and PasteStimulus() methods.]
+// that stimulus channels are not Maestro data objects: they are not found as child nodes under a run object in the
+// Maestro object tree; rather, they are part of the "data" in a CCxContRun. Also, CCxContRun exercises complete control
+// over its stimulus channels. For example, to insert a channel into the run's channel list, callers must invoke a 
+// CCxContRun method which, in turn, constructs and initializes a new CCxStimulus object and inserts that object into 
+// its channel list. To modify the parameters of an existing channel, callers must again use CCxContRun methods; the run
+// object does not expose non-const references to its stimulus channel objects. The purpose of these restrictions is to 
+// emphasize the fact that stimulus channels are meaningless outside a containing run object, and to prevent 
+// modifications of a channel (such as deleting it!!) that make no sense in the context of the run in which it 
+// participates. [Still, it is possible to copy & paste a stimulus channel from one run object to another; see the 
+// CopyStimulus() and PasteStimulus() methods.]
 //
-// ==> The Big Picture:  Storage of CNTRLX data objects.
-// The user creates experimental protocols within a CNTRLX "experiment document" (CCxDoc) by defining a variety of
+// ==> The Big Picture:  Storage of Maestro data objects.
+// The user creates experimental protocols within a Maestro "experiment document" (CCxDoc) by defining a variety of
 // "data objects" and establishing relationships among those objects.  For instance, each CNTRLX "trial" defines the
 // trajectories of one or more "targets", which are defined separately.  The trial object also refers to a "channel
 // set" object, which contains the list of analog channels that should be sampled during that trial.  Trials, targets,
-// and channel sets are examples of "abstract" data classes defined in CNTRLX.
+// and channel sets are examples of "abstract" data classes defined in Maestro.
 //
-// CNTRLX data objects are stored in the CNTRLX object trees, encapsulated by CCxTreeMap.  This "tree map" collection
+// Maestro data objects are stored in the Maestro object trees, encapsulated by CCxTreeMap.  This "tree map" collection
 // stores all the data objects in several different hierarchical trees (the "target tree", "trial tree", and so on).
 // We chose this somewhat complex storage scheme in order to organize the different data objects in a logical manner,
 // and to provide the potential for storing a large # of objects in a single document yet be able to access any
@@ -108,30 +109,30 @@
 // CCxTreeMap is derived from the generic CTreeMap class, which handles the low-level implementation details of the
 // tree map (see TREEMAP.CPP).  CTreeMap itself handles one base data class, CTreeObj, which merely stores the object's
 // name and abstract data type and serves as the starting point for building more complex data classes.  CCxTreeMap
-// tailors the behavior of CTreeMap so it can handle all data types present in CNTRLX.  Each CNTRLX data class must
+// tailors the behavior of CTreeMap so it can handle all data types present in Maestro. Each Maestro data class must
 // satisfy certain constraints in order to build the CNTRLX object trees on top of the CTreeMap/CTreeObj framework; see
-// the CTreeMap/CTreeObj implementation file for an explanation of these constraints.  CCxContRun has been designed
+// the CTreeMap/CTreeObj implementation file for an explanation of these constraints. CCxContRun has been designed
 // with these constraints in mind.
 //
 // There is a division of responsibilities among CCxDoc, CCxTreeMap, and the various CTreeObj-derived classes that
-// represent the real CNTRLX data objects.  First, the CNTRLX data object classes provide methods for accessing,
-// modifying, and validating the actual data which define how the object behaves in a CNTRLX experiment.  CCxTreeMap is
+// represent the real Maestro data objects. First, the Maestro data object classes provide methods for accessing,
+// modifying, and validating the actual data which define how the object behaves in a Maestro experiment. CCxTreeMap is
 // the "intelligent" storage medium for these objects (leaf nodes in the tree-map) and "collections" of related
-// objects. It must be "aware" of all the different types of CNTRLX data objects so that it can construct any given
-// object by calling the appropriate constructor.  Furthermore, it controls the naming of the objects, allowing only
+// objects. It must be "aware" of all the different types of Maestro data objects so that it can construct any given
+// object by calling the appropriate constructor. Furthermore, it controls the naming of the objects, allowing only
 // characters from a valid character set (it uses the default char set provided by CTreeMap) and requiring that no two
 // sibling objects have the same name.  Finally, of course, it encodes the tree connections among the objects and
 // provides methods for adding objects to the trees, removing objects, etc.  However, it does NOT impose any
 // restrictions on how objects are added to the tree-map; that is the responsibility of CCxDoc, in coordination with
-// its various views.  As mentioned above, CCxDoc uses CCxTreeMap to store a number of different "CNTRLX object trees";
+// its various views. As mentioned above, CCxDoc uses CCxTreeMap to store a number of different "Maestro object trees";
 // CCxDoc methods implement the logic for constructing and restricting the exact composition of these object trees (see
 // CCxDoc for details).
 //
-// CCxContRun represents the "data class" which handles all continuous-mode runs in CNTRLX.  It stores a single
+// CCxContRun represents the "data class" which handles all continuous-mode stimulus runs in Maestro. It stores a single
 // abstract data type, identified by the defined constant CX_CONTRUN.
 //
 // ==> Using CCxContRun.
-// As explained above, CCxContRun is designed for use with the CNTRLX object tree container CCxTreeMap and the
+// As explained above, CCxContRun is designed for use with the Maestro object tree container CCxTreeMap and the
 // underlying CTreeMap/CTreeObj framework.  Thus, the default constructor, destructor, and the Copy() and Initialize()
 // methods are all protected.  The idea is that only CCxTreeMap can construct, copy, and destroy CCxContRun objects.
 // In addition, CCxContRun must override CTreeObj::GetDependencies() because it may "depend" on any XY scope target
@@ -144,40 +145,20 @@
 //       !!! CCxDoc::UpdateObjDep().  Otherwise, the dependency locking scheme will fail !!!
 //       !!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //
-// In the CNTRLX design scheme, a view can obtain a pointer to a particular CCxContRun object by querying CCxDoc, which
-// includes a CCxTreeMap container for managing the CNTRLX object trees.  The view can then edit the run definition by
-// invoking various public methods.  Below is a summary of the allowed operations:
+// In the Maestro design scheme, a view can obtain a pointer to a particular CCxContRun object by querying CCxDoc, which
+// includes a CCxTreeMap container for managing the Maestro object trees. The view can then edit the run definition by
+// invoking various public methods.
 //
-//    todo()                  ==> ********** TO DO ***********
-//
-// It is important to note that the run object never provides DIRECT access to its stimulus channels or the XYseq
-// target list.  All changes must be made by invoking CCxContRun methods.  For example, CopyStimulus() does not provide
-// a non-const reference to the desired channel, but a copy of it; thus, a view cannot modify any stimulus channel
-// object directly by invoking methods thru that pointer!  Similarly, PasteStimulus() does not insert the provided
-// channel into the run's stimulus list, rather, it inserts a copy.
-//
-//
-// ==> Importing defn from an ASCII text file.
-// CNTRLX succeeds the cross-platform cntrlxUNIX/PC application, in which the GUI was hosted on a UNIX workstation
-// ("cntrlxUNIX") and the hardware controller resided on a WindowsNT PC ("cntrlxPC").  In that system, the various data
-// objects (targets, channel configurations, trials, etc.) could be defined in ASCII-text "definition files".  CNTRLX
-// supports importing CNTRLX data objects from such definition files via the dedicated CCxImportDialog.  This dialog
-// is responsible for interacting with the user, opening the text files and reading the definitions into an array of
-// CString's, and creating new data objects as appropriate.  Each data class provides an Import() method that takes
-// a CStringArray and reinitializes itself IAW the definition contained therein.  Thus, the details of translating the
-// cntrlxUNIX-style text definition to the CNTRLX data object is encapsulated in the data object itself, but the
-// details of opening text files and interacting with the user are handled by a user-interface object.
-//
-// In the case of the channel configuration object, cntrlxUNIX "channel definition files" could define one or more
-// channel configurations.  Thus, CCxImportDialog is responsible for parsing out each individual channel configuration,
-// creating a new CCxChannel object with the assigned name, then invoking CCxChannel::Import() to complete the import.
-// See CCxChannel::Import() for details.
-//
+// It is important to note that the run object never provides DIRECT access to its stimulus channels. All changes must
+// be made by invoking CCxContRun methods. For example, CopyStimulus() does not provide a non-const reference to the 
+// desired channel, but a copy of it; thus, a view cannot modify any stimulus channel object directly by invoking 
+// methods thru that pointer! Similarly, PasteStimulus() does not insert the provided channel into the run's stimulus 
+// list, rather, it inserts a copy.
 //
 // DEVNOTES:
-// 1) CNTRLX data objects developed prior to CCxContRun (such as CCxTrial, CCxTarget, ...) were designed under the
-// assumption that they could not access the containing CCxDoc.  I have relaxed that restriction on CCxContRun so that
-// it could perform certain tasks.  CCntrlxApp::GetDoc() exposes the ptr to the current (and only) CCxDoc!
+// 1) Maestro data objects developed prior to CCxContRun (such as CCxTrial, CCxTarget, ...) were designed under the
+// assumption that they could not access the containing CCxDoc. I have relaxed that restriction on CCxContRun so that
+// it could perform certain tasks. CCntrlxApp::GetDoc() exposes the ptr to the current (and only) CCxDoc!
 //
 //
 // REVISION HISTORY:
@@ -211,6 +192,9 @@
 // STIM_ISXYSEQ and STIM_ISPSGM are also adjusted to their new values. Extensive changes have been made to this module
 // to remove support for the Fiber1/2 channels.
 // 05sep2017-- Fix compiler issues while compiling for 64-bit Win 10 using VStudio 2017.
+// 30sep2024-- Made changes to reflect the fact that the XYseq stimulus -- which uses the now-deprecated XYScope
+// platform -- is deprecated a/o Maestro 5.0. CCxContRun can still handle deserialization of stimulus runs using XYseq,
+// but an exception is thrown if there's an attempt to save a run that uses XYseq.
 //=====================================================================================================================
 
 
@@ -234,7 +218,7 @@ static char THIS_FILE[] = __FILE__;
 // class CCxStimulus
 //=====================================================================================================================
 //
-IMPLEMENT_SERIAL( CCxStimulus, CObject, 3 | VERSIONABLE_SCHEMA )
+IMPLEMENT_SERIAL( CCxStimulus, CObject, 4 | VERSIONABLE_SCHEMA )
 
 //=====================================================================================================================
 // CONSTANTS
@@ -247,10 +231,8 @@ const int CCxStimulus::NPARAMS[STIM_NTYPES][STIM_NMAXMODES] =     // # of motion
    { 7, 7, 8, 8, 0 }                                              //    STIM_ISXYSEQ
 };
 
-LPCTSTR CCxStimulus::TYPESTRINGS[] = { "Chair", "PSGM", "XYseq" };
 LPCTSTR CCxStimulus::STDMODESTRINGS[] = { "Sine", "Pulse" };
 LPCTSTR CCxStimulus::PSGMMODESTRINGS[] = { "Single", "2Pulse", "Biphasic", "Train", "Biph Tr" };
-LPCTSTR CCxStimulus::XYSEQMODESTRINGS[] = { "SparsD", "DenseD", "SparsV", "DenseV" };
 LPCTSTR CCxStimulus::COMMONLBLSTRINGS[] = { "On/off", "Marker", "Type", "Motion", "t0 (ms)" };
 
 
@@ -264,10 +246,11 @@ LPCTSTR CCxStimulus::COMMONLBLSTRINGS[] = { "On/off", "Marker", "Type", "Motion"
 //    Get/set the stimulus definition.
 //
 //    CXDRIVER uses a formatted data structure, STIMCHAN, to hold the relevant parameters IAW stimulus type and motion
-//    mode.  CCxStimulus uses a very similar storage scheme, except that it maintains separate copies of each possible
+//    mode. CCxStimulus uses a very similar storage scheme, except that it maintains separate copies of each possible
 //    motion parameter set so that the object's type and motion mode can be freely changed without having to revalidate
 //    the relevant parameter set.
 //
+//    30sep2024-- A/o Maestro 5.0, XYseq stimuli are deprecated.
 //    ARGS:       stim  -- [in/out] the stimulus channel definition struct compatible with CXDRIVER.
 //
 //    RETURNS:    NONE.
@@ -279,8 +262,7 @@ VOID CCxStimulus::GetStimulusInfo( STIMCHAN& stim ) const
    stim.iType = m_iType;
    stim.tStart = m_tStart;
 
-   if( m_iType == STIM_ISXYSEQ ) stim.xy = m_xyseq;
-   else if( m_iType == STIM_ISPSGM ) stim.sgm = m_sgm;
+   if( m_iType == STIM_ISPSGM ) stim.sgm = m_sgm;
    else
    {
       stim.iStdMode = m_iStdMode;
@@ -296,8 +278,8 @@ VOID CCxStimulus::SetStimulusInfo( const STIMCHAN& stim )
    m_iType = stim.iType;
    m_tStart = stim.tStart;
 
-   if( stim.iType == STIM_ISXYSEQ ) m_xyseq = stim.xy;
-   else if( stim.iType == STIM_ISPSGM ) m_sgm = stim.sgm;
+   ASSERT(stim.iType != STIM_ISXYSEQ);
+   if( stim.iType == STIM_ISPSGM ) m_sgm = stim.sgm;
    else
    {
       m_iStdMode = stim.iStdMode;
@@ -324,6 +306,7 @@ VOID CCxStimulus::SetStimulusInfo( const STIMCHAN& stim )
 VOID CCxStimulus::Copy( const CCxStimulus& src )
 {
    ASSERT_VALID( &src );
+   ASSERT(src.m_iType != STIM_ISXYSEQ);
    m_bOn = src.m_bOn;
    m_iMarker = src.m_iMarker;
    m_iType = src.m_iType;
@@ -331,7 +314,7 @@ VOID CCxStimulus::Copy( const CCxStimulus& src )
    m_tStart = src.m_tStart;
    m_sine = src.m_sine;
    m_pulse = src.m_pulse;
-   m_xyseq = src.m_xyseq;
+   // m_xyseq = src.m_xyseq;
    m_sgm = src.m_sgm;
 }
 
@@ -351,6 +334,10 @@ VOID CCxStimulus::Copy( const CCxStimulus& src )
       STIM_ISFIBER1=1, STIM_ISFIBER2=2 are no longer allowed. If we encounter such a channel type in an earlier 
       version, we map it to STIM_ISCHAIR instead and post a message in Maestro's message panel. Channel type IDs 
       corresponding to the PSGM and XYSeq stimuli are decremented by 2 to bring them in line with this version.
+   4: As of Maestro v5.0, XYseq stimuli may no longer be saved. The XYScope platform has not been supported since
+      V4.0, and XYScope targets and XYseq are no longer allowed in experiment docs a/o V5.0. Still supports 
+      deserializing XYseq stimuli in order to handle old documents containing them. AFTER deserialization, CCxDoc
+      removes all stimlus runs and trial that depend on XYScope targets.
 
  @param ar The serialization archive.
  @throws The archive may throw CMemoryException, CArchiveException, or CFileException.
@@ -362,13 +349,11 @@ void CCxStimulus::Serialize(CArchive& ar)
 
    if( ar.IsStoring() )                                        // STORE TO ARCHIVE...
    {
+      if(m_iType == STIM_ISXYSEQ)
+         ::AfxThrowArchiveException(CArchiveException::genericException);
+
       ar << int(m_bOn) << m_iMarker << m_iType << m_iStdMode << m_tStart;
-      if( m_iType == STIM_ISXYSEQ )
-      {
-         ar << m_xyseq.iOpMode << m_xyseq.iRefresh << m_xyseq.nSegs << m_xyseq.iSegDur << m_xyseq.iSeed;
-         ar << m_xyseq.nChoices << m_xyseq.fAngle << m_xyseq.fVel << m_xyseq.fOffsetV;
-      }
-      else if( m_iType == STIM_ISPSGM )
+      if( m_iType == STIM_ISPSGM )
       {
          ar << m_sgm.iOpMode << int(m_sgm.bExtTrig) << m_sgm.iAmp1 << m_sgm.iAmp2 << m_sgm.iPW1 << m_sgm.iPW2;
          ar << m_sgm.iPulseIntv << m_sgm.iTrainIntv << m_sgm.nPulses << m_sgm.nTrains;
@@ -386,7 +371,7 @@ void CCxStimulus::Serialize(CArchive& ar)
    }
    else                                                        // READ FROM ARCHIVE...
    {
-      if( nSchema < 1 || nSchema > 3 )                         // unsupported version
+      if( nSchema < 1 || nSchema > 4 )                         // unsupported version
          ::AfxThrowArchiveException( CArchiveException::badSchema );
 
       SetDefaults();
@@ -417,8 +402,11 @@ void CCxStimulus::Serialize(CArchive& ar)
          nSchema = 3;
       }
 
-      if( m_iType == STIM_ISXYSEQ )
+      if(m_iType == STIM_ISXYSEQ)
       {
+         // XYseq stimuli cannot appear in schema version 4 documents!
+         if(nSchema == 4)
+            ::AfxThrowArchiveException(CArchiveException::badSchema);
          ar >> m_xyseq.iOpMode >> m_xyseq.iRefresh >> m_xyseq.nSegs >> m_xyseq.iSegDur >> m_xyseq.iSeed;
          ar >> m_xyseq.nChoices >> m_xyseq.fAngle >> m_xyseq.fVel >> m_xyseq.fOffsetV;
       }
@@ -491,39 +479,41 @@ void CCxStimulus::Serialize(CArchive& ar)
 //    The table below maps the zero-based "parameter index" to the parameter's identity.  The first 5 indices refer to
 //    the parameters that are common for all stimulus types and motion mode.  Indices >=5 refer to motion parameters,
 //    the identities of which var with type and motion mode.
+// 
+//    *** (30sep2024) XYseq stimuli DEPRECATED a/o Maestro 5.0. ***
 //
-//    index    XYseq type           PSGM type                  Sines mode              Pulse mode
+//    index    PSGM type                  Sines mode              Pulse mode
 //    ---------------------------------------------------------------------------------------------------
-//    0        m_bOn                m_bOn                      m_bOn                   m_bOn
-//    1        m_iMarker            m_iMarker                  m_iMarker               m_iMarker
-//    2        m_iType              m_iType                    m_iType                 m_iType
-//    3        m_xyseq.iOpMode      m_sgm.iOpMode              m_iStdMode              m_iStdMode
-//    4        m_tStart             m_tStart                   m_tStart                m_tStart
+//    0        m_bOn                      m_bOn                   m_bOn
+//    1        m_iMarker                  m_iMarker               m_iMarker
+//    2        m_iType                    m_iType                 m_iType
+//    3        m_sgm.iOpMode              m_iStdMode              m_iStdMode
+//    4        m_tStart                   m_tStart                m_tStart
 //
-//    5        m_xyseq.iRefresh     m_sgm.bExtTrig             m_sine.fAmp             m_pulse.fAmp
-//    6        m_xyseq.nSegs        m_sgm.iAmp1                m_sine.iPeriod          m_pulse.iPulseDur
-//    7        m_xyseq.iSegDur      m_sgm.iPW1                 m_sine.fPhase           m_pulse.iRampDur
-//    8        m_xyseq.iSeed        m_sgm.iAmp2, or            m_sine.nCycles          m_pulse.bBlank 
-//                                  m_sgm.iPulseIntv, or 
-//                                  NOT USED
+//    5        m_sgm.bExtTrig             m_sine.fAmp             m_pulse.fAmp
+//    6        m_sgm.iAmp1                m_sine.iPeriod          m_pulse.iPulseDur
+//    7        m_sgm.iPW1                 m_sine.fPhase           m_pulse.iRampDur
+//    8        m_sgm.iAmp2, or            m_sine.nCycles          m_pulse.bBlank 
+//             m_sgm.iPulseIntv, or 
+//             NOT USED
 //
-//    9        m_xyseq.nChoices     m_sgm.iPW2, or             NOT USED                NOT USED
-//                                  m_sgm.nPulses, or 
-//                                  NOT USED
+//    9        m_sgm.iPW2, or             NOT USED                NOT USED
+//             m_sgm.nPulses, or 
+//             NOT USED
 //
-//    10       m_xyseq.fAngle       m_sgm.iPulseIntv, or       NOT USED                NOT USED
-//                                  m_sgm.iTrainIntv, or
-//                                  NOT USED
+//    10       m_sgm.iPulseIntv, or       NOT USED                NOT USED
+//             m_sgm.iTrainIntv, or
+//             NOT USED
 //
-//    11       m_xyseq.fVel         m_sgm.nTrains, or          NOT USED                NOT USED
-//                                  m_sgm.nPulses, or
-//                                  NOT USED
+//    11       m_sgm.nTrains, or          NOT USED                NOT USED
+//             m_sgm.nPulses, or
+//             NOT USED
 //
-//    12       m_xyseq.fOffsetV     m_sgm.iTrainIntv, or       NOT USED                NOT USED
-//                                  NOT USED
+//    12       m_sgm.iTrainIntv, or       NOT USED                NOT USED
+//             NOT USED
 //
-//    13       NOT USED             m_sgm.nTrains, or          NOT USED                NOT USED
-//                                  NOT USED
+//    13       m_sgm.nTrains, or          NOT USED                NOT USED
+//             NOT USED
 //
 //    14       Reserved for future use.
 //
@@ -552,60 +542,53 @@ double CCxStimulus::GetParameter( int i ) const
       case 4 : d = double(m_tStart);   break;
 
       case 3 :                                                       // motion mode is stored in several diff places...
-         if( m_iType == STIM_ISXYSEQ )       d = double(m_xyseq.iOpMode);
-         else if( m_iType == STIM_ISPSGM )   d = double(m_sgm.iOpMode);
-         else                                d = double(m_iStdMode);
+         if( m_iType == STIM_ISPSGM )   d = double(m_sgm.iOpMode);
+         else                           d = double(m_iStdMode);
          break;
 
       case 5 :
-         if( m_iType == STIM_ISXYSEQ )       d = double(m_xyseq.iRefresh);
-         else if( m_iType == STIM_ISPSGM )   d = m_sgm.bExtTrig ? 1.0 : 0.0;
-         else if( bIsSine )                  d = double(m_sine.fAmp);
-         else                                d = double(m_pulse.fAmp);
+         if( m_iType == STIM_ISPSGM )   d = m_sgm.bExtTrig ? 1.0 : 0.0;
+         else if( bIsSine )             d = double(m_sine.fAmp);
+         else                           d = double(m_pulse.fAmp);
          break;
 
       case 6 :
-         if( m_iType == STIM_ISXYSEQ )       d = double(m_xyseq.nSegs);
-         else if( m_iType == STIM_ISPSGM )   d = double(m_sgm.iAmp1);
-         else if( bIsSine )                  d = double(m_sine.iPeriod);
-         else                                d = double(m_pulse.iPulseDur);
+         if( m_iType == STIM_ISPSGM )   d = double(m_sgm.iAmp1);
+         else if( bIsSine )             d = double(m_sine.iPeriod);
+         else                           d = double(m_pulse.iPulseDur);
          break;
 
       case 7 :
-         if( m_iType == STIM_ISXYSEQ )       d = double(m_xyseq.iSegDur);
-         else if( m_iType == STIM_ISPSGM )   d = double(m_sgm.iPW1);
-         else if( bIsSine )                  d = double(m_sine.fPhase);
-         else                                d = double(m_pulse.iRampDur);
+         if( m_iType == STIM_ISPSGM )   d = double(m_sgm.iPW1);
+         else if( bIsSine )             d = double(m_sine.fPhase);
+         else                           d = double(m_pulse.iRampDur);
          break;
 
       case 8 :
-         if( m_iType == STIM_ISXYSEQ )       d = double(m_xyseq.iSeed);
-         else if( m_iType == STIM_ISPSGM )   d = double( bIsTrain ? m_sgm.iPulseIntv : m_sgm.iAmp2 );
-         else if( bIsSine )                  d = double(m_sine.nCycles);
-         else                                d = m_pulse.bBlank ? 1.0 : 0.0;
+         if( m_iType == STIM_ISPSGM )   d = double( bIsTrain ? m_sgm.iPulseIntv : m_sgm.iAmp2 );
+         else if( bIsSine )             d = double(m_sine.nCycles);
+         else                           d = m_pulse.bBlank ? 1.0 : 0.0;
          break;
 
       case 9 :
-         if( m_iType == STIM_ISXYSEQ )       d = double(m_xyseq.nChoices);
-         else if( m_iType == STIM_ISPSGM )   d = double( bIsTrain ? m_sgm.nPulses : m_sgm.iPW2 );
+         if( m_iType == STIM_ISPSGM )   d = double( bIsTrain ? m_sgm.nPulses : m_sgm.iPW2 );
          break;
 
       case 10 :
-         if( m_iType == STIM_ISXYSEQ )       d = double(m_xyseq.fAngle);
-         else                                d = double( bIsTrain ? m_sgm.iTrainIntv : m_sgm.iPulseIntv );
+         d = double(bIsTrain ? m_sgm.iTrainIntv : m_sgm.iPulseIntv);
          break;
 
       case 11 :
-         if( m_iType == STIM_ISXYSEQ )       d = double(m_xyseq.fVel);
-         else                                d = double( bIsTrain ? m_sgm.nTrains : m_sgm.nPulses );
+         d = double(bIsTrain ? m_sgm.nTrains : m_sgm.nPulses);
          break;
 
       case 12 : 
-         if( m_iType == STIM_ISXYSEQ )       d = double(m_xyseq.fOffsetV);
-         else                                d = double(m_sgm.iTrainIntv);
+         d = double(m_sgm.iTrainIntv);
          break;
 
-      case 13 :                              d = double(m_sgm.nTrains); break;
+      case 13 :
+         d = double(m_sgm.nTrains);
+         break;
    }
 
    return( d );
@@ -642,23 +625,7 @@ VOID CCxStimulus::GetParameterLabel( int i, CString& str ) const     // all para
 
    if( i < NumberOfCommonParameters() )
       GetCommonParameterLabel( i, str );
-   else if( m_iType == STIM_ISXYSEQ )
-   {
-      BOOL bIsDir = BOOL( m_xyseq.iOpMode == MODE_ISSPARSEDIR || m_xyseq.iOpMode == MODE_ISDENSEDIR );
-      switch( i )
-      {
-         case 5 : str = _T("refresh(ms)"); break;
-         case 6 : str = _T("#segments"); break;
-         case 7 : str = _T("segDur(ms)"); break;
-         case 8 : str = _T("randseed"); break;
-         case 9 : str = bIsDir ? _T("#directions") : _T("#velocities"); break;
-         case 10: str = bIsDir ? _T("offset(deg)") : _T("direc(deg)"); break;
-         case 11: str = bIsDir ? _T("vel(deg/s)")  : _T("maxV(deg/s)"); break;
-         case 12: str = bIsDir ? _T("")            : _T("offsetV(d/s)"); break;
-         default: break;
-      }
-   }
-   else if( m_iType == STIM_ISPSGM )
+   if( m_iType == STIM_ISPSGM )
    {
       BOOL bIsTrain = BOOL( m_sgm.iOpMode == SGM_TRAIN );
       switch( i )
@@ -715,13 +682,12 @@ VOID CCxStimulus::GetParameterFormat( int i, BOOL& bIsChoice, CStringArray& choi
    }
    else if( i == 2 )                                                       // 2) stimulus type
    {
-      for( j = 0; j < STIM_NTYPES; j++ ) choices.Add( TYPESTRINGS[j] );
+      choices.Add("Chair");
+      choices.Add("PSGM");
    }
    else if( i == 3 )                                                       // 3) motion mode -- choices depend on
    {                                                                       // stimulus type
-      if( m_iType == STIM_ISXYSEQ )
-         for( j=0; j<STIM_NXYSEQMODES; j++ ) choices.Add( XYSEQMODESTRINGS[j] );
-      else if( m_iType == STIM_ISPSGM )
+      if( m_iType == STIM_ISPSGM )
          for( j=0; j<STIM_NPSGMMODES; j++ ) choices.Add( PSGMMODESTRINGS[j] );
       else
          for( j=0; j<STIM_NSTDMODES; j++ ) choices.Add( STDMODESTRINGS[j] );
@@ -738,19 +704,7 @@ VOID CCxStimulus::GetParameterFormat( int i, BOOL& bIsChoice, CStringArray& choi
       fmt.flags = NES_INTONLY | NES_NONNEG;                                // numeric parameters other than those
       fmt.nPre = 1;                                                        // handled below...
       fmt.nLen = 6;
-      if( m_iType == STIM_ISXYSEQ )
-      {
-         switch( i )
-         {
-            case 5 : fmt.nLen = 3; break;
-            case 8 : fmt.nLen = 9; break;
-            case 9 : fmt.nLen = 2; break;
-            case 10: fmt.flags = 0; break;
-            case 11:
-            case 12: fmt.flags = 0; fmt.nPre = 2, fmt.nLen = 7; break;
-         }
-      }
-      else if( m_iType == STIM_ISPSGM )
+      if( m_iType == STIM_ISPSGM )
       {
          BOOL bIsTrain = BOOL(m_sgm.iOpMode == SGM_TRAIN);
          switch( i )
@@ -792,8 +746,10 @@ BOOL CCxStimulus::IsParameterMultiChoice( int i ) const
 
 BOOL CCxStimulus::SetParameter( int i, double dVal )
 {
-   if( !IsValidParameter( i ) ) return( FALSE );                        // do nothing if parameter index invalid
+   ASSERT(m_iType != STIM_ISXYSEQ);                                     // XYseq stimulus DEPRECATED
 
+   if( !IsValidParameter( i ) ) return( FALSE );                        // do nothing if parameter index invalid
+   
    int iVal = int(dVal + 0.5);                                          // integer version is rounded value
    BOOL bSideEffect = FALSE;                                            // TRUE if param change may have side effect
 
@@ -808,44 +764,35 @@ BOOL CCxStimulus::SetParameter( int i, double dVal )
       case 4 : m_tStart = iVal; break;
 
       case 3 :                                                          // motion mode stored in several diff places...
-         if( m_iType == STIM_ISXYSEQ )       m_xyseq.iOpMode = iVal;
-         else if( m_iType == STIM_ISPSGM )   m_sgm.iOpMode = iVal;
-         else                                m_iStdMode = iVal;
+         if( m_iType == STIM_ISPSGM )   m_sgm.iOpMode = iVal;
+         else                           m_iStdMode = iVal;
          bSideEffect = TRUE;                                            // motion mode affects index<->param mapping
          break;
 
       case 5 :
-         if( m_iType == STIM_ISXYSEQ )
-         {
-            m_xyseq.iRefresh = iVal;                                    //    changing XYseq refresh period can affect
-            bSideEffect = TRUE;                                         //    the seg duration
-         }
-         else if( m_iType == STIM_ISPSGM )   m_sgm.bExtTrig = (iVal<=0 || iVal>1) ? FALSE : TRUE;
-         else if( bIsSine )                  m_sine.fAmp = float(dVal);
-         else                                m_pulse.fAmp = float(dVal);
+         if( m_iType == STIM_ISPSGM )   m_sgm.bExtTrig = (iVal<=0 || iVal>1) ? FALSE : TRUE;
+         else if( bIsSine )             m_sine.fAmp = float(dVal);
+         else                           m_pulse.fAmp = float(dVal);
          break;
 
       case 6 :
-         if( m_iType == STIM_ISXYSEQ )       m_xyseq.nSegs = iVal;
-         else if( m_iType == STIM_ISPSGM )   m_sgm.iAmp1 = iVal;
-         else if( bIsSine )                  m_sine.iPeriod = iVal;
-         else                                m_pulse.iPulseDur = iVal;
+         if( m_iType == STIM_ISPSGM )   m_sgm.iAmp1 = iVal;
+         else if( bIsSine )             m_sine.iPeriod = iVal;
+         else                           m_pulse.iPulseDur = iVal;
          break;
 
       case 7 :
-         if( m_iType == STIM_ISXYSEQ )       m_xyseq.iSegDur = iVal;
-         else if( m_iType == STIM_ISPSGM )   
+         if(m_iType == STIM_ISPSGM)   
          {
             m_sgm.iPW1 = iVal; 
             bSideEffect = bIsTrain || (m_sgm.iOpMode == SGM_BIPHASICTRAIN) || (m_sgm.iOpMode == SGM_DUAL);
          }
-         else if( bIsSine )                  m_sine.fPhase = float(dVal);
-         else                                m_pulse.iRampDur = iVal;
+         else if(bIsSine) m_sine.fPhase = float(dVal);
+         else m_pulse.iRampDur = iVal;
          break;
 
       case 8 :
-         if( m_iType == STIM_ISXYSEQ )       m_xyseq.iSeed = iVal;
-         else if( m_iType == STIM_ISPSGM )
+         if( m_iType == STIM_ISPSGM )
          {
             if( bIsTrain ) 
             {
@@ -854,13 +801,12 @@ BOOL CCxStimulus::SetParameter( int i, double dVal )
             }
             else m_sgm.iAmp2 = iVal;
          }
-         else if( bIsSine )                  m_sine.nCycles = iVal;
-         else                                m_pulse.bBlank = (iVal<=0 || iVal>1) ? FALSE : TRUE;
+         else if( bIsSine ) m_sine.nCycles = iVal;
+         else m_pulse.bBlank = (iVal<=0 || iVal>1) ? FALSE : TRUE;
          break;
 
       case 9 :
-         if( m_iType == STIM_ISXYSEQ )       m_xyseq.nChoices = iVal;
-         else if( m_iType == STIM_ISPSGM )
+         if( m_iType == STIM_ISPSGM )
          {
             if( bIsTrain ) m_sgm.nPulses = iVal;
             else m_sgm.iPW2 = iVal;
@@ -869,25 +815,26 @@ BOOL CCxStimulus::SetParameter( int i, double dVal )
          break;
 
       case 10 :
-         if( m_iType == STIM_ISXYSEQ )       m_xyseq.fAngle = float(dVal);
-         else if( bIsTrain )                 m_sgm.iTrainIntv = iVal;
-         else                                { m_sgm.iPulseIntv = iVal; bSideEffect = TRUE; }
+         if( bIsTrain ) m_sgm.iTrainIntv = iVal;
+         else { m_sgm.iPulseIntv = iVal; bSideEffect = TRUE; }
          break;
 
       case 11 :
-         if( m_iType == STIM_ISXYSEQ )       m_xyseq.fVel = float(dVal);
-         else if(bIsTrain)                   m_sgm.nTrains = iVal;
-         else                                { m_sgm.nPulses = iVal; bSideEffect = TRUE; }
+         if(bIsTrain) m_sgm.nTrains = iVal;
+         else { m_sgm.nPulses = iVal; bSideEffect = TRUE; }
          break;
 
       case 12 :                              
-         if(m_iType == STIM_ISXYSEQ)         m_xyseq.fOffsetV = float(dVal); 
-         else                                m_sgm.iTrainIntv = iVal;
+         m_sgm.iTrainIntv = iVal;
          break;
 
-      case 13 :                              m_sgm.nTrains = iVal; break;
+      case 13 :
+         m_sgm.nTrains = iVal; 
+         break;
       
-      default:                               ASSERT( FALSE ); break;
+      default:
+         ASSERT( FALSE ); 
+         break;
    }
 
    Validate();                                                          // auto-correct any invalid entry
@@ -974,6 +921,7 @@ VOID CCxStimulus::SetDefaults()
    m_pulse.fAmp = 10.0f;               //    velocity amplitude, in deg/sec: [-500.0 .. 500.0].
    m_pulse.fDirec = 0.0f;              //    direction of motion, CCW angle from x-axis [-180.0..180.0]
 
+   // DEPRECATED: We maintain m_xyseq in order to deserialize older documents containing XYseq runs...
    m_xyseq.iOpMode = MODE_ISSPARSEDIR; // for XYseq channel type:  sparse-direction motion mode,
    m_xyseq.iRefresh = 4;               //    refresh period in ms,
    m_xyseq.nSegs = 100;                //    # of distinct segments of random motion
@@ -999,6 +947,9 @@ VOID CCxStimulus::SetDefaults()
 //
 //    Validate the current stimulus channel definition.
 //
+//    30sep2024: XYseq stimuli (STIM_ISXYSEQ) are no longer validated. XYseq-containing stimulus runs may be read in
+//    during deserialization of pre-V5.0 docs, but they are ultimately deleted by CCxDoc after deserialization.
+// 
 //    ARGS:       NONE.
 //
 //    RETURNS:    NONE.
@@ -1010,45 +961,12 @@ VOID CCxStimulus::Validate()
 
    if( m_iStdMode < 0 || m_iStdMode >= STIM_NSTDMODES )                 // motion mode: limited # of choices, depending
        m_iStdMode = 0;                                                  // on stimulus type...
-   if( m_xyseq.iOpMode < 0 || m_xyseq.iOpMode >= STIM_NXYSEQMODES )
-      m_xyseq.iOpMode = 0;
    if( m_sgm.iOpMode < 0 || m_sgm.iOpMode >= STIM_NPSGMMODES )
       m_sgm.iOpMode = 0;
 
    if( m_tStart < 0 ) m_tStart = 0;                                     // start time t0 must be >= 0
 
-   if( m_iType == STIM_ISXYSEQ )                                        // validate ALL motion params for XYseq stim:
-   {
-      if( m_xyseq.iRefresh < SGH_MINXYFRAME )                           //    refresh period has limited ranged and
-         m_xyseq.iRefresh = SGH_MINXYFRAME;                             //    must be multiple of min refresh period
-      else if( m_xyseq.iRefresh > SGH_MAXXYFRAME )
-         m_xyseq.iRefresh = SGH_MAXXYFRAME;
-      else if( (m_xyseq.iRefresh % SGH_MINXYFRAME) != 0 )
-      {
-         m_xyseq.iRefresh = (m_xyseq.iRefresh/SGH_MINXYFRAME)*SGH_MINXYFRAME;
-         if( m_xyseq.iRefresh == 0 ) m_xyseq.iRefresh = SGH_MINXYFRAME;
-      }
-
-      if( m_xyseq.nSegs < 1 ) m_xyseq.nSegs = 1;                        //    #segments must be >= 1
-
-      if( (m_xyseq.iSegDur % m_xyseq.iRefresh) != 0 )                   //    seg dur must be multiple of refresh per
-      {
-         m_xyseq.iSegDur = (m_xyseq.iSegDur/m_xyseq.iRefresh)*m_xyseq.iRefresh;
-         if( m_xyseq.iSegDur == 0 ) m_xyseq.iSegDur = m_xyseq.iRefresh;
-      }
-
-      if( m_xyseq.nChoices < 2 ) m_xyseq.nChoices = 2;                  //    #dir or #vel: [2..32]
-      else if( m_xyseq.nChoices > 32 ) m_xyseq.nChoices = 32;
-
-      while( m_xyseq.fAngle < -180.0f ) m_xyseq.fAngle += 360.0f;       //    offset angle or direc:  restrict to the
-      while( m_xyseq.fAngle > 180.0f ) m_xyseq.fAngle -= 360.0f;        //    unit circle, [-180..180] deg
-
-      if( m_xyseq.fVel < -500.0f ) m_xyseq.fVel = -500.0f;              //    velocity params: [-500..500] deg/sec
-      else if( m_xyseq.fVel > 500.0f ) m_xyseq.fVel = 500.0f;
-      if( m_xyseq.fOffsetV < -500.0f ) m_xyseq.fOffsetV = -500.0f;
-      else if( m_xyseq.fOffsetV > 500.0f ) m_xyseq.fOffsetV = 500.0f;
-   }
-   else if( m_iType == STIM_ISPSGM )                                    // validate ALL motion params for PSGM stim
+   if( m_iType == STIM_ISPSGM )                                    // validate ALL motion params for PSGM stim
    {
       int iVal = m_sgm.iAmp1 / 80;                                      //    amp1,2: [min..max] in 80mV increments
       if(iVal < SGM_MINPA) iVal = SGM_MINPA;
@@ -1171,7 +1089,7 @@ VOID CCxContRun::Initialize( LPCTSTR s, const WORD t, const WORD f )
    ASSERT( t == CX_CONTRUN );                                        // validate run object type and flags
    ASSERT( (f & CX_ISSETOBJ) == 0 );
 
-   if ( (GetStimulusCount() > 0) || (GetXYseqTargCount() > 0) )      // reinitialize to empty, default state
+   if(GetStimulusCount() > 0)      // reinitialize to empty, default state
    {
       Clear();
       SetDefaults();
@@ -1185,9 +1103,9 @@ VOID CCxContRun::Initialize( LPCTSTR s, const WORD t, const WORD f )
 //
 //    Copy members of specified CNTRLX data object to THIS object (already constructed).
 //
-//    We do not require that both src & dst run object have the same # of stimuli or participating XYseq targets, so
-//    this operation could change the memory requirements of THIS run object -- either requiring allocation of
-//    additional stimulus channels or deallocation of extra channels.
+//    We do not require that both src & dst run object have the same # of stimuli, so this operation could change the
+//    memory requirements of THIS run object -- either requiring allocation of additional stimulus channels or 
+//    deallocation of extra channels.
 //
 //    For simplicity, we clear the run completely and start from scratch; the danger in doing so is that, if we have
 //    a problem allocating memory as we make THIS run identical to the source run, we cannot restore the run to its
@@ -1197,9 +1115,8 @@ VOID CCxContRun::Initialize( LPCTSTR s, const WORD t, const WORD f )
 //
 //    RETURNS:    NONE.
 //
-//    THROWS:     CMemoryException if unable to allocate memory for stimuli or participating XYseq target info.  Run
-//                will NOT be in its original state if such an exception should occur.  Caller should catch exception
-//                and delete this object!
+//    THROWS:     CMemoryException if unable to allocate memory for stimuli. Run will NOT be in its original state if 
+//                such an exception should occur. Caller should catch exception and delete this object!
 //
 VOID CCxContRun::Copy( const CTreeObj* pSrc )
 {
@@ -1217,29 +1134,7 @@ VOID CCxContRun::Copy( const CTreeObj* pSrc )
    m_fHOffset = float( pSrcRun->GetHOffset() );
    m_fVOffset = float( pSrcRun->GetVOffset() );
 
-   int i;
-   for( i = 0; i < pSrcRun->GetXYseqTargCount(); i++ )            // copy list of participating XYseq targets...
-   {
-      CXYseqTgt* pTgt = new CXYseqTgt;                            // construct uninitialized tgt record
-      ASSERT( pTgt != NULL );                                     // **** THROWS CMemoryException
-
-      pTgt->wKey = pSrcRun->GetXYseqTarget( i );                  // copy data into tgt record
-      pTgt->fCtrX = float( pSrcRun->GetHPosXYseqTarget( i ) );
-      pTgt->fCtrY = float( pSrcRun->GetVPosXYseqTarget( i ) );
-
-      try
-      {
-         m_XYseqTgts.AddTail( pTgt );                             // append record to the XYseq participating tgt list
-      }
-      catch( CMemoryException* e )                                // if memory exception, must not leave the new tgt
-      {                                                           // record dangling!  free it and pass on exception.
-         UNREFERENCED_PARAMETER(e);
-         delete pTgt;
-         throw;
-      }
-   }
-
-   for( i = 0; i < pSrcRun->GetStimulusCount(); i++ )             // copy list of stimulus channels...
+   for(int i = 0; i < pSrcRun->GetStimulusCount(); i++)           // copy list of stimulus channels...
    {
       CCxStimulus* pStim = new CCxStimulus;                       // construct new, default stimulus channel object
       ASSERT( pStim != NULL );                                    // **** THROWS CMemoryException
@@ -1300,29 +1195,6 @@ BOOL CCxContRun::CopyRemoteObj(CTreeObj* pSrc, const CWordToWordMap& depKeyMap)
    m_fHOffset = float( pSrcRun->GetHOffset() );
    m_fVOffset = float( pSrcRun->GetVOffset() );
 
-   for( i = 0; i < pSrcRun->GetXYseqTargCount(); i++ )               // copy list of participating XYseq targets...
-   {
-      CXYseqTgt* pTgt = NULL;
-      try
-      {
-         pTgt = new CXYseqTgt;                                       // construct uninitialized tgt record
-
-         depKeyMap.Lookup( pSrcRun->GetXYseqTarget(i), dstKey );     // copy data into tgt record, replacing src doc
-         pTgt->wKey = dstKey;                                        // tgt key w/ key obtained from dependency map
-         pTgt->fCtrX = float( pSrcRun->GetHPosXYseqTarget( i ) );
-         pTgt->fCtrY = float( pSrcRun->GetVPosXYseqTarget( i ) );
-
-         m_XYseqTgts.AddTail( pTgt );                                // append record to the XYseq partic tgt list
-      }
-      catch( CMemoryException* e )                                   // if memory exception, clear defn and abort
-      {
-         UNREFERENCED_PARAMETER(e);
-         if( pTgt != NULL ) delete pTgt;
-         Clear();
-         return( FALSE );
-      }
-   }
-
    for( i = 0; i < pSrcRun->GetStimulusCount(); i++ )                // copy list of stimulus channels...
    {
       CCxStimulus* pStim = NULL;
@@ -1352,12 +1224,19 @@ BOOL CCxContRun::CopyRemoteObj(CTreeObj* pSrc, const CWordToWordMap& depKeyMap)
 
 //=== GetDependencies [base override] =================================================================================
 //
-//    Return a list of keys identifying those CNTRLX data objects which are currently referenced by this CNTRLX object.
+//    Return a list of keys identifying those Maestro data objects which are currently referenced by this object.
 //    This method is required by the CTreeMap/CTreeObj framework in order to "lock" the "independent" objects in the
 //    treemap -- providing a mechanism that prevents user from removing them and thereby corrupting the "dependent"
 //    object's definition.
 //
 //    A continuous-mode run is "dependent" only upon any XY scope targets appearing in its XYseq target list.
+// 
+//    30sep2024: The XYScope platform is unsupported since Maestro 4.0 and is removed a/o Maestro 5. So there is no
+//    such thing as the XYSeq target list. However, in order to handle reading in and migrating pre-V5.0 documents that
+//    contained XYScope targets and XYseq stimulus runs, CCxContRun still maintains a list of XYSeq targets. During
+//    deserialization of a pre-V5 document, this list will get loaded with the keys of the XYScope targets in the list,
+//    and during migration, CCxDoc calls this method to identify all stimulus runs with XYScope target dependencies;
+//    these runs are removed from the document during migration.
 //
 //    ARGS:       wArKeys -- [out] currently referenced CNTRLX object keys are stored here.  if none, array emptied.
 //
@@ -1378,47 +1257,6 @@ VOID CCxContRun::GetDependencies( CWordArray& wArKeys ) const
 }
 
 
-//=== UsingXYseq ======================================================================================================
-//
-//    Return TRUE if the run's stimulus channel list includes an active (ie, turned "on") XYseq stimulus.
-//
-//    ARGS:       NONE
-//
-//    RETURNS:    TRUE if there's an active XYseq in stimulus list; else FALSE.
-//
-BOOL CCxContRun::UsingXYseq() const
-{
-   POSITION pos = m_Stimuli.GetHeadPosition();
-   while( pos != NULL )
-   {
-      CCxStimulus* pStim = m_Stimuli.GetNext( pos );
-      if( pStim->GetType() == STIM_ISXYSEQ && pStim->IsOn() )
-         return( TRUE );
-   }
-   return( FALSE );
-}
-
-
-//=== IsUsingTarget ===================================================================================================
-//
-//    Return TRUE if the specified target key is already included in the run's XYseq participating target list.
-//
-//    ARGS:       wKey  -- [in] CNTRLX target key.
-//
-//    RETURNS:    TRUE if it is in the target list; else FALSE.
-//
-BOOL CCxContRun::IsUsingTarget( WORD wKey ) const
-{
-   POSITION pos = m_XYseqTgts.GetHeadPosition();
-   while( pos != NULL )
-   {
-      CXYseqTgt* pTgt = m_XYseqTgts.GetNext( pos );
-      if( pTgt->wKey == wKey ) return( TRUE );
-   }
-   return( FALSE );
-}
-
-
 //=====================================================================================================================
 // OPERATIONS - GENERAL
 //=====================================================================================================================
@@ -1426,15 +1264,12 @@ BOOL CCxContRun::IsUsingTarget( WORD wKey ) const
 //=== GetDefinition ===================================================================================================
 //
 //    Recasts the definition of the continuous-mode run object as a CONTRUN structure, which is suitable for storage in
-//    the Maestro-MaestroDRIVER shared-memory interface (C++/MFC objects cannot be passed across that interface!).
+//    the Maestro-CXDRIVER shared-memory interface (C++/MFC objects cannot be passed across that interface!).
 //
-//    NOTE:  Suited only for passing the run definition to MaestroRTSS in preparation for a run.  Any inactive
-//    stimuli are ignored, and the XYseq target list is filled ONLY if the run will execute an XYseq stimulus!  Do NOT
-//    use this method to obtain a complete copy of the run's current contents.
+//    NOTE: Suited only for passing the run definition to CXDRIVER in preparation for a run. Any inactive stimuli are
+//    ignored. Do NOT use this method to obtain a complete copy of the run's current contents.
 //
-//    To prepare the CONTRUN data structure, we must query the CCxDoc for the definitions of any targets in the XYseq
-//    participating target list.  If any of the targets in that list are NOT XY scope targets (type CX_XYTARG), they
-//    will not be included in the run definition -- an XYseq stimulus only operates on XY scope targets!
+//    30sep2024: No longer supports XYseq stimuli - deprecated a/o Maestro 5.0.
 //
 //    ARGS:       runDef   -- [out] run definition in CXDRIVER-compatible format.
 //
@@ -1458,33 +1293,7 @@ VOID CCxContRun::GetDefinition( CONTRUN& runDef ) const
    }
    runDef.nStimuli = nActive;
 
-   runDef.nXYTgts = 0;
-   if( nActive > 0 && UsingXYseq() )                                    // IF this run executes an XYseq stimulus,
-   {                                                                    // then load all valid XY scope targets in the
-      CCxDoc* pDoc = ((CCntrlxApp*)AfxGetApp())->GetDoc();              // run's XYseq participating target list...
-      int nValid = 0;
-      POSITION pos = m_XYseqTgts.GetHeadPosition();
-      while( pos != NULL )
-      {
-         CXYseqTgt* pTgt = m_XYseqTgts.GetNext( pos );
-         if( pDoc->ObjExists( pTgt->wKey ) )
-         {
-            CCxTarget* pTgtObj = (CCxTarget*) pDoc->GetObject( pTgt->wKey );
-            if( pTgtObj->DataType() == CX_XYTARG )
-            {
-               CXTARGET* pDef = &(runDef.xyTgts[nValid]);
-               pDef->wType = CX_XYTARG;
-               ::sprintf_s(pDef->name, "%.*s", CX_MAXOBJNAMELEN-1, LPCTSTR(pTgtObj->Name()));
-               pTgtObj->GetParams( &(pDef->u) );
-
-               runDef.fCtrX[nValid] = pTgt->fCtrX;
-               runDef.fCtrY[nValid] = pTgt->fCtrY;
-               ++nValid;
-            }
-         }
-      }
-      runDef.nXYTgts = nValid;
-   }
+   runDef.nXYTgts = 0;   // XYseq stimulus DEPRECATED
 }
 
 
@@ -1617,8 +1426,8 @@ CCxStimulus* CCxContRun::CopyStimulus( int iPos ) const
 //    unprotected (the caller could delete it without going through CCxContRun methods!).  We insert a new stimulus at
 //    the specified pos and make it the same as the pasted stimulus channel.
 //
-//    If the pasted stimulus is an active XYseq or PSGM, we must turn off the currently active XYseq or PSGM before
-//    pasting -- enforcing the rule that only one XYseq and one PSGM can be active in the run.
+//    If the pasted stimulus is an active PSGM, we must turn off the currently active PSGM before pasting -- enforcing 
+//    the rule that only one PSGM can be active in the run.
 //
 //    ARGS:       iPos  -- [in] zero-based insertion position; if invalid pos, stimulus channel is appended.
 //                pStim -- [in] ptr to the stim channel to be pasted.
@@ -1637,12 +1446,11 @@ int CCxContRun::PasteStimulus( int iPos, const CCxStimulus* pStim )
    CCxStimulus* pNew = RetrieveStimulus( iIns );            // get ptr to new stimulus and copy the paste stim to it
    pNew->Copy( *pStim );
 
-   int iType = pNew->GetType();                             // if pasted stimulus is an active XYseq or PSGM channel,
-   if( pNew->IsOn() &&                                      // deactivate all other channels of same type
-       (iType == STIM_ISXYSEQ || iType == STIM_ISPSGM) )
+   int iType = pNew->GetType();                             // if pasted stimulus is an active PSGM channel
+   if(pNew->IsOn() && (iType == STIM_ISPSGM))               // deactivate all other PSGM channels
       DeactivateAllOthers( pNew );
 
-   return( iIns );
+   return(iIns);
 }
 
 
@@ -1653,8 +1461,8 @@ int CCxContRun::PasteStimulus( int iPos, const CCxStimulus* pStim )
 //    NOTE that we do NOT simply insert the provided stimulus channel ptr into the list, as this would leave the stim
 //    channel object unprotected (the caller could delete it without going through CCxContRun methods!).
 //
-//    If the replacement stimulus is an active XYseq or PSGM, we must turn off any other active XYseq or PSGM --
-//    enforcing the rule that only one XYseq and one PSGM can be active in the run.
+//    If the replacement stimulus is an active PSGM, we must turn off any other active PSGM -- enforcing the rule that 
+//    only one PSGM can be active in the run.
 //
 //    ARGS:       iPos  -- [in] zero-based position of stimulus channel to be replaced.
 //                pStim -- [in] ptr to the replacement channel definition.
@@ -1670,9 +1478,8 @@ BOOL CCxContRun::ReplaceStimulus( int iPos, const CCxStimulus* pStim )
       CCxStimulus* pS = RetrieveStimulus( iPos );              // retrieve ptr to existing stimulus
       pS->Copy( *pStim );                                      // and copy replacement stimulus into it.
 
-      int iType = pS->GetType();                               // if replacement is an active XYseq or PSGM channel,
-      if( pS->IsOn() &&                                        // deactivate all other channels of same type
-          (iType == STIM_ISXYSEQ || iType == STIM_ISPSGM) )
+      int iType = pS->GetType();                               // if replacement is an active PSGM channel,
+      if(pS->IsOn() && (iType == STIM_ISPSGM))                 // deactivate all other PSGM channels
          DeactivateAllOthers( pS );
 
       return( TRUE );
@@ -1700,114 +1507,9 @@ VOID CCxContRun::ClearStimuli()
 }
 
 
-//=== InsertXYseqTarget ===============================================================================================
-//
-//    Insert an XY scope target at the specified position (zero-based index) in the participating target list that is
-//    associated with any XYseq stimulus in this run.  Existing target entries are moved down to make room.
-//
-//    ARGS:       iPos           -- [in] zero-based insertion position; if invalid pos, the target record is appended.
-//                wTargKey       -- [in] key of CNTRLX target object to insert.
-//                dCtrX, dCtrY   -- [in] initial location of center of target's window, in deg (default= 0,0).
-//
-//    RETURNS:    Zero-based position of the target in the list if successful; -1 if target list is full, if specified
-//                target is already in the list, or if target is not an XY scope target type (CX_XYTARG).
-//
-//    THROWS:     CMemoryException if unable to allocate a record for the target info or insert it into the list.  In
-//                such a case, we clean up any allocations that were made here prior to the exception to avoid memory
-//                leaks, then pass on the exception.
-//
-int CCxContRun::InsertXYseqTarget( int iPos, WORD wTargKey, double dCtrX /* =0.0 */, double dCtrY /* =0.0 */ )
-{
-   int nCount = GetXYseqTargCount();
-   if( nCount == MAXTGTSINXYSEQ ) return( -1 );                // target list is maxed out!
-
-   CCxDoc* pDoc = ((CCntrlxApp*)AfxGetApp())->GetDoc();
-   if( (!pDoc->ObjExists( wTargKey )) ||                       // specified target must exist,
-        pDoc->GetObjType( wTargKey ) != CX_XYTARG ||           // it must be an XY scope target, and
-        IsUsingTarget( wTargKey ) )                            // it must not already be in the target list!
-      return( -1 );
-
-   BOOL bAfter = FALSE;                                        // insert before stimulus at specified pos, unless...
-   int iNew = iPos;
-   if( nCount == 0 )                                           // ...list empty:  inserting first target
-      iNew = 0;
-   else if ( (iNew < 0) || (iNew >= nCount) )                  // ...invalid pos:  append by inserting after last rec
-   {
-      iNew = nCount-1;
-      bAfter = TRUE;
-   }
-
-   CXYseqTgt* pTgt = new CXYseqTgt;                            // create record to hold target key & ctr pos
-                                                               // ***** THROWS CMemoryException
-   pTgt->wKey = wTargKey;
-   pTgt->fCtrX = float(dCtrX);
-   pTgt->fCtrY = float(dCtrY);
-
-   try                                                         // insert record ptr into target list.  guard against
-   {                                                           // memory exceptions...
-      if( nCount == 0 )                                        //    first target (arg ignored in this case)
-         m_XYseqTgts.AddHead( pTgt );                          //    **** THROWS CMemoryException
-      else                                                     //    general insertion case:
-      {
-         POSITION pos = m_XYseqTgts.FindIndex( iNew );
-         if( bAfter ) m_XYseqTgts.InsertAfter( pos, pTgt );    //    **** THROWS CMemoryException
-         else m_XYseqTgts.InsertBefore( pos, pTgt );           //    **** THROWS CMemoryException
-      }
-   }
-   catch( CMemoryException *e )                                // caught memory excpt; must release new tgt rec before
-   {                                                           // passing on exception so it's not left dangling!
-      UNREFERENCED_PARAMETER(e);
-      delete pTgt;
-      throw;
-   }
-
-   return( (bAfter) ? (iNew+1): iNew );
-}
-
-
-//=== RemoveXYseqTarget ===============================================================================================
-//
-//    Delete an existing record at the specified position (zero-based index) in the XYseq participating target list.
-//
-//    ARGS:       iPos  -- [in] zero-based position of target record to be deleted.
-//
-//    RETURNS:    TRUE if successful; FALSE otherwise (invalid pos or list empty), in which case tgt list unchanged.
-//
-BOOL CCxContRun::RemoveXYseqTarget( int iPos )
-{
-   if( (iPos < 0) || (iPos >= GetXYseqTargCount()) ) return( FALSE );   // invalid pos or list empty
-
-   POSITION pos = m_XYseqTgts.FindIndex( iPos );                        // get ptr to target record to be deleted
-   CXYseqTgt* pDeadTgt = m_XYseqTgts.GetAt( pos );
-   m_XYseqTgts.RemoveAt( pos );                                         // remove ptr from list
-   delete pDeadTgt;                                                     // destroy tgt record itself
-   return( TRUE );
-}
-
-
-//=== ClearXYseqTargets ===============================================================================================
-//
-//    Empty the XYseq participating target list.
-//
-//    ARGS:       NONE
-//
-//    RETURNS:    NONE.
-//
-VOID CCxContRun::ClearXYseqTargets()
-{
-   while( !m_XYseqTgts.IsEmpty() )
-   {
-      CXYseqTgt* pTgt = m_XYseqTgts.RemoveHead();
-      delete pTgt;
-   }
-}
-
-
-
 //=== Clear ===========================================================================================================
 //
-//    Deletes all stimuli from the stimulus channel list and all records from the XYseq participating target list, and
-//    resets general run parameters to their default values.
+//    Deletes all stimuli from the stimulus channel list, and resets general run parameters to their default values.
 //
 //    ARGS:       NONE.
 //
@@ -1815,7 +1517,6 @@ VOID CCxContRun::ClearXYseqTargets()
 //
 VOID CCxContRun::Clear()
 {
-   ClearXYseqTargets();
    ClearStimuli();
    SetDefaults();
 }
@@ -1823,8 +1524,13 @@ VOID CCxContRun::Clear()
 
 //=== Serialize [base override] =======================================================================================
 //
-//    Handles reading/writing the CNTRLX continuous-mode run object from/to a disk file via a serialization archive.
+//    Handles reading/writing the Maestro stimulus run object from/to a disk file via a serialization archive.
 //
+//    NOTE: The XYScope platform, unsupported since V4.0, is dropped for V5.0. Hence, the XYSeq stimlus type is also
+//    deprecated. This method throws an exception if there is an attempt to save a run using the XYSeq stimulus
+//    channel, but it still supports reading in such an object so that Maestro can load and migrate older experiment
+//    documents containing XYSeq runs.
+// 
 //    ARGS:       ar -- [in] the serialization archive.
 //
 //    RETURNS:    NONE.
@@ -1838,16 +1544,8 @@ void CCxContRun::Serialize ( CArchive& ar )
    m_Stimuli.Serialize( ar );                               // the stimulus channels
 
    int i, nTgts;
-   if ( ar.IsStoring() )
+   if(ar.IsStoring())
    {
-      nTgts = GetXYseqTargCount();                          // the XYseq target list (count, record[0], ...)
-      ar << nTgts;
-      for( i = 0; i < nTgts; i++ )
-      {
-         CXYseqTgt* pTgt = RetrieveTarget( i );
-         ar << pTgt->wKey << pTgt->fCtrX << pTgt->fCtrY;
-      }
-
       ar << m_iDutyPeriod << m_iDutyPulse << m_nAutoStop;   // the general run parameters...
       ar << m_fHOffset << m_fVOffset;
    }
@@ -1867,7 +1565,11 @@ void CCxContRun::Serialize ( CArchive& ar )
       catch( CException* e )
       {
          UNREFERENCED_PARAMETER(e);
-         ClearXYseqTargets();
+         while(!m_XYseqTgts.IsEmpty())
+         {
+            CXYseqTgt* pTgt = m_XYseqTgts.RemoveHead();
+            delete pTgt;
+         }
          throw;
       }
 
@@ -1909,66 +1611,19 @@ VOID CCxContRun::GetDutyPulseChoices( CStringArray& choices )
 }
 
 
-//=== Get/SetXYseqTarget ==============================================================================================
-//
-//    These methods access the target key of individual target records in the XYseq participating target list:
-//       GetXYseqTarget( i )        ==> key of target in ith record; CX_NULLOBJ_KEY if index is invalid!
-//       GetXYseqTarget( i, str )   ==> human-readable name of target; empty string if index is invalid!
-//       SetXYseqTarget( i, wKey )  ==> change key of target in ith record.  This will succeed only if the key refers
-//    to a valid XY scope target that is not already present in the target list.  If the pos index is invalid, this
-//    method will append the target to the list.
-//
-//    ARGS:       i     -- [in] pos of existing record in XYseq target list.
-//                str   -- [out] will contain human-readable name of target in specified record.
-//                wKey  -- [in] CNTRLX target key -- must refer to a valid XY scope target.
-//
-//    RETURNS:    SetXYseqTarget() returns TRUE if successful, FALSE otherwise.
-//
-WORD CCxContRun::GetXYseqTarget( int i ) const
-{
-   return( IsValidXYseqTarg( i ) ? RetrieveTarget( i )->wKey : CX_NULLOBJ_KEY );
-}
-
-VOID CCxContRun::GetXYseqTarget( int i, CString& str ) const
-{
-   str.Empty();
-   if( IsValidXYseqTarg( i ) )
-   {
-      WORD key = RetrieveTarget( i )->wKey;
-      CCxDoc* pDoc = ((CCntrlxApp*)AfxGetApp())->GetDoc();
-      if( pDoc->ObjExists( key ) )
-         str = pDoc->GetObjName( key );
-   }
-}
-
-BOOL CCxContRun::SetXYseqTarget( int i, WORD wKey )
-{
-   CCxDoc* pDoc = ((CCntrlxApp*)AfxGetApp())->GetDoc();
-   BOOL bOk = pDoc->ObjExists( wKey ) && (pDoc->GetObjType( wKey ) == CX_XYTARG) && !IsUsingTarget( wKey );
-   if( bOk )
-   {
-      if( IsValidXYseqTarg( i ) ) RetrieveTarget( i )->wKey = wKey;
-      else bOk = BOOL( InsertXYseqTarget( -1, wKey ) >= 0 );
-   }
-   return( bOk );
-}
-
-
 //=== SetStimParameter ================================================================================================
 //
-//    Change the value of the specified parameter for the specified stimulus channel.  Illegal parameter values are
+//    Change the value of the specified parameter for the specified stimulus channel. Illegal parameter values are
 //    auto-corrected.
 //
-//    Only one XYseq stimulus and only one PSGM stimulus channel can be turned ON at any time (though more than one
-//    channel of each type can be defined).  We enforce this restriction here by turning OFF any other active XYseq
-//    (or PSGM) stimulus channel.
+//    Only one PSGM stimulus channel can be turned ON at any time (though more than one PSGM channel can be defined).
+//    We enforce this restriction here by turning OFF any other active PSGM stimulus channel.
 //
 //    NOTE:  Any view class that displays CCxContRun should be aware of the possible "side effects" of changing a
-//    single stimulus parameter.  As mentioned above, turning ON an XYseq or PSGM stimulus will automatically turn OFF
-//    any other XYseq or PSGM channel (note that this effect will occur if the user changes the type of an "ON"
-//    channel to XYseq or PSGM).  In addition, changing certain stimulus channel parameters may affect other
-//    parameter(s) in that channel's definition -- see CCxStimulus::SetParameter().  We return TRUE here if a side
-//    effect has or may have occurred
+//    single stimulus parameter. As mentioned above, turning ON a PSGM stimulus will automatically turn OFF any other 
+//    PSGM channel. In addition, changing certain stimulus channel parameters may affect other parameter(s) in that 
+//    channel's definition -- see CCxStimulus::SetParameter(). We return TRUE here if a side effect has or may have 
+//    occurred.
 //
 //    ARGS:       i           -- [in] index of stimulus channel.
 //                j           -- [in] index of parameter to be modified.
@@ -1985,9 +1640,9 @@ BOOL CCxContRun::SetStimParameter( int i, int j, double dVal )
    BOOL bSideEffect = pStim->SetParameter( j, dVal );
 
    int iType = pStim->GetType();
-   if( (iType == STIM_ISXYSEQ || iType == STIM_ISPSGM) && pStim->IsOn() && (iType != iOldType || bWasOff) )
+   if((iType == STIM_ISPSGM) && pStim->IsOn() && (iType != iOldType || bWasOff) )
    {
-      if( DeactivateAllOthers( pStim ) ) bSideEffect = TRUE;
+      if(DeactivateAllOthers(pStim)) bSideEffect = TRUE;
    }
 
    return( bSideEffect );
@@ -2014,28 +1669,20 @@ void CCxContRun::Dump( CDumpContext& dc ) const
 {
    CTreeObj::Dump( dc );
 
-   dc << "********CNTRLX Run Object********";
+   dc << "********Maestro Run Object********";
 
    CString msg;
    msg.Format( "\nDuty period = %d ms, Duty pulse = %d, Autostop = %d, HOffset = %.2f, VOffset = %.2f",
                m_iDutyPeriod, m_iDutyPulse, m_nAutoStop, m_fHOffset, m_fVOffset );
    dc << msg;
 
-   msg.Format( "\nContains %d stimulus channels, %d records in XYseq target list",
-               GetStimulusCount(), GetXYseqTargCount() );
+   msg.Format("\nContains %d stimulus channels", GetStimulusCount());
    dc << msg;
 
    if( dc.GetDepth() > 0 )
    {
       dc << _T("\nSTIMULUS CHANNEL DEFINITIONS:");
       m_Stimuli.Dump( dc );
-      dc << _T("\nXYseq TARGET LIST CONTENTS (key, fCtrX, fCtrY):");
-      POSITION pos = m_XYseqTgts.GetHeadPosition();
-      while( pos != NULL )
-      {
-         CXYseqTgt* pTgt = m_XYseqTgts.GetNext( pos );
-         dc << _T("\n   ") << pTgt->wKey << _T(" ") << pTgt->fCtrX << _T(",") << pTgt->fCtrY;
-      }
    }
    dc << "\n\n";
 }
@@ -2086,8 +1733,8 @@ VOID CCxContRun::SetDefaults()
 //=== DeactivateAllOthers =============================================================================================
 //
 //    Deactivate (ie, turn "OFF") all stimulus channels in the run that are of the same type as the specified channel.
-//    The specified channel is unaffected.  This convenience method is used to enforce the rule that a run may have
-//    only one active ("ON") XYseq and one active PSGM stimulus; however, it can be used for any stimulus type.
+//    The specified channel is unaffected. This convenience method is used to enforce the rule that a run may have
+//    only one active ("ON") PSGM stimulus; however, it can be used for any stimulus type.
 //
 //    ARGS:       pStim -- [in] the stimulus channel that will remain "ON"; all other channels OF THE SAME TYPE are
 //                         turned OFF.
