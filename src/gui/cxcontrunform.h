@@ -50,19 +50,13 @@ protected:
    WORD              m_wKey;                    // unique key of CNTRLX run object currently displayed on form 
    CCxContRun*       m_pRun;                    // ptr to CNTRLX run object currently displayed on form 
 
-   CWordArray        m_arDepObjs;               // keys of CNTRLX objects upon which current run is dependent
-
    CCxStimulus*      m_pPasteStim;              // ptr to the stimulus channel object last copied by user; can be 
                                                 // pasted into any run loaded into view
 
    CCellID           m_contextCell;             // the grid cell on which a context menu was invoked by right-click
-   int               m_iInsTgtPos;              // insert pos for target being chosen by user; -1 when not adding tgt 
-   WORD              m_wLastTgtKey;             // key of last target object added to the XYseq targets grid
 
    CLiteGrid         m_stimChanGrid;            // grid control displaying run's stimulus channel grid
    CSize             m_minSTCSize;              // minimum size (based on dlg template) of this grid
-
-   CLiteGrid         m_xyTgtsGrid;              // grid control displaying list of XY targets for run's XYseq stimulus 
    
                                                 // other subclassed controls on form:
    CNumEdit          m_edDutyPeriod;            // run duty period in ms 
@@ -94,10 +88,8 @@ protected:
    afx_msg void OnUpdateEditCommand( CCmdUI* pCmdUI );   // update enable state of standard "Edit" menu cmds 
    afx_msg void OnEditCommand( UINT nID );               // perform selected standard "Edit" menu cmds 
    afx_msg void OnSize( UINT nType, int cx, int cy );    // resize stim channel grid if form view is enlarged by user
-   afx_msg void OnNMDblClk( UINT id, NMHDR* pNMHDR,      // handle NM_DBLCLK notification from grid controls on form
-                            LRESULT* pResult );
-   afx_msg void OnNMRClick( UINT id, NMHDR* pNMHDR,      // handle NM_RCLICK notification from grid controls on form
-                            LRESULT* pResult );
+   afx_msg void OnNMDblClk(NMHDR* pNMHDR, LRESULT* pResult); // handle NM_DBLCLK notification from stimulus grid             
+   afx_msg void OnNMRClick(NMHDR* pNMHDR, LRESULT* pResult); // handle NM_RCLICK notification from stimulus grid
    afx_msg void OnGridOps( UINT cmdID );                 // handle user-initiated operations on embedded grid ctrls
    afx_msg void OnUpdGridOps( CCmdUI* pCmdUI );          // dynamically disable/enable grid operations dep on context 
 
@@ -147,13 +139,6 @@ protected:
    static BOOL CALLBACK StimGridEditCB(                  // callback invoked to initiate inplace editing of grid cell
             EDITINFO *pEI, LPARAM lParam );
    static BOOL CALLBACK StimGridEndEditCB(               // callback invoked upon termination of inplace editing 
-            ENDEDITINFO *pEEI, LPARAM lParam );
-
-   static BOOL CALLBACK TgtGridDispCB(                   // analogously for the XYseq targets grid... 
-            GV_DISPINFO *pDispInfo, LPARAM lParam ); 
-   static BOOL CALLBACK TgtGridEditCB( 
-            EDITINFO *pEI, LPARAM lParam );
-   static BOOL CALLBACK TgtGridEndEditCB( 
             ENDEDITINFO *pEEI, LPARAM lParam );
 };
 

@@ -104,7 +104,6 @@
 #define IDC_RF_HOFFSET                  1102
 #define IDC_RF_VOFFSET                  1103
 #define IDC_RF_DUTYPULSE                1104
-#define IDC_RF_XYTGTS                   1105
 #define IDC_RF_STIMULI                  1106
 #define IDC_EL_XPOL                     1188
 #define IDC_EL_YPOL                     1189
@@ -351,11 +350,6 @@
 #define ID_RUN_STIM_PASTE               32884
 #define ID_RUN_STIM_INS                 32885
 #define ID_RUN_STIM_APPEND              32886
-#define ID_RUN_TGT_CLEAR                32887
-#define ID_RUN_TGT_DEL                  32888
-#define ID_RUN_TGT_CENTER               32889
-#define ID_RUN_TGT_INS                  32890
-#define ID_RUN_TGT_APPEND               32891
 #define ID_HELP_USRGUIDE                33007
 #define ID_FILE_COPYREMOTE              33008
 #define IDS_COPYREMOTE_FILEDLGTITLE     33008
@@ -378,7 +372,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        172
+#define _APS_NEXT_RESOURCE_VALUE        173
 #define _APS_NEXT_COMMAND_VALUE         33020
 #define _APS_NEXT_CONTROL_VALUE         1212
 #define _APS_NEXT_SYMED_VALUE           104

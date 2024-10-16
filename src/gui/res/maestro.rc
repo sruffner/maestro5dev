@@ -257,16 +257,6 @@ BEGIN
         MENUITEM "&Insert",                     ID_RUN_STIM_INS
         MENUITEM "&Append",                     ID_RUN_STIM_APPEND
     END
-    POPUP "blank3"
-    BEGIN
-        MENUITEM "&Remove All",                 ID_RUN_TGT_CLEAR
-        MENUITEM SEPARATOR
-        MENUITEM "&Delete",                     ID_RUN_TGT_DEL
-        MENUITEM "Move to &Origin",             ID_RUN_TGT_CENTER
-        MENUITEM SEPARATOR
-        MENUITEM "&Insert",                     ID_RUN_TGT_INS
-        MENUITEM "&Append",                     ID_RUN_TGT_APPEND
-    END
     POPUP "blank4"
     BEGIN
         MENUITEM "&Add Perturbation",           ID_PERT_APPEND
@@ -619,22 +609,16 @@ IDD_RUNFORM DIALOGEX 0, 0, 500, 239
 STYLE DS_SETFONT | WS_CHILD
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
-    EDITTEXT        IDC_RF_DUTYPER,99,22,30,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_RF_AUTOSTOP,99,40,30,14,ES_AUTOHSCROLL
-    COMBOBOX        IDC_RF_DUTYPULSE,81,58,48,74,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    EDITTEXT        IDC_RF_HOFFSET,157,33,30,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_RF_VOFFSET,157,49,30,14,ES_AUTOHSCROLL
-    CONTROL         "",IDC_RF_XYTGTS,"MFCGridCtrl",WS_TABSTOP,253,7,240,74
-    CONTROL         "",IDC_RF_STIMULI,"MFCGridCtrl",WS_TABSTOP,7,88,486,144
-    LTEXT           "Duty Cycle (ms)",IDC_STATIC,46,25,50,8
-    LTEXT           "#Cycles to Auto-Stop",IDC_STATIC,25,43,68,8
-    LTEXT           "Duty Marker Pulse",IDC_STATIC,18,60,59,8
-    LTEXT           "Pos Offset (deg)",IDC_STATIC,144,23,52,8
-    LTEXT           "H",IDC_STATIC,149,36,8,8
-    LTEXT           "V",IDC_STATIC,149,52,8,8
-    LTEXT           "Targets For",IDC_STATIC,214,15,37,8
-    LTEXT           "XYseq",IDC_STATIC,229,23,22,8
-    LTEXT           "Stimulus",IDC_STATIC,224,33,27,8
+    EDITTEXT        IDC_RF_DUTYPER,63,22,30,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RF_AUTOSTOP,166,22,30,14,ES_AUTOHSCROLL
+    COMBOBOX        IDC_RF_DUTYPULSE,265,23,48,74,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_RF_HOFFSET,422,22,30,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RF_VOFFSET,456,22,30,14,ES_AUTOHSCROLL
+    CONTROL         "",IDC_RF_STIMULI,"MFCGridCtrl",WS_TABSTOP,7,56,486,176
+    LTEXT           "Duty Cycle (ms)",IDC_STATIC,14,25,50,8
+    LTEXT           "#Cycles to Auto-Stop",IDC_STATIC,100,25,68,8
+    LTEXT           "Duty Marker Pulse",IDC_STATIC,207,25,59,8
+    LTEXT           "Pos Offset H, V (deg):",IDC_STATIC,355,25,65,8
 END
 
 IDD_CONTCP2 DIALOG 0, 0, 300, 150

@@ -1324,7 +1324,7 @@ void CCxTrialForm::OnNMRClick( UINT id, NMHDR* pNMHDR, LRESULT* pResult )
 
       if( m_contextCell.col == 0 )                                // if clicked on first column, pop up menu...
       {
-         CMenu* pPopup = menu.GetSubMenu( 4 );                    // run the popup
+         CMenu* pPopup = menu.GetSubMenu( 3 );                    // run the popup
          pPopup->TrackPopupMenu( TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_RIGHTBUTTON,
                mousePt.x, mousePt.y, AfxGetMainWnd() );
       }
