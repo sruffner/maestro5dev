@@ -5,20 +5,17 @@
 // AUTHOR:  saruffner
 //
 // DESCRIPTION:
-// CCxTargForm is a dialog-like form view that manages a set of input controls for displaying and adjusting any
-// modifiable parameters associated with a particular MAESTRO target.  Encapsulated by the CCxTarget data class, a
+// CCxTargForm is a dialog-like form view that manages a set of input controls for displaying and adjusting the
+// modifiable parameters associated with an RMVideo target in Maestro. Encapsulated by the CCxTarget data class, a
 // "target" represents some kind of stimulus that is presented to the subject in a MAESTRO experiment; see CCxTarget
-// implementation file for details.  Currently, there are two kinds of user-defined, configurable "video" targets:
-// "XY scope" (CX_XYTARG) and "remote Maestro framebuffer video", or "RMVideo", (CX_RMVTARG) targets.  The former
-// target class is displayed on an XY oscilloscope driven by the outputs of an in-house "dotter" board which, in
-// turn, is controlled by a DSP card.  The latter target class is displayed on a color CRT.  Target animation is
-// handled by an OpenGL application, RMVideo, that runs on a separate Linux workstation (RMVideo replaced our old
-// VSG2/4 framebuffer video card in Maestro v2.0).  In addition, MAESTRO offers several "predefined" non-video
-// targets (CX_CHAIR, CX_FIBER1, etc) for which there are no configurable parameters.
+// implementation file for details. As of V5.0, the only available user-defined "video" targets are implemented in
+// RMVideo ("remote Maestro framebuffer video"); the XYScope platform is unsupported since V4.0 and was officially
+// removed in V5. RMVideo targets (CX_RMVTARG) are displayed on a color CRT. Target animation is handled by RMVideo, an
+// OpenGL application running on a separate Linux workstation.
 //
 // ==> Construction of form; layout of controls.
-// The form's layout is defined as a dialog template resource IDD_TARGFORM.  Since we supply this ID in the default
-// constructor, the MFC framework handles the details of loading the template and creating the view.  Use the Dev
+// The form's layout is defined as a dialog template resource IDD_TARGFORM. Since we supply this ID in the default
+// constructor, the MFC framework handles the details of loading the template and creating the view. Use the Visual
 // Studio Resource Editor to review the layout of IDD_TARGFORM.
 //    The integer resource IDs below must represent a contiguous range of values so that we can use ON_CONTROL_RANGE
 // in the message map.
@@ -54,33 +51,29 @@
 // CFormView-derivative that provides methods for telling the parent TTabWnd to update a tab caption or bring a
 // particular tab to the front of the tab window.  TVTabPane is a supplement to the Visual Framework (see VISUALFX.*).
 //
-// ==> Enabling/disabling controls IAW target hardware platform and type.
-// Not all of the controls laid out on IDD_TARGFORM are applicable to all target categories.  The "predefined" targets
-// have no modifiable parameters -- and so CCxTargForm does not enable them.  Modifiable targets come in one of two
-// flavors, "XY Scope" and "RMVideo" targets -- referring to the display platforms on which these targets are realized.
-// There are several available target "types" within each of these categories, and the set of applicable parameters
-// changes with target type.  Thus, every time the user changes the target type, CCxTargForm updates the enable state
-// of all child controls appropriately -- so the user can change only those controls that are relevant.
+// ==> Enabling/disabling controls IAW target type.
+// Not all of the controls laid out on IDD_TARGFORM are applicable to all RMVideo target types. Thus, every time the 
+// user changes the target type, CCxTargForm updates the enable state of all child controls appropriately -- so the 
+// user can change only those controls that are relevant.
 //
 // ==> "Use grayscale" button.
-// RMVideo targets can be in color or grayscale at the user's discretion (RGB colorspace).  Specifying a color
-// requires separate entries for each of the R, G and B components.  If the user only wants "grayscale", then entering
-// the same value in three different controls is inefficient.  The "Use grayscale" button eliminates this problem.  If
+// RMVideo targets can be in color or grayscale at the user's discretion (RGB colorspace). Specifying a color
+// requires separate entries for each of the R, G and B components. If the user only wants "grayscale", then entering
+// the same value in three different controls is inefficient. The "Use grayscale" button eliminates this problem. If
 // grayscale is selected, CCxTargForm disables the controls for the G and B components, and the data entered for the R
-// component is automatically copied for the G and B components.  This feature is only available for RMVideo targets,
-// as color is irrelevant on the monochrome XY scope.
+// component is automatically copied for the G and B components. 
 //
 // ==> Changes to target definition are applied immediately; DDX not used.
 // Any change to a target parameter is handled as soon as it occurs, rather than waiting for the user to press an
-// "Apply" button.  If the change is unacceptable, it is automatically corrected in some way and the controls are
-// updated to reflect the corrections made.  Since we must catch parameter changes as they occur, we have elected not
-// to use MFC's Dialog Data Exchange techniques in our implementation.  The routines OnChange() and StuffControls()
+// "Apply" button. If the change is unacceptable, it is automatically corrected in some way and the controls are
+// updated to reflect the corrections made. Since we must catch parameter changes as they occur, we have elected not
+// to use MFC's Dialog Data Exchange techniques in our implementation. The routines OnChange() and StuffControls()
 // handle the exchange of data between the loaded target object (CCxTarget) and the child controls on the CCxTargForm.
 //
 // Detection of a parameter change is VERY simplistic; essentially, we just catch notifications (EN_KILLFOCUS,
-// CBN_CLOSEUP, BN_CLICKED) which *suggest* that a change has occurred.  In response, CCxTargForm loads the values
+// CBN_CLOSEUP, BN_CLICKED) which *suggest* that a change has occurred. In response, CCxTargForm loads the values
 // from the controls into a U_TGPARMS struct (see cxobj_ifc.h) and queries the CCxTarget obj to update its parameters
-// accordingly.  CCxTarget checks the validity of the new parameter set and makes any corrections; if corrections were
+// accordingly. CCxTarget checks the validity of the new parameter set and makes any corrections; if corrections were
 // made, CCxTargForm refreshes the parameter controls with the corrected parameter values.
 //
 // ==> Subclassed edit controls restrict user input -- CNumEdit.
@@ -217,6 +210,8 @@
 // 08may2019-- Mods to support new "flicker" feature for RMVideo targets. Added a "Flicker" control group to the 
 // target dialog IDD_TARGFORM, containing the 3 numeric edit controls to display/edit the duration of the flicker's ON
 // and OFF phases and its initial delay.
+// 16oct2024-- As of Maestro 5.0, there is no support for XYScope targets. Only an RMVideo target can be displayed and
+// modified on this form.
 //=====================================================================================================================
 
 
@@ -227,6 +222,7 @@
 #include "cxmainframe.h"                     // CCxMainFrame -- Maestro's main frame window
 #include "cxtarget.h"                        // CCxTarget -- encapsulating a MAESTRO target object
 #include "cxviewhint.h"                      // the "hint" class used by all MAESTRO views
+#include "util.h"
 #include "cxtargform.h"
 
 
@@ -284,7 +280,6 @@ CCxTargForm::CCxTargForm() : TVTabPane( CCxTargForm::IDD )
    m_wKey = CX_NULLOBJ_KEY;         // initially, no target object is loaded on form
    m_pTarg = NULL;
    m_bGrayScale = FALSE;            // grayscale mode OFF
-   m_bXYtypes = TRUE;               // XY target types will be loaded initially into the target type combo box
    m_modifyMode = ATOMIC;
 }
 
@@ -338,9 +333,9 @@ void CCxTargForm::OnChange( UINT id )
 
    if( m_pTarg == NULL ) return;                                     // if no target loaded, ignore
 
-   WORD wType = m_pTarg->DataType();                                 // check object data type...
-   if( (wType != CX_XYTARG) && (wType != CX_RMVTARG) ) return;       // ...only XY and RMV tgts have adjustable params!
-   BOOL bIsXY = BOOL(wType == CX_XYTARG);
+   // the form only displays/edits RMVideo targets!
+   WORD wType = m_pTarg->DataType(); 
+   if(wType != CX_RMVTARG) return;
 
    int iValue = 0;                                                   // get value in numeric edit ctrl just modified,
    float fValue = 0.0f;                                              // as an integer and as a float (if applicable)
@@ -363,13 +358,8 @@ void CCxTargForm::OnChange( UINT id )
       case IDC_TARGF_DOTLF_MS :                                      //    target dot life units
       case IDC_TARGF_DOTLF_DEG :
          bChecked = BOOL(m_btnDotLifeMS.GetCheck()==1);
-         if( bIsXY )
-            m_tgParms.xy.iDotLfUnits = bChecked ? DOTLFINMS : DOTLFINDEG;
-         else
-         {
-            if( bChecked ) m_tgParms.rmv.iFlags |= RMV_F_LIFEINMS;
-            else m_tgParms.rmv.iFlags &= ~RMV_F_LIFEINMS;
-         }
+         if(bChecked) m_tgParms.rmv.iFlags |= RMV_F_LIFEINMS;
+         else m_tgParms.rmv.iFlags &= ~RMV_F_LIFEINMS;
          bRestuff = TRUE;
          break;
 
@@ -382,18 +372,13 @@ void CCxTargForm::OnChange( UINT id )
          break;
 
       case IDC_TARGF_WRTSCRN :                                       //    toggle frame of reference for pattern
-         if(!bIsXY)                                                  //    motion of RMV_RANDOMDOTS only
-         {
-            bChecked = BOOL(m_btnWRTScreen.GetCheck()==1);
-            if(bChecked) m_tgParms.rmv.iFlags |= RMV_F_WRTSCREEN;
-            else m_tgParms.rmv.iFlags &= ~RMV_F_WRTSCREEN;
-         }
+         bChecked = BOOL(m_btnWRTScreen.GetCheck() == 1);            //    motion of RMV_RANDOMDOTS only
+         if(bChecked) m_tgParms.rmv.iFlags |= RMV_F_WRTSCREEN;
+         else m_tgParms.rmv.iFlags &= ~RMV_F_WRTSCREEN;
          break;
          
       case IDC_TARGF_SPDALG :                                        //    toggle dot speed noise algorithm
-         if(bIsXY)
-            m_tgParms.xy.fInnerX = (m_tgParms.xy.fInnerX != 0.0f) ? 0.0f : 1.0f;
-         else if((m_tgParms.rmv.iFlags & RMV_F_SPDLOG2) != 0)
+         if((m_tgParms.rmv.iFlags & RMV_F_SPDLOG2) != 0)
             m_tgParms.rmv.iFlags &= ~RMV_F_SPDLOG2;
          else
             m_tgParms.rmv.iFlags |= RMV_F_SPDLOG2;
@@ -401,14 +386,14 @@ void CCxTargForm::OnChange( UINT id )
          break;
       
       case IDC_TARGF_SINE :                                          //    grating is sinewave or squarewave
-      case IDC_TARGF_SQUARE :                                        //    (enabled ONLY for RMVideo targets)
+      case IDC_TARGF_SQUARE :
          bChecked = BOOL(m_btnSquarewave.GetCheck()==1);
          if( bChecked ) m_tgParms.rmv.iFlags |= RMV_F_ISSQUARE;
          else m_tgParms.rmv.iFlags &= ~RMV_F_ISSQUARE;
          break;
 
       case IDC_TARGF_INDEPGRATS :                                    //    toggle "Independent gratings?" checkbox
-         bChecked = BOOL(m_btnIndepGrats.GetCheck()==1);             //    (enabled ONLY for RMVideo plaid targets)
+         bChecked = BOOL(m_btnIndepGrats.GetCheck()==1);             //    (enabled ONLY for plaid targets)
          if(bChecked) 
          {
             m_tgParms.rmv.iFlags |= RMV_F_INDEPGRATS;
@@ -419,7 +404,7 @@ void CCxTargForm::OnChange( UINT id )
          break;
 
       case IDC_TARGF_ORIENTADJ :                                     //    toggle "Orientation tracks drift vector?" checkbox
-         bChecked = BOOL(m_btnOrientAdj.GetCheck()==1);              //    (enabled for RMVideo grating/plaid targets)
+         bChecked = BOOL(m_btnOrientAdj.GetCheck()==1);              //    (enabled for grating/plaid targets)
          if(bChecked) 
          {
             m_tgParms.rmv.iFlags |= RMV_F_ORIENTADJ;
@@ -463,43 +448,35 @@ void CCxTargForm::OnChange( UINT id )
          
       case IDC_TARGF_TYPE :                                          //    target type
          iValue = m_cbType.GetCurSel();
-         if( bIsXY ) m_tgParms.xy.type = iValue;
-         else m_tgParms.rmv.iType = iValue;
+         m_tgParms.rmv.iType = iValue;
          bRestuff = TRUE;
          break;
 
-      case IDC_TARGF_SHAPE :                                         //    aperture shape (RMVideo tgts only)
+      case IDC_TARGF_SHAPE :                                         //    aperture shape
          m_tgParms.rmv.iAperture = m_cbAperture.GetCurSel();
          bRestuff = TRUE;
          break;
 
-      case IDC_TARGF_ORECTW :                                        //    outer rect W (FLOAT, XY or RMV)
-         if( bIsXY ) m_tgParms.xy.fRectW = fValue;
-         else m_tgParms.rmv.fOuterW = fValue;
+      case IDC_TARGF_ORECTW :                                        //    outer rect W
+         m_tgParms.rmv.fOuterW = fValue;
          break;
 
-      case IDC_TARGF_ORECTH :                                        //    outer rect H (FLOAT, XY or RMV)
-         if( bIsXY ) m_tgParms.xy.fRectH = fValue;
-         else m_tgParms.rmv.fOuterH = fValue;
+      case IDC_TARGF_ORECTH :                                        //    outer rect H
+         m_tgParms.rmv.fOuterH = fValue;
          break;
 
-      case IDC_TARGF_IRECTW :                                        //    inner rect W (FLOAT, XY or RMV)
-         if( bIsXY ) m_tgParms.xy.fInnerW = fValue;
+      case IDC_TARGF_IRECTW :                                        //    inner rect W
+         if(m_tgParms.rmv.iType == RMV_BAR)                          //    special case: edit bar's "drift axis"
+            m_tgParms.rmv.fDriftAxis[0] = fValue;
          else
-         {                                                           //    for RMVideo RMV_BAR target, we use IRECTW
-            if( m_tgParms.rmv.iType == RMV_BAR )                     //    to edit bar's "drift axis"
-               m_tgParms.rmv.fDriftAxis[0] = fValue;
-            else
-               m_tgParms.rmv.fInnerW = fValue;
-         }
+            m_tgParms.rmv.fInnerW = fValue;
          break;
 
-      case IDC_TARGF_IRECTH :                                        //    inner rect H (FLOAT, XY or RMV)
-         if( bIsXY ) m_tgParms.xy.fInnerH = fValue;
-         else m_tgParms.rmv.fInnerH = fValue;
+      case IDC_TARGF_IRECTH :                                        //    inner rect H
+         m_tgParms.rmv.fInnerH = fValue;
          break;
 
-      case IDC_TARGF_REDMEAN :                                       //    mean intensity for R cmpt (INT, RMV only).
+      case IDC_TARGF_REDMEAN :                                       //    mean intensity for R cmpt
       case IDC_TARGF_REDMEAN2 :                                      //    (for 2nd grating of a plaid).
          iGrat = (id==IDC_TARGF_REDMEAN) ? 0 : 1;
          r = cMath::rangeLimit(iValue, 0, 255);
@@ -515,7 +492,7 @@ void CCxTargForm::OnChange( UINT id )
          }
          break;
 
-      case IDC_TARGF_GRNMEAN :                                       //    mean intensity for G cmpt (INT, RMV only)
+      case IDC_TARGF_GRNMEAN :                                       //    mean intensity for G cmpt
       case IDC_TARGF_GRNMEAN2 :                                      //    (for 2nd grating of a plaid)
          iGrat = (id==IDC_TARGF_GRNMEAN) ? 0 : 1;
          r = m_tgParms.rmv.iRGBMean[iGrat] & 0x00FF;
@@ -525,7 +502,7 @@ void CCxTargForm::OnChange( UINT id )
          bRestuff = BOOL(g!=iValue);
          break;
 
-      case IDC_TARGF_BLUMEAN :                                       //    mean intensity for B cmpt (INT, RMV only)
+      case IDC_TARGF_BLUMEAN :                                       //    mean intensity for B cmpt
       case IDC_TARGF_BLUMEAN2 :                                      //    (for 2nd grating of a plaid)
          iGrat = (id==IDC_TARGF_BLUMEAN) ? 0 : 1;
          r = m_tgParms.rmv.iRGBMean[iGrat] & 0x00FF;
@@ -572,85 +549,74 @@ void CCxTargForm::OnChange( UINT id )
          break;
 
       case IDC_TARGF_NDOTS :                                         //    #dots in a tgt pattern
-         if( bIsXY ) m_tgParms.xy.ndots = iValue;
-         else m_tgParms.rmv.nDots = iValue;
+         m_tgParms.rmv.nDots = iValue;
          break;
 
-      case IDC_TARGF_DOTSZ :                                         //    size of a "dot" in pixels (RMVideo only)
+      case IDC_TARGF_DOTSZ :                                         //    size of a "dot" in pixels
          m_tgParms.rmv.nDotSize = iValue;
          break;
 
-      case IDC_TARGF_DOTLIFE :                                       //    dot life in deg or msecs (FLOAT)
-         if( bIsXY ) m_tgParms.xy.fDotLife = fValue;
-         else m_tgParms.rmv.fDotLife = fValue;
+      case IDC_TARGF_DOTLIFE :                                       //    dot life in deg or msecs
+         m_tgParms.rmv.fDotLife = fValue;
          break;
 
-      case IDC_TARGF_COHER :                                         //    % coherence (INT)
-         if( bIsXY ) m_tgParms.xy.fInnerW = fValue;                  //    (awkward field usage!)
-         else m_tgParms.rmv.iPctCoherent = iValue;
+      case IDC_TARGF_COHER :                                         //    % coherence
+         m_tgParms.rmv.iPctCoherent = iValue;
          break;
 
       case IDC_TARGF_NOISERNG :                                      //    noise range limit (INT)
-         if( bIsXY ) m_tgParms.xy.fInnerW = fValue;
-         else m_tgParms.rmv.iNoiseLimit = iValue;
+         m_tgParms.rmv.iNoiseLimit = iValue;
          break;
 
       case IDC_TARGF_NOISEUPD :                                      //    noise update intv (INT)
-         if( bIsXY ) m_tgParms.xy.fInnerH = fValue;                  //    (awkward field usage!)
-         else m_tgParms.rmv.iNoiseUpdIntv = iValue;
+         m_tgParms.rmv.iNoiseUpdIntv = iValue;
          break;
 
-      case IDC_TARGF_GRAT1_DA :                                      //    1st grating drift axis in deg CCW (FLOAT,
-         m_tgParms.rmv.fDriftAxis[0] = fValue;                       //    RMV only)
+      case IDC_TARGF_GRAT1_DA :                                      //    1st grating drift axis in deg CCW
+         m_tgParms.rmv.fDriftAxis[0] = fValue;
          break;
 
-      case IDC_TARGF_GRAT2_DA :                                      //    similarly for 2nd grating (FLOAT, RMV only)
+      case IDC_TARGF_GRAT2_DA :                                      //    similarly for 2nd grating
          m_tgParms.rmv.fDriftAxis[1] = fValue;
          break;
 
       case IDC_TARGF_GRAT1_SF :                                      //    1st grating spatial freq in cyc/deg
-         m_tgParms.rmv.fSpatialFreq[0] = fValue;                     //    (FLOAT, RMV only)
+         m_tgParms.rmv.fSpatialFreq[0] = fValue; 
          break;
 
-      case IDC_TARGF_GRAT2_SF :                                      //    similarly for 2nd grating (FLOAT, RMV only)
+      case IDC_TARGF_GRAT2_SF :                                      //    similarly for 2nd grating 
          m_tgParms.rmv.fSpatialFreq[1] = fValue;
          break;
 
-      case IDC_TARGF_GRAT1_PH :                                      //    1st grating spatial phase in deg (FLOAT,
-         m_tgParms.rmv.fGratPhase[0] = fValue;                       //    RMV only)
+      case IDC_TARGF_GRAT1_PH :                                      //    1st grating spatial phase in deg
+         m_tgParms.rmv.fGratPhase[0] = fValue;
          break;
 
-      case IDC_TARGF_GRAT2_PH :                                      //    similarly for 2nd grating (FLOAT, RMV only)
+      case IDC_TARGF_GRAT2_PH :                                      //    similarly for 2nd grating 
          m_tgParms.rmv.fGratPhase[1] = fValue;
          break;
 
-      case IDC_TARGF_XSIGMA :                                        //    X std dev of Gaussian window in subtended
-         if( bIsXY )                                                 //    deg for RMVTarget, or X offset of "hole" for 
-            m_tgParms.xy.fInnerX = fValue;                           //    XY scope RECTANNU target only (FLOAT)
-         else
-            m_tgParms.rmv.fSigma[0] = fValue;
+      case IDC_TARGF_XSIGMA :                                        //    X std dev of Gaussian window in deg
+         m_tgParms.rmv.fSigma[0] = fValue;
          break;
 
-      case IDC_TARGF_YSIGMA :                                        //    Y std dev of Gaussian window in subtended
-         if( bIsXY )                                                 //    deg for RMVTarget, or Y offset of "hole" for 
-            m_tgParms.xy.fInnerY = fValue;                           //    XY scope RECTANNU target only (FLOAT)
-         else
-            m_tgParms.rmv.fSigma[1] = fValue;
+      case IDC_TARGF_YSIGMA :                                        //    Y std dev of Gaussian window in deg
+         m_tgParms.rmv.fSigma[1] = fValue;
          break;
 
-      case IDC_TARGF_RANDSEED:                                       //    seed for random-dot gen. (INT, RMV only)
+      case IDC_TARGF_RANDSEED:                                       //    seed for random-dot generation
          m_tgParms.rmv.iSeed = iValue;
          break;
 
-      case IDC_TARGF_FLICKON:                                        //    flicker ON duration (INT, RMV only)
+      case IDC_TARGF_FLICKON:                                        //    flicker ON duration 
          m_tgParms.rmv.iFlickerOn = iValue;
          break;
 
-      case IDC_TARGF_FLICKOFF:                                       //    flicker OFF duration (INT, RMV only)
+      case IDC_TARGF_FLICKOFF:                                       //    flicker OFF duration 
          m_tgParms.rmv.iFlickerOff = iValue;
          break;
 
-      case IDC_TARGF_FLICKDELAY:                                     //    flicker initial delay (INT, RMV only)
+      case IDC_TARGF_FLICKDELAY:                                     //    flicker initial delay
          m_tgParms.rmv.iFlickerDelay = iValue;
          break;
 
@@ -683,7 +649,7 @@ void CCxTargForm::OnChange( UINT id )
 
 //=== OnGrayscale =====================================================================================================
 //
-//    Response to user clicking the "Use grayscale" button, resource ID# IDC_TARGF_GRAY.
+//    Response to user clicking the "Use grayscale" button, resource IDC_TARGF_GRAY.
 //
 //    The grayscale button changes its state automatically.  Here we toggle the form view's "grayscale flag" and update
 //    appearance of the color specification controls for the GRN and BLU axes.
@@ -880,10 +846,9 @@ void CCxTargForm::OnEditCommand( UINT nID )
 //
 //    When this view is initially created, there is no "current target", all of the parameter controls are created in
 //    a visible and enabled state, the grayscale button is not checked, and the target type and target aperture combo 
-//    box dropdown lists have no labels in them. Here we load the aperture type labels (unchanging), and we initially 
-//    load the XYScope type strings into the target type dropdown list, since future updates expect that one set of 
-//    labels or the other is loaded (see ReloadTargetTypes()). We set up our internal state variables to reflect the 
-//    initialized state of the form. Then, since there is no "current target", we must disable all controls.
+//    box dropdown lists have no labels in them. Here we load the target type and aperture type labels into the 
+//    relevant dropdown lists, and set up our internal state variables to reflect the initialized state of the form. 
+//    Then, since there is no "current target", we must disable all controls.
 //
 //    In order to tailor behavior of the edit ctrls on this form, each one is subclassed to a CNumEdit or CEdit object 
 //    held privately by this form view. That subclassing is done here. Also, the various checkboxes and radio buttons
@@ -990,12 +955,12 @@ void CCxTargForm::OnInitialUpdate()
       m_edMediaFile.SetLimitText(RMV_MVF_LEN);
       m_edMediaFile.SetWindowText("");
 
-      m_cbType.SubclassDlgItem(IDC_TARGF_TYPE, this);                // target type: load initially w/ XY tgt type
+      m_cbType.SubclassDlgItem(IDC_TARGF_TYPE, this);                // target type: load RMVideo target types
       m_cbType.ModifyStyle( CBS_SORT, 0 );                           // names, unsorted (list index = type ID!)
       m_cbType.ResetContent();
       int i;
-      for( i = 0; i < NUMXYTYPES; i++ )
-         m_cbType.AddString( CCxTarget::XYTYPENAMES[i] );
+      for( i = 0; i < RMV_NUMTGTTYPES; i++ )
+         m_cbType.AddString( CCxTarget::RMVTYPENAMES[i] );
       m_cbType.SetCurSel( 0 );
 
       m_cbAperture.SubclassDlgItem(IDC_TARGF_SHAPE, this);           // window aperture type: load aperture shape
@@ -1007,7 +972,6 @@ void CCxTargForm::OnInitialUpdate()
 
       m_wKey = CX_NULLOBJ_KEY;                                       // there's no target loaded into view
       m_bGrayScale = FALSE;                                          // grayscale mode initially off
-      m_bXYtypes = TRUE;                                             // XY target type names loaded into combo box
 
       m_btnModMode.SetColor(::GetSysColor(COLOR_BTNTEXT),            // init appearance of tgt modification mode PB
          (m_modifyMode == ATOMIC) ? ::GetSysColor(COLOR_BTNFACE) : CLR_WARNGLOBALMODE);
@@ -1027,12 +991,12 @@ void CCxTargForm::OnInitialUpdate()
 //    This function is called by the doc/view framework whenever the document contents have changed.
 //
 //    This view must respond to a number of different "signals" broadcast by other views attached to the CCxDoc obj:
-//       CXVH_DSPOBJ:   May need to load a different target definition onto the form.  Ignore if we get this for one
+//       CXVH_DSPOBJ:   May need to load a different target definition onto the form. Ignore if we get this for one
 //                      of the predefined targets, which are not modifiable.
-//       CXVH_MODOBJ:   If another view modifies a MAESTRO object, it may send this hint.  If the currently loaded
+//       CXVH_MODOBJ:   If another view modifies a MAESTRO object, it may send this hint. If the currently loaded
 //                      target was the object modified, then we must reload it to ensure our view is up-to-date.
 //       CXVH_MOVOBJ,
-//       CXVH_NAMOBJ:   This signal is sent whenever a MAESTRO object is moved or renamed.  If the currently loaded tgt
+//       CXVH_NAMOBJ:   This signal is sent whenever a MAESTRO object is moved or renamed. If the currently loaded tgt
 //                      was affected, we update the assoc. tab pane caption to reflect tgt's new "full path" name.
 //       CXVH_DELOBJ,
 //       CXVH_CLRUSR:   If the currently loaded target is deleted, then the view must be reset.
@@ -1057,9 +1021,8 @@ void CCxTargForm::OnUpdate( CView* pSender, LPARAM lHint, CObject* pHint )
    CCxViewHint* pVuHint = (CCxViewHint*)pHint;           // cast provided hint to the MAESTRO hint class
    switch( pVuHint->m_code )
    {
-      case CXVH_DSPOBJ :                                 // display params of specified XYScope or RMVideo target
-         if( (pVuHint->m_type == CX_XYTARG) ||           // (the predefined targets are not modifiable!)
-             (pVuHint->m_type == CX_RMVTARG) )
+      case CXVH_DSPOBJ :                                 // display params of specified RMVideo target
+         if(pVuHint->m_type == CX_RMVTARG)
          {
             BringToFront();                              // at least bring this view to front of tab window; if obj
             if( m_wKey != pVuHint->m_key )               // is diff from what's currently there, load the new obj
@@ -1068,7 +1031,7 @@ void CCxTargForm::OnUpdate( CView* pSender, LPARAM lHint, CObject* pHint )
          break;
 
       case CXVH_MODOBJ :                                 // tgt params modified *outside* this view -- if specified tgt
-         if ( m_wKey == pVuHint->m_key )                 // is currently displayed here, reload its params from doc
+         if(m_wKey == pVuHint->m_key)                    // is currently displayed here, reload its params from doc
             LoadTarget( m_wKey );
          break;
 
@@ -1118,7 +1081,7 @@ void CCxTargForm::Dump( CDumpContext& dc ) const
       CString info;
       CString moreInfo;
       info.Format( "Target key = %d\n", m_wKey );
-      moreInfo.Format( "Grayscale flag = %d, XYtypes flag = %d\n", m_bGrayScale, m_bXYtypes );
+      moreInfo.Format( "Grayscale flag = %d\n", m_bGrayScale);
       info += moreInfo;
       dc << info;
    }
@@ -1156,29 +1119,6 @@ void CCxTargForm::AssertValid() const
 //    Load specified target obj into the form view, updating the form's internal state vars and appearance accordingly.
 //    If no target is specified (CX_NULLOBJ_KEY), the form is cleared.
 //
-//    24mar2006:  We no longer hide any controls, just enable/disable them.  But I think the problem below still
-//    applies, because a disabled control cannot have the focus any more than a hidden control can...
-//    BUG:  The fact that we reuse certain fields in the XYPARMS struct to store different quantities for different
-//    target types (see description of XYPARMS struct in CX_OBJIFC.H) introduces subtle bugs.  If you enter a value
-//    in an edit control and then display a different target type for which that control is hidden, the EN_KILLFOCUS
-//    notification gets sent twice:  once when you double-click in the object tree to load a different target, and
-//    again when you click in a visible control in the newly loaded and updated CCxTargForm.  Here's an example where
-//    this causes a problem:  Suppose you change the drift axis of an ORIENTEDBAR tgt, then double-click on a NOISYDIR
-//    target to load its definition onto the form.  The NOISYDIR "noise offset range" is stored in the same field
-//    as the ORIENTEDBAR's drift axis (XYPARMS.fInnerW), even though it is displayed in a different control.  When the
-//    NOISYDIR target is loaded, the control displaying drift axis (IDC_TARGF_IRECTW) is hidden -- BUT it apparently
-//    keeps the focus.  So here's what happens.  When you double-click to load the NOISYDIR target, IDC_TARGF_IRECTW
-//    sends EN_KILLFOCUS and the drift axis is updated for the ORIENTEDBAR target as it should be -- see OnChange().
-//    Then the NOISYDIR target is loaded, which hides IDC_TARGF_IRECTW.  When the user clicks on a visible control in
-//    the target form, the hidden control issues EN_KILLFOCUS *again*.  It still has the value entered earlier, and
-//    OnChange() calls CCxTarget::SetParams() with that value placed in XYPARMS.fInnerW -- so whatever the drift axis
-//    value was entered earlier, that becomes the "noise offset range".
-//    SOLUTION:  Before loading a target onto the form, we nullify the old target pointer, put the focus on the
-//    target type control (which is visible always, except when no target is loaded on form), and then load the new
-//    target.  Then, if EN_KILLFOCUS gets issued by a hidden control as described above, it will have no effect (when
-//    no target is loaded on the form, EN_KILLFOCUS is ignored!).
-//    LONG-TERM SOLUTION:  DON'T reuse fields in XYPARMS!!
-//
 //    ARGS:       key   -- [in] the key of target obj (CX_NULLOBJ_KEY to clear form).
 //
 //    RETURNS:    NONE
@@ -1189,7 +1129,6 @@ VOID CCxTargForm::LoadTarget( const WORD key )
 
    m_wKey = key;                                               // unique key of target to be displayed on form
    m_bGrayScale = FALSE;                                       // reset grayscale mode
-   CString typeLabel = _T("");                                 // label for tgt type indicates platform: XY or RMV
 
    if( m_wKey == CX_NULLOBJ_KEY )                              // no target loaded; ctrls will be disabled
       m_pTarg = NULL;
@@ -1201,18 +1140,11 @@ VOID CCxTargForm::LoadTarget( const WORD key )
       m_pTarg = (CCxTarget*) pDoc->GetObject( m_wKey );        // ...get ptr to target record
       ASSERT( m_pTarg );
       ASSERT_KINDOF( CCxTarget, m_pTarg );
-      ASSERT( m_pTarg->IsModifiable() );                       // we only load modifiable targets!
-
-      if(m_pTarg->DataType() == CX_XYTARG)                     // ...label for tgt type reflects display platform
-         typeLabel = _T("XYScope Type");
-      else
-         typeLabel = _T("RMVideo Type");
+      ASSERT( m_pTarg->DataType() == CX_RMVTARG );             // we only load RMVideo targets!
 
       m_pTarg->GetParams( &m_tgParms );                        //    get a copy of the current param values
       m_bGrayScale = IsGrayscale(m_pTarg);                     //    are values consistent with grayscale mode?
    }
-
-   SetDlgItemText(IDC_TARGF_TYPELBL, typeLabel);               // stuff target type label
 
    m_btnGrayscale.SetCheck( m_bGrayScale ? 1:0 );              // check/uncheck grayscale button as appropriate
 
@@ -1244,12 +1176,8 @@ VOID CCxTargForm::UpdateCaption( LPCTSTR szCaption )
 
 //=== StuffControls ===================================================================================================
 //
-//    Load current target parameters into the associated controls on this form view.  This method only "stuffs" those
-//    parameters which are relevant, depending upon the target category (XY scope or RMVideo) and the specific target
-//    type (e.g., RECTDOT, CENTER, etc...).
-//
-//    The RECTDOT, FLOWFIELD, ORIENTEDBAR, NOISYDIR and NOISYSPEED XY target subtypes use one or more of the bounding
-//    rect parameters in non-intuitive ways.  See CXOBJ_IFC.H for the details.
+//    Load current target parameters into the associated controls on this form view. This method only "stuffs" those
+//    parameters which are relevant, depending upon the specific target type.
 //
 //    The method assumes that the internal copy of target parameters is "in sync" with the currently loaded tgt object.
 //
@@ -1260,157 +1188,99 @@ VOID CCxTargForm::UpdateCaption( LPCTSTR szCaption )
 VOID CCxTargForm::StuffControls()
 {
    if( m_pTarg == NULL) return;                                                     // no tgt
-   ASSERT( m_pTarg->DataType() == CX_XYTARG || m_pTarg->DataType() == CX_RMVTARG );
+   ASSERT( m_pTarg->DataType() == CX_RMVTARG );
 
-   BOOL bIsXY = BOOL(m_pTarg->DataType() == CX_XYTARG);
+   PRMVTGTDEF pRMV = &(m_tgParms.rmv);                                           // a subset applies to tgt type!)
+   int t = pRMV->iType;
+   m_cbType.SetCurSel(t);                                                      // target subtype
+   m_cbAperture.SetCurSel(pRMV->iAperture);                                    // window aperture
 
-   if( bIsXY )                                                                      // LOAD AN XYSCOPE TARGET:
-   {
-      PXYPARMS pXY = &(m_tgParms.xy);
-      m_cbType.SetCurSel( pXY->type );                                              // target subtype
-      GetNumEdit(IDC_TARGF_NDOTS)->SetWindowText( pXY->ndots );                     // # of dots in target pattern
+   BOOL bSet = BOOL((pRMV->iFlags & RMV_F_LIFEINMS) != 0);                       // the radio btn pairs...
+   m_btnDotLifeMS.SetCheck(bSet ? 1 : 0);
+   m_btnDotLifeDeg.SetCheck(bSet ? 0 : 1);
 
-      GetNumEdit(IDC_TARGF_ORECTW)->SetWindowText( pXY->fRectW );                   // outer bounding rect; FLOWFIELD
-      if( pXY->type != FLOWFIELD )                                                  // only uses rectW for outer radius
-         GetNumEdit(IDC_TARGF_ORECTH)->SetWindowText( pXY->fRectH );
+   bSet = BOOL((pRMV->iFlags & RMV_F_DIRNOISE) != 0);
+   m_btnDotNoiseDir.SetCheck(bSet ? 1 : 0);
+   m_btnDotNoiseSpeed.SetCheck(bSet ? 0 : 1);
 
-      if( pXY->type == RECTANNU || pXY->type == FLOWFIELD ||                        // inner rectW used by RECTANNU, as
-          pXY->type == ORIENTEDBAR )                                                // inner radius by FLOWFIELD, and
-         GetNumEdit(IDC_TARGF_IRECTW)->SetWindowText( pXY->fInnerW );               // as drift axis by ORIENTEDBAR
-      if( pXY->type == RECTANNU )                                                   // inner rectH -- RECTANNU only
-         GetNumEdit(IDC_TARGF_IRECTH)->SetWindowText( pXY->fInnerH );
+   bSet = BOOL(t == RMV_RANDOMDOTS && (pRMV->iFlags & RMV_F_WRTSCREEN) != 0);    // dot pattern motion WRT screen?
+   m_btnWRTScreen.SetCheck(bSet ? 1 : 0);                                        // (RMV_RANDOMDOTS only)
 
-      if( pXY->type == COHERENTFC )                                                 // percent coherence
-         GetNumEdit(IDC_TARGF_COHER)->SetWindowText( pXY->fInnerW );
+   bSet = BOOL((pRMV->iFlags & RMV_F_ISSQUARE) != 0);
+   m_btnSquarewave.SetCheck(bSet ? 1 : 0);
+   m_btnSinewave.SetCheck(bSet ? 0 : 1);
 
-      if( pXY->type==NOISYDIR || pXY->type==NOISYSPEED )                            // noise offset and upd intv for
-      {                                                                             // NOISYDIR/SPEED
-         GetNumEdit(IDC_TARGF_NOISERNG)->SetWindowText( pXY->fInnerW );
-         GetNumEdit(IDC_TARGF_NOISEUPD)->SetWindowText( pXY->fInnerH );
+   bSet = BOOL((t == RMV_PLAID) && (pRMV->iFlags & RMV_F_INDEPGRATS) != 0);        // "Independent gratings?" chk box
+   m_btnIndepGrats.SetCheck(bSet ? 1 : 0);
 
-         m_btnDotNoiseDir.SetCheck( (pXY->type==NOISYDIR) ? 1:0 );                  // this radio btn pair is disabled,
-         m_btnDotNoiseSpeed.SetCheck( (pXY->type==NOISYDIR) ? 0:1 );                // but it should be consistent.
-      }
+   bSet = BOOL((pRMV->iFlags & RMV_F_ORIENTADJ) != 0);                           // "Dynamic orientation?" chk box
+   if(bSet && (t == RMV_PLAID) && (pRMV->iFlags & RMV_F_INDEPGRATS) != 0)          // for plaids, _INDEPGRATS and 
+      bSet = false;                                                              // _ORIENTADJ are mutually exclusive
+   m_btnOrientAdj.SetCheck(bSet ? 1 : 0);
 
-      // for XYScope targets, dot pattern motion is always specified WRT screen. This check box will be disabled.
-      m_btnWRTScreen.SetCheck(1); 
-      
-      if( pXY->type==FCDOTLIFE || pXY->type==NOISYDIR || pXY->type==NOISYSPEED )    // finite dotlife tgts only:
-      {
-         CNumEdit* pDotLife = GetNumEdit( IDC_TARGF_DOTLIFE );                      // dyn. change format of dotlife
-         if( pXY->iDotLfUnits == DOTLFINMS )                                        // ctrl IAW selected units...
-            pDotLife->SetFormat( TRUE, TRUE, 5, 1 );                                //    msec: must be nonneg int
-         else
-            pDotLife->SetFormat( FALSE, TRUE, 5, 2 );                               //    deg: must be nonneg float
-         pDotLife->SetWindowText( pXY->fDotLife );
-         m_btnDotLifeMS.SetCheck( (pXY->iDotLfUnits==DOTLFINMS) ? 1:0 );            // we update both radio btns in
-         m_btnDotLifeDeg.SetCheck( (pXY->iDotLfUnits==DOTLFINMS) ? 0:1 );           // pair b/c Windows doesn't!
-      }
+   GetNumEdit(IDC_TARGF_ORECTW)->SetWindowText(pRMV->fOuterW);                   // target window dimensions
+   GetNumEdit(IDC_TARGF_ORECTH)->SetWindowText(pRMV->fOuterH);
+   GetNumEdit(IDC_TARGF_IRECTW)->SetWindowText(                                  // (we use IRECTW for RMV_BAR's
+      (t == RMV_BAR) ? pRMV->fDriftAxis[0] : pRMV->fInnerW);                       // "drift axis")
+   GetNumEdit(IDC_TARGF_IRECTH)->SetWindowText(pRMV->fInnerH);
+   GetNumEdit(IDC_TARGF_REDMEAN)->SetWindowText(pRMV->iRGBMean[0] & 0x00FF);     // mean RGB color, RGB contrast
+   GetNumEdit(IDC_TARGF_GRNMEAN)->SetWindowText((pRMV->iRGBMean[0] >> 8) & 0x00FF);
+   GetNumEdit(IDC_TARGF_BLUMEAN)->SetWindowText((pRMV->iRGBMean[0] >> 16) & 0x00FF);
+   GetNumEdit(IDC_TARGF_REDCON)->SetWindowText(pRMV->iRGBCon[0] & 0x00FF);
+   GetNumEdit(IDC_TARGF_GRNCON)->SetWindowText((pRMV->iRGBCon[0] >> 8) & 0x00FF);
+   GetNumEdit(IDC_TARGF_BLUCON)->SetWindowText((pRMV->iRGBCon[0] >> 16) & 0x00FF);
+   GetNumEdit(IDC_TARGF_REDMEAN2)->SetWindowText(pRMV->iRGBMean[1] & 0x00FF);
+   GetNumEdit(IDC_TARGF_GRNMEAN2)->SetWindowText((pRMV->iRGBMean[1] >> 8) & 0x00FF);
+   GetNumEdit(IDC_TARGF_BLUMEAN2)->SetWindowText((pRMV->iRGBMean[1] >> 16) & 0x00FF);
+   GetNumEdit(IDC_TARGF_REDCON2)->SetWindowText(pRMV->iRGBCon[1] & 0x00FF);
+   GetNumEdit(IDC_TARGF_GRNCON2)->SetWindowText((pRMV->iRGBCon[1] >> 8) & 0x00FF);
+   GetNumEdit(IDC_TARGF_BLUCON2)->SetWindowText((pRMV->iRGBCon[1] >> 16) & 0x00FF);
+   GetNumEdit(IDC_TARGF_NDOTS)->SetWindowText(pRMV->nDots);
+   GetNumEdit(IDC_TARGF_DOTSZ)->SetWindowText(pRMV->nDotSize);
 
-      if( pXY->type==RECTANNU )                                                     // RECTANNU only: x,y offset of
-      {                                                                             // "hole" rel to tgt center
-         GetNumEdit(IDC_TARGF_XSIGMA)->SetFormat(FALSE,FALSE,6,2);                  // must allow for negative values! 
-         GetNumEdit(IDC_TARGF_YSIGMA)->SetFormat(FALSE,FALSE,6,2);                  // 
-         GetNumEdit(IDC_TARGF_XSIGMA)->SetWindowText( pXY->fInnerX );
-         GetNumEdit(IDC_TARGF_YSIGMA)->SetWindowText( pXY->fInnerY );
-      }
-   }
-   else                                                                             // LOAD AN RMVIDEO TARGET:
-   {                                                                                // (We load all controls, but only
-      PRMVTGTDEF pRMV = &(m_tgParms.rmv);                                           // a subset applies to tgt type!)
-      int t = pRMV->iType;
-      m_cbType.SetCurSel( t );                                                      // target subtype
-      m_cbAperture.SetCurSel( pRMV->iAperture );                                    // window aperture
+   CNumEdit* pEdit = GetNumEdit(IDC_TARGF_DOTLIFE);                            // dyn. change format of dotlife
+   if((pRMV->iFlags & RMV_F_LIFEINMS) != 0)                                    // ctrl IAW selected units...
+      pEdit->SetFormat(TRUE, TRUE, 5, 1);                                      //    msec: must be nonneg int
+   else
+      pEdit->SetFormat(FALSE, TRUE, 5, 2);                                     //    deg: must be nonneg float
+   pEdit->SetWindowText(pRMV->fDotLife);
 
-      BOOL bSet = BOOL((pRMV->iFlags & RMV_F_LIFEINMS) != 0);                       // the radio btn pairs...
-      m_btnDotLifeMS.SetCheck( bSet ? 1:0 );
-      m_btnDotLifeDeg.SetCheck( bSet ? 0:1 );
+   GetNumEdit(IDC_TARGF_COHER)->SetWindowText(pRMV->iPctCoherent);
+   GetNumEdit(IDC_TARGF_NOISERNG)->SetWindowText(pRMV->iNoiseLimit);
+   GetNumEdit(IDC_TARGF_NOISEUPD)->SetWindowText(pRMV->iNoiseUpdIntv);
+   GetNumEdit(IDC_TARGF_GRAT1_DA)->SetWindowText(                                // RMV_BAR's "drift axis" is NOT
+      (t == RMV_BAR) ? 0.0f : pRMV->fDriftAxis[0]);                               // edited here!
+   GetNumEdit(IDC_TARGF_GRAT2_DA)->SetWindowText(pRMV->fDriftAxis[1]);
+   GetNumEdit(IDC_TARGF_GRAT1_SF)->SetWindowText(pRMV->fSpatialFreq[0]);
+   GetNumEdit(IDC_TARGF_GRAT2_SF)->SetWindowText(pRMV->fSpatialFreq[1]);
+   GetNumEdit(IDC_TARGF_GRAT1_PH)->SetWindowText(pRMV->fGratPhase[0]);
+   GetNumEdit(IDC_TARGF_GRAT2_PH)->SetWindowText(pRMV->fGratPhase[1]);
+   GetNumEdit(IDC_TARGF_XSIGMA)->SetFormat(FALSE, TRUE, 5, 2);                      // b/c they can display negative 
+   GetNumEdit(IDC_TARGF_YSIGMA)->SetFormat(FALSE, TRUE, 5, 2);                      // numbers in another context!
+   GetNumEdit(IDC_TARGF_XSIGMA)->SetWindowText(pRMV->fSigma[0]);
+   GetNumEdit(IDC_TARGF_YSIGMA)->SetWindowText(pRMV->fSigma[1]);
+   GetNumEdit(IDC_TARGF_RANDSEED)->SetWindowText(pRMV->iSeed);
+   GetNumEdit(IDC_TARGF_FLICKON)->SetWindowText(pRMV->iFlickerOn);
+   GetNumEdit(IDC_TARGF_FLICKOFF)->SetWindowText(pRMV->iFlickerOff);
+   GetNumEdit(IDC_TARGF_FLICKDELAY)->SetWindowText(pRMV->iFlickerDelay);
 
-      bSet = BOOL((pRMV->iFlags & RMV_F_DIRNOISE) != 0);
-      m_btnDotNoiseDir.SetCheck( bSet ? 1:0 );
-      m_btnDotNoiseSpeed.SetCheck( bSet ? 0:1 );
+   // controls unique to the RMVideo "movie" target type
+   bSet = BOOL((pRMV->iFlags & RMV_F_REPEAT) != 0);
+   m_btnMovieRepeat.SetCheck(bSet ? 1 : 0);
+   bSet = BOOL((pRMV->iFlags & RMV_F_PAUSEWHENOFF) != 0);
+   m_btnMoviePause.SetCheck(bSet ? 1 : 0);
+   bSet = BOOL((pRMV->iFlags & RMV_F_ATDISPRATE) != 0);
+   m_btnMovieRate.SetCheck(bSet ? 1 : 0);
 
-      bSet = BOOL(t == RMV_RANDOMDOTS && (pRMV->iFlags & RMV_F_WRTSCREEN) != 0);    // dot pattern motion WRT screen?
-      m_btnWRTScreen.SetCheck( bSet ? 1:0 );                                        // (RMV_RANDOMDOTS only)
-
-      bSet = BOOL((pRMV->iFlags & RMV_F_ISSQUARE) != 0);
-      m_btnSquarewave.SetCheck( bSet ? 1:0 );
-      m_btnSinewave.SetCheck( bSet ? 0:1 );
-
-      bSet = BOOL((t==RMV_PLAID) && (pRMV->iFlags & RMV_F_INDEPGRATS) != 0);        // "Independent gratings?" chk box
-      m_btnIndepGrats.SetCheck( bSet ? 1:0 );
-
-      bSet = BOOL((pRMV->iFlags & RMV_F_ORIENTADJ) != 0);                           // "Dynamic orientation?" chk box
-      if(bSet && (t==RMV_PLAID) && (pRMV->iFlags & RMV_F_INDEPGRATS) != 0)          // for plaids, _INDEPGRATS and 
-         bSet = false;                                                              // _ORIENTADJ are mutually exclusive
-      m_btnOrientAdj.SetCheck( bSet ? 1:0 );
-
-      GetNumEdit(IDC_TARGF_ORECTW)->SetWindowText(pRMV->fOuterW);                   // target window dimensions
-      GetNumEdit(IDC_TARGF_ORECTH)->SetWindowText(pRMV->fOuterH);
-      GetNumEdit(IDC_TARGF_IRECTW)->SetWindowText(                                  // (we use IRECTW for RMV_BAR's
-         (t==RMV_BAR) ? pRMV->fDriftAxis[0] : pRMV->fInnerW);                       // "drift axis")
-      GetNumEdit(IDC_TARGF_IRECTH)->SetWindowText(pRMV->fInnerH);
-      GetNumEdit(IDC_TARGF_REDMEAN)->SetWindowText(pRMV->iRGBMean[0] & 0x00FF);     // mean RGB color, RGB contrast
-      GetNumEdit(IDC_TARGF_GRNMEAN)->SetWindowText((pRMV->iRGBMean[0]>>8) & 0x00FF);
-      GetNumEdit(IDC_TARGF_BLUMEAN)->SetWindowText((pRMV->iRGBMean[0]>>16) & 0x00FF);
-      GetNumEdit(IDC_TARGF_REDCON)->SetWindowText(pRMV->iRGBCon[0] & 0x00FF);
-      GetNumEdit(IDC_TARGF_GRNCON)->SetWindowText((pRMV->iRGBCon[0]>>8) & 0x00FF);
-      GetNumEdit(IDC_TARGF_BLUCON)->SetWindowText((pRMV->iRGBCon[0]>>16) & 0x00FF);
-      GetNumEdit(IDC_TARGF_REDMEAN2)->SetWindowText(pRMV->iRGBMean[1] & 0x00FF);
-      GetNumEdit(IDC_TARGF_GRNMEAN2)->SetWindowText((pRMV->iRGBMean[1]>>8) & 0x00FF);
-      GetNumEdit(IDC_TARGF_BLUMEAN2)->SetWindowText((pRMV->iRGBMean[1]>>16) & 0x00FF);
-      GetNumEdit(IDC_TARGF_REDCON2)->SetWindowText(pRMV->iRGBCon[1] & 0x00FF);
-      GetNumEdit(IDC_TARGF_GRNCON2)->SetWindowText((pRMV->iRGBCon[1]>>8) & 0x00FF);
-      GetNumEdit(IDC_TARGF_BLUCON2)->SetWindowText((pRMV->iRGBCon[1]>>16) & 0x00FF);
-      GetNumEdit(IDC_TARGF_NDOTS)->SetWindowText(pRMV->nDots);
-      GetNumEdit(IDC_TARGF_DOTSZ)->SetWindowText(pRMV->nDotSize);
-
-      CNumEdit* pEdit = GetNumEdit( IDC_TARGF_DOTLIFE );                            // dyn. change format of dotlife
-      if( (pRMV->iFlags & RMV_F_LIFEINMS) != 0 )                                    // ctrl IAW selected units...
-         pEdit->SetFormat( TRUE, TRUE, 5, 1 );                                      //    msec: must be nonneg int
-      else
-         pEdit->SetFormat( FALSE, TRUE, 5, 2 );                                     //    deg: must be nonneg float
-      pEdit->SetWindowText(pRMV->fDotLife);
-
-      GetNumEdit(IDC_TARGF_COHER)->SetWindowText(pRMV->iPctCoherent);
-      GetNumEdit(IDC_TARGF_NOISERNG)->SetWindowText(pRMV->iNoiseLimit);
-      GetNumEdit(IDC_TARGF_NOISEUPD)->SetWindowText(pRMV->iNoiseUpdIntv);
-      GetNumEdit(IDC_TARGF_GRAT1_DA)->SetWindowText(                                // RMV_BAR's "drift axis" is NOT
-         (t==RMV_BAR) ? 0.0f : pRMV->fDriftAxis[0] );                               // edited here!
-      GetNumEdit(IDC_TARGF_GRAT2_DA)->SetWindowText( pRMV->fDriftAxis[1] );
-      GetNumEdit(IDC_TARGF_GRAT1_SF)->SetWindowText( pRMV->fSpatialFreq[0] );
-      GetNumEdit(IDC_TARGF_GRAT2_SF)->SetWindowText( pRMV->fSpatialFreq[1] );
-      GetNumEdit(IDC_TARGF_GRAT1_PH)->SetWindowText( pRMV->fGratPhase[0] );
-      GetNumEdit(IDC_TARGF_GRAT2_PH)->SetWindowText( pRMV->fGratPhase[1] );
-      GetNumEdit(IDC_TARGF_XSIGMA)->SetFormat(FALSE,TRUE,5,2);                      // b/c they can display negative 
-      GetNumEdit(IDC_TARGF_YSIGMA)->SetFormat(FALSE,TRUE,5,2);                      // numbers in another context!
-      GetNumEdit(IDC_TARGF_XSIGMA)->SetWindowText( pRMV->fSigma[0] );
-      GetNumEdit(IDC_TARGF_YSIGMA)->SetWindowText( pRMV->fSigma[1] );
-      GetNumEdit(IDC_TARGF_RANDSEED)->SetWindowText( pRMV->iSeed );
-      GetNumEdit(IDC_TARGF_FLICKON)->SetWindowText(pRMV->iFlickerOn);
-      GetNumEdit(IDC_TARGF_FLICKOFF)->SetWindowText(pRMV->iFlickerOff);
-      GetNumEdit(IDC_TARGF_FLICKDELAY)->SetWindowText(pRMV->iFlickerDelay);
-
-      // controls unique to the RMVideo "movie" target type
-      bSet = BOOL((pRMV->iFlags & RMV_F_REPEAT) != 0);
-      m_btnMovieRepeat.SetCheck( bSet ? 1:0 );
-      bSet = BOOL((pRMV->iFlags & RMV_F_PAUSEWHENOFF) != 0);
-      m_btnMoviePause.SetCheck( bSet ? 1:0 );
-      bSet = BOOL((pRMV->iFlags & RMV_F_ATDISPRATE) != 0);
-      m_btnMovieRate.SetCheck( bSet ? 1:0 );
-      
-      m_edMediaFolder.SetWindowText((LPCTSTR) ((t==RMV_MOVIE || t==RMV_IMAGE) ? pRMV->strFolder : _T("")));
-      m_edMediaFile.SetWindowText((LPCTSTR) ((t==RMV_MOVIE || t==RMV_IMAGE) ? pRMV->strFile : _T("")));
-   }
-
+   m_edMediaFolder.SetWindowText((LPCTSTR)((t == RMV_MOVIE || t == RMV_IMAGE) ? pRMV->strFolder : _T("")));
+   m_edMediaFile.SetWindowText((LPCTSTR)((t == RMV_MOVIE || t == RMV_IMAGE) ? pRMV->strFile : _T("")));
 }
 
 
 //=== UpdateControls ==================================================================================================
 //
-//    Update the enabled state of all parameter controls on the target data form.  Which controls should be enabled
-//    depends on whether the "current target" is realized on the XYScope or RMVideo, the target's type, and the state
-//    of the "Use Grayscale" button (RMVideo targets only).
+//    Update the enabled state of all parameter controls on the target data form. Which controls should be enabled
+//    depends on the target's type and the state of the "Use Grayscale" button.
 //
 //    Some labels are dynamically changed to accurately reflect the usage of the corresponding widgets: IDC_TARGF_WLBL,
 //    _HLBL, _ORLBL, _IRLBL, and _STDEVLBL. The IDC_TARGF_SPDALG button's text is dynamically changed.
@@ -1438,50 +1308,6 @@ VOID CCxTargForm::UpdateControls()
       m_btnSpdNoiseAlg.EnableWindow( FALSE );
       for( int i=0; i<NUMTGEDITC; i++ )
          m_edCtrls[i].EnableWindow( FALSE );
-      m_btnMovieRepeat.EnableWindow(FALSE);
-      m_btnMoviePause.EnableWindow(FALSE);
-      m_btnMovieRate.EnableWindow(FALSE);
-      m_edMediaFolder.EnableWindow(FALSE);
-      m_edMediaFile.EnableWindow(FALSE);
-   }
-   else if( m_pTarg->DataType() == CX_XYTARG )                       // current target is an XYScope target
-   {
-      PXYPARMS pXY = &(m_tgParms.xy);
-      int t = pXY->type;
-
-      m_cbType.EnableWindow( TRUE );
-      m_cbAperture.EnableWindow( FALSE );
-      m_btnGrayscale.EnableWindow( FALSE );
-
-      BOOL usesDotLf = BOOL(t==FCDOTLIFE || t==NOISYDIR || t==NOISYSPEED);
-      m_btnDotLifeMS.EnableWindow( usesDotLf );
-      m_btnDotLifeDeg.EnableWindow( usesDotLf );
-
-      m_btnDotNoiseDir.EnableWindow( FALSE );
-      m_btnDotNoiseSpeed.EnableWindow( FALSE );
-      m_btnWRTScreen.EnableWindow(FALSE);
-      m_btnSinewave.EnableWindow( FALSE );
-      m_btnSquarewave.EnableWindow( FALSE );
-      m_btnIndepGrats.EnableWindow( FALSE );
-      m_btnOrientAdj.EnableWindow( FALSE );
-
-      m_btnSpdNoiseAlg.EnableWindow( t==NOISYSPEED );
-      
-      // disable all numeric edit controls initially, then enable the relatively few that apply...
-      for(int i = 0; i<NUMTGEDITC; i++) m_edCtrls[i].EnableWindow(FALSE);
-      GetNumEdit(IDC_TARGF_ORECTW)->EnableWindow(TRUE);
-      GetNumEdit(IDC_TARGF_ORECTH)->EnableWindow(TRUE);
-      GetNumEdit(IDC_TARGF_IRECTW)->EnableWindow(
-         t==RECTANNU || t==FLOWFIELD || t==ORIENTEDBAR || t==NOISYDIR || t==NOISYSPEED || t==COHERENTFC );
-      GetNumEdit(IDC_TARGF_IRECTH)->EnableWindow( t==RECTANNU || t==NOISYDIR || t==NOISYSPEED );
-      GetNumEdit(IDC_TARGF_NDOTS)->EnableWindow(TRUE);
-      GetNumEdit(IDC_TARGF_DOTLIFE)->EnableWindow(usesDotLf);
-      GetNumEdit(IDC_TARGF_COHER)->EnableWindow(t==COHERENTFC);
-      GetNumEdit(IDC_TARGF_NOISERNG)->EnableWindow(t==NOISYDIR || t==NOISYSPEED);
-      GetNumEdit(IDC_TARGF_NOISEUPD)->EnableWindow(t==NOISYDIR || t==NOISYSPEED);
-      GetNumEdit(IDC_TARGF_XSIGMA)->EnableWindow(t==RECTANNU);
-      GetNumEdit(IDC_TARGF_YSIGMA)->EnableWindow(t==RECTANNU);
-      
       m_btnMovieRepeat.EnableWindow(FALSE);
       m_btnMoviePause.EnableWindow(FALSE);
       m_btnMovieRate.EnableWindow(FALSE);
@@ -1560,77 +1386,28 @@ VOID CCxTargForm::UpdateControls()
    else                                                              // we should NEVER get here!
       ASSERT(FALSE);
 
-   ReloadTargetTypes();                                              // reload set of strings appearing in the
-                                                                     // tgt-type dropdown combo box, if necessary
-
-   if( (m_pTarg != NULL) && m_pTarg->IsModifiable() )                // update text of changeable labels only if a
-   {                                                                 // modifiable target is loaded...
-      BOOL bIsXY = BOOL(m_pTarg->DataType()==CX_XYTARG);
-
+   if((m_pTarg != NULL) && m_pTarg->IsModifiable())                  // update text of changeable labels
+   {
       CString strLbl = _T("Width(deg)");
-      if( (bIsXY && m_tgParms.xy.type==FLOWFIELD) || (!bIsXY && m_tgParms.rmv.iType==RMV_FLOWFIELD) )
+      if(m_tgParms.rmv.iType==RMV_FLOWFIELD)
          strLbl = _T("Radius(deg)");
       SetDlgItemText( IDC_TARGF_WLBL, strLbl );
 
-      strLbl = _T("Height(deg)");
-      if( bIsXY && (m_tgParms.xy.type == RECTDOT) ) strLbl = _T("Spacing(deg)");
-      SetDlgItemText( IDC_TARGF_HLBL, strLbl );
-
       strLbl = _T("Outer");
-      if( (bIsXY && m_tgParms.xy.type==ORIENTEDBAR) || (!bIsXY && m_tgParms.rmv.iType==RMV_BAR) )
+      if(m_tgParms.rmv.iType==RMV_BAR)
          strLbl = _T("Bar Rect");
       SetDlgItemText( IDC_TARGF_ORLBL, strLbl );
 
       strLbl = _T("Inner");
-      if( (bIsXY && m_tgParms.xy.type==ORIENTEDBAR) || (!bIsXY && m_tgParms.rmv.iType==RMV_BAR) )
+      if(m_tgParms.rmv.iType==RMV_BAR)
          strLbl = _T("Drift Axis");
       SetDlgItemText( IDC_TARGF_IRLBL, strLbl );
-
-      strLbl = bIsXY ? _T("X,Y offset of hole (deg):") : _T("Gaussian std dev in X,Y (deg):");
-      SetDlgItemText( IDC_TARGF_STDEVLBL, strLbl );
       
       // text of this button reflects the per-dot speed noise algorithm chosen. Button disabled when not applicable.
       strLbl = _T("additive");
-      if((bIsXY && m_tgParms.xy.type == NOISYSPEED && m_tgParms.xy.fInnerX != 0.0f) ||
-         ((!bIsXY) && m_tgParms.rmv.iType == RMV_RANDOMDOTS && ((m_tgParms.rmv.iFlags & RMV_F_SPDLOG2) != 0)))
+      if((m_tgParms.rmv.iType == RMV_RANDOMDOTS) && ((m_tgParms.rmv.iFlags & RMV_F_SPDLOG2) != 0))
          strLbl = _T("* 2^N");
       m_btnSpdNoiseAlg.SetWindowText(strLbl);
-   }
-}
-
-
-//=== ReloadTargetTypes ===============================================================================================
-//
-//    The "target type" dropdown list (resource IDC_TARGF_TYPE ) must reflect the target type names associated with
-//    the target display platform.  There are currently two platforms that support multiple target types, the XY scope
-//    and framebuffer video displays.  The string names associated with each target type are found in static string
-//    arrays in CCxTarget, indexed by target type ID.
-//
-//    An internal flag indicates which set of type strings is currently loaded.  This flag and the current target's
-//    data type are checked to determine whether or not a reload is necessary.
-//
-//    ARGS:       NONE
-//
-//    RETURNS:    NONE
-//
-VOID CCxTargForm::ReloadTargetTypes()
-{
-   if( m_pTarg == NULL || !m_pTarg->IsModifiable() ) return;      // don't bother in this case
-
-   WORD dspType = m_pTarg->DataType();
-   if( m_bXYtypes && (dspType==CX_RMVTARG) )                      // switch from XY --> RMV target types
-   {
-      m_cbType.ResetContent();
-      for( int i = 0; i < RMV_NUMTGTTYPES; i++ )
-         m_cbType.AddString( CCxTarget::RMVTYPENAMES[i] );
-      m_bXYtypes = FALSE;
-   }
-   else if( (!m_bXYtypes) && (dspType==CX_XYTARG) )               // switch from RMV --> XY target types
-   {
-      m_cbType.ResetContent();
-      for( int i = 0; i < NUMXYTYPES; i++ )
-         m_cbType.AddString( CCxTarget::XYTYPENAMES[i] );
-      m_bXYtypes = TRUE;
    }
 }
 
@@ -1691,8 +1468,8 @@ BOOL CCxTargForm::IsGrayscale(CCxTarget* pTgt)
 //       SELTGTS:  Same as ALLTGTS, but applies only to targets in the edited target's parent set that are currently 
 //    selected in Maestro's object tree.
 //
-//    What is a COMPATIBLE target? It must be implemented on the same display platform (XYScope or RMVideo). Also, it 
-//    must have the same target type as the loaded target -- unless the parameter changed was the target type itself!
+//    What is a COMPATIBLE target? It must be another RMVideo target with the same target type as the loaded target -- 
+//    unless the parameter changed was the target type itself!
 //
 //    On MATCHTGTS modification mode and grayscale mode: When the user switches the loaded target to grayscale mode by 
 //    checking the "Grayscale" (IDC_TARGF_GRAY) button, sibling targets are "matching" only if they have exactly the 
@@ -1711,6 +1488,7 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
 {
    if(m_modifyMode == ATOMIC) return;
    ASSERT( m_pTarg );
+   ASSERT(m_pTarg->DataType() == CX_RMVTARG);
 
    // to manipulate individual cmpts of packed RGB in place
    int redMask = 0x000000FF;
@@ -1722,22 +1500,17 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
    if(m_modifyMode == SELTGTS && pFrame == NULL) 
       return;
 
-   // target platform type: CX_XYTARG or CX_RMVTARG
-   WORD wDspType = m_pTarg->DataType();
-   BOOL bIsXY = BOOL(wDspType == CX_XYTARG);
-
    // traverse all target objects in immediate parent of target currently loaded in the form and propagate the change 
    // that was made to the loaded target to all such compatible targets IAW modification mode...
    CCxDoc* pDoc = ((CCntrlxApp*) AfxGetApp())->GetDoc(); 
    POSITION pos = pDoc->GetFirstChildObj( pDoc->GetParentObj( m_wKey ) ); 
    while(pos != NULL) 
    {
-      // skip over the currently loaded target itself, and skip over any target that is not on the same display 
-      // platform (XYScope or RMVideo) as the loaded target.
+      // skip over the currently loaded target itself, and skip over any target that is not an RMVideo target
       WORD wKey;
       CTreeObj* pObj; 
       pDoc->GetNextChildObj( pos, wKey, pObj ); 
-      if(pObj->DataType() != wDspType || wKey == m_wKey ) 
+      if(pObj->DataType() != CX_RMVTARG || wKey == m_wKey ) 
          continue;
 
       // in ALLTGTS mode, we modify all compatible targets, while in SELTGTS mode we modify compatible targets that are 
@@ -1758,8 +1531,7 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
       // currently loaded target
       if(cid != IDC_TARGF_TYPE)
       {
-         if( (bIsXY && (dstParms.xy.type != m_tgParms.xy.type)) || 
-             ((!bIsXY) && (dstParms.rmv.iType != m_tgParms.rmv.iType)) ) 
+         if(dstParms.rmv.iType != m_tgParms.rmv.iType) 
             continue;
       }
 
@@ -1770,26 +1542,17 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
          // target dot life units
          case IDC_TARGF_DOTLF_MS : 
          case IDC_TARGF_DOTLF_DEG :
-            if(bIsXY)
+            if(bModify || ((dstParms.rmv.iFlags & RMV_F_LIFEINMS) == (oldParms.rmv.iFlags & RMV_F_LIFEINMS)))
             {
-               if(bModify || (dstParms.xy.iDotLfUnits == oldParms.xy.iDotLfUnits))
-                  dstParms.xy.iDotLfUnits = m_tgParms.xy.iDotLfUnits;
-            }
-            else
-            {
-               if( bModify || ((dstParms.rmv.iFlags & RMV_F_LIFEINMS) == (oldParms.rmv.iFlags & RMV_F_LIFEINMS)) )
-               {
-                  dstParms.rmv.iFlags &= ~RMV_F_LIFEINMS;
-                  dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_LIFEINMS);
-               }
+               dstParms.rmv.iFlags &= ~RMV_F_LIFEINMS;
+               dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_LIFEINMS);
             }
             break;
 
-         // target dot noise in direction or speed (applicable only to RMVideo targets)
+         // target dot noise in direction or speed
          case IDC_TARGF_NOISEDIR : 
          case IDC_TARGF_NOISESPEED : 
-            if((!bIsXY) && 
-               (bModify || ((dstParms.rmv.iFlags & RMV_F_DIRNOISE) == (oldParms.rmv.iFlags & RMV_F_DIRNOISE))) )
+            if(bModify || ((dstParms.rmv.iFlags & RMV_F_DIRNOISE) == (oldParms.rmv.iFlags & RMV_F_DIRNOISE)))
             {
                dstParms.rmv.iFlags &= ~RMV_F_DIRNOISE;
                dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_DIRNOISE);
@@ -1798,8 +1561,8 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
 
          // RMV_RANDOMDOTS "Pattern motion WRT screen? flag
          case IDC_TARGF_WRTSCRN :  
-            if((!bIsXY) && (dstParms.rmv.iType == RMV_RANDOMDOTS) &&
-               (bModify || ((dstParms.rmv.iFlags & RMV_F_WRTSCREEN) == (oldParms.rmv.iFlags & RMV_F_WRTSCREEN))) )
+            if((dstParms.rmv.iType == RMV_RANDOMDOTS) &&
+               (bModify || ((dstParms.rmv.iFlags & RMV_F_WRTSCREEN) == (oldParms.rmv.iFlags & RMV_F_WRTSCREEN))))
             {
                dstParms.rmv.iFlags &= ~RMV_F_WRTSCREEN;
                dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_WRTSCREEN);
@@ -1808,26 +1571,17 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
 
          // algorithm for per-dot speed noise (one of two possible choices)
          case IDC_TARGF_SPDALG :
-            if(bIsXY)
+            if(bModify || ((dstParms.rmv.iFlags & RMV_F_SPDLOG2) == (oldParms.rmv.iFlags & RMV_F_SPDLOG2)))
             {
-               if(bModify || (dstParms.xy.fInnerX == oldParms.xy.fInnerX))
-                  dstParms.xy.fInnerX = m_tgParms.xy.fInnerX;
-            }
-            else
-            {
-               if( bModify || ((dstParms.rmv.iFlags & RMV_F_SPDLOG2) == (oldParms.rmv.iFlags & RMV_F_SPDLOG2)) )
-               {
-                  dstParms.rmv.iFlags &= ~RMV_F_SPDLOG2;
-                  dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_SPDLOG2);
-               }
+               dstParms.rmv.iFlags &= ~RMV_F_SPDLOG2;
+               dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_SPDLOG2);
             }
             break;
 
-         // grating is sinewave or squarewave (applicable only to RMVideo targets)
+         // grating is sinewave or squarewave
          case IDC_TARGF_SINE : 
          case IDC_TARGF_SQUARE : 
-            if((!bIsXY) && 
-               (bModify || ((dstParms.rmv.iFlags & RMV_F_ISSQUARE) == (oldParms.rmv.iFlags & RMV_F_ISSQUARE))) )
+            if(bModify || ((dstParms.rmv.iFlags & RMV_F_ISSQUARE) == (oldParms.rmv.iFlags & RMV_F_ISSQUARE)))
             {
                dstParms.rmv.iFlags &= ~RMV_F_ISSQUARE;
                dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_ISSQUARE);
@@ -1836,8 +1590,8 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
 
          // use independent gratings? (applicable only to RMVideo RMV_PLAID targets)
          case IDC_TARGF_INDEPGRATS :  
-            if((!bIsXY) && (dstParms.rmv.iType == RMV_PLAID) &&
-               (bModify || ((dstParms.rmv.iFlags & RMV_F_INDEPGRATS) == (oldParms.rmv.iFlags & RMV_F_INDEPGRATS))) )
+            if((dstParms.rmv.iType == RMV_PLAID) &&
+               (bModify || ((dstParms.rmv.iFlags & RMV_F_INDEPGRATS) == (oldParms.rmv.iFlags & RMV_F_INDEPGRATS))))
             {
                dstParms.rmv.iFlags &= ~RMV_F_INDEPGRATS;
                dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_INDEPGRATS);
@@ -1846,8 +1600,8 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
 
          // orientation tracks drift vector direction? (applicable only to RMVideo grating and plaid targets)
          case IDC_TARGF_ORIENTADJ :  
-            if((!bIsXY) && (dstParms.rmv.iType == RMV_GRATING || dstParms.rmv.iType == RMV_PLAID) &&
-               (bModify || ((dstParms.rmv.iFlags & RMV_F_ORIENTADJ) == (oldParms.rmv.iFlags & RMV_F_ORIENTADJ))) )
+            if((dstParms.rmv.iType == RMV_GRATING || dstParms.rmv.iType == RMV_PLAID) &&
+               (bModify || ((dstParms.rmv.iFlags & RMV_F_ORIENTADJ) == (oldParms.rmv.iFlags & RMV_F_ORIENTADJ))))
             {
                dstParms.rmv.iFlags &= ~RMV_F_ORIENTADJ;
                dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_ORIENTADJ);
@@ -1856,8 +1610,8 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
 
          // RMV_MOVIE "repeat?" flag
          case IDC_TARGF_MVREP :  
-            if((!bIsXY) && (dstParms.rmv.iType == RMV_MOVIE) &&
-               (bModify || ((dstParms.rmv.iFlags & RMV_F_REPEAT) == (oldParms.rmv.iFlags & RMV_F_REPEAT))) )
+            if((dstParms.rmv.iType == RMV_MOVIE) &&
+               (bModify || ((dstParms.rmv.iFlags & RMV_F_REPEAT) == (oldParms.rmv.iFlags & RMV_F_REPEAT))))
             {
                dstParms.rmv.iFlags &= ~RMV_F_REPEAT;
                dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_REPEAT);
@@ -1866,8 +1620,8 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
 
          // RMV_MOVIE "pause when off?" flag
          case IDC_TARGF_MVPAUSE :  
-            if((!bIsXY) && (dstParms.rmv.iType == RMV_MOVIE) &&
-               (bModify || ((dstParms.rmv.iFlags & RMV_F_PAUSEWHENOFF) == (oldParms.rmv.iFlags & RMV_F_PAUSEWHENOFF))) )
+            if((dstParms.rmv.iType == RMV_MOVIE) &&
+               (bModify || ((dstParms.rmv.iFlags & RMV_F_PAUSEWHENOFF) == (oldParms.rmv.iFlags & RMV_F_PAUSEWHENOFF))))
             {
                dstParms.rmv.iFlags &= ~RMV_F_PAUSEWHENOFF;
                dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_PAUSEWHENOFF);
@@ -1876,8 +1630,8 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
 
          // RMV_MOVIE "at monitor frame rate?" flag
          case IDC_TARGF_MVRATE :  
-            if((!bIsXY) && (dstParms.rmv.iType == RMV_MOVIE) &&
-               (bModify || ((dstParms.rmv.iFlags & RMV_F_ATDISPRATE) == (oldParms.rmv.iFlags & RMV_F_ATDISPRATE))) )
+            if((dstParms.rmv.iType == RMV_MOVIE) &&
+               (bModify || ((dstParms.rmv.iFlags & RMV_F_ATDISPRATE) == (oldParms.rmv.iFlags & RMV_F_ATDISPRATE))))
             {
                dstParms.rmv.iFlags &= ~RMV_F_ATDISPRATE;
                dstParms.rmv.iFlags |= (m_tgParms.rmv.iFlags & RMV_F_ATDISPRATE);
@@ -1886,7 +1640,7 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
 
          // RMV_MOVIE or RMV_IMAGE media folder name
          case IDC_TARGF_MVFOLDER :
-            if((!bIsXY) && (dstParms.rmv.iType == RMV_MOVIE || dstParms.rmv.iType == RMV_IMAGE) &&
+            if((dstParms.rmv.iType == RMV_MOVIE || dstParms.rmv.iType == RMV_IMAGE) &&
                (bModify || (0 == ::strcmp(dstParms.rmv.strFolder, oldParms.rmv.strFolder))))
             {
                ::strcpy_s(dstParms.rmv.strFolder, oldParms.rmv.strFolder);
@@ -1895,7 +1649,7 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
             
          // RMV_MOVIE or RMV_IMAGE media file name
          case IDC_TARGF_MVFILE :
-            if((!bIsXY) && (dstParms.rmv.iType == RMV_MOVIE || dstParms.rmv.iType == RMV_IMAGE) &&
+            if((dstParms.rmv.iType == RMV_MOVIE || dstParms.rmv.iType == RMV_IMAGE) &&
                (bModify || (0 == ::strcmp(dstParms.rmv.strFile, oldParms.rmv.strFile))))
             {
                ::strcpy_s(dstParms.rmv.strFile, oldParms.rmv.strFile);
@@ -1904,60 +1658,31 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
 
          // target type
          case IDC_TARGF_TYPE : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.type == oldParms.xy.type))
-                  dstParms.xy.type = m_tgParms.xy.type;
-            }
-            else
-            {
-               if(bModify || (dstParms.rmv.iType == oldParms.rmv.iType))
-                  dstParms.rmv.iType = m_tgParms.rmv.iType;
-            }
+            if(bModify || (dstParms.rmv.iType == oldParms.rmv.iType))
+               dstParms.rmv.iType = m_tgParms.rmv.iType;
             break;
 
-         // target aperture shape (RMVideo targets only)
+         // target aperture shape
          case IDC_TARGF_SHAPE : 
-            if((!bIsXY) && (bModify || (dstParms.rmv.iAperture == oldParms.rmv.iAperture)))
+            if(bModify || (dstParms.rmv.iAperture == oldParms.rmv.iAperture))
                dstParms.rmv.iAperture = m_tgParms.rmv.iAperture;
             break;
 
          // width of outer bounding rectangle
          case IDC_TARGF_ORECTW : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.fRectW == oldParms.xy.fRectW))
-                  dstParms.xy.fRectW = m_tgParms.xy.fRectW;
-            }
-            else
-            {
-               if(bModify || (dstParms.rmv.fOuterW == oldParms.rmv.fOuterW))
-                  dstParms.rmv.fOuterW = m_tgParms.rmv.fOuterW;
-            }
+            if(bModify || (dstParms.rmv.fOuterW == oldParms.rmv.fOuterW))
+               dstParms.rmv.fOuterW = m_tgParms.rmv.fOuterW;
             break;
 
          // height of outer bounding rectangle
          case IDC_TARGF_ORECTH : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.fRectH == oldParms.xy.fRectH))
-                  dstParms.xy.fRectH = m_tgParms.xy.fRectH;
-            }
-            else
-            {
-               if(bModify || (dstParms.rmv.fOuterH == oldParms.rmv.fOuterH))
-                  dstParms.rmv.fOuterH = m_tgParms.rmv.fOuterH;
-            }
+            if(bModify || (dstParms.rmv.fOuterH == oldParms.rmv.fOuterH))
+               dstParms.rmv.fOuterH = m_tgParms.rmv.fOuterH;
             break;
 
-         // width of inner bounding rectangle. For RMVideo RMV_BAR target, we use IRECTW ctrl to edit bar's drift axis
+         // width of inner bounding rectangle. For RMV_BAR target, we use IRECTW ctrl to edit bar's drift axis
          case IDC_TARGF_IRECTW : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.fInnerW == oldParms.xy.fInnerW))
-                  dstParms.xy.fInnerW = m_tgParms.xy.fInnerW;
-            }
-            else if(dstParms.rmv.iType == RMV_BAR)
+            if(dstParms.rmv.iType == RMV_BAR)
             {
                if(bModify || (dstParms.rmv.fDriftAxis[0] == oldParms.rmv.fDriftAxis[0]))
                   dstParms.rmv.fDriftAxis[0] = m_tgParms.rmv.fDriftAxis[0];
@@ -1971,299 +1696,208 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
 
          // height of inner bounding rectangle
          case IDC_TARGF_IRECTH : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.fInnerH == oldParms.xy.fInnerH))
-                  dstParms.xy.fInnerH = m_tgParms.xy.fInnerH;
-            }
-            else
-            {
-               if(bModify || (dstParms.rmv.fInnerH == oldParms.rmv.fInnerH))
-                  dstParms.rmv.fInnerH = m_tgParms.rmv.fInnerH;
-            }
+            if(bModify || (dstParms.rmv.fInnerH == oldParms.rmv.fInnerH))
+               dstParms.rmv.fInnerH = m_tgParms.rmv.fInnerH;
             break;
 
          // switched to grayscale mode. In this case, we set the entire color spec (mean and contrast for 1st and 2nd 
          // gratings) of destination target to that of the loaded tgt. In MATCHTGTS modification mode, this will happen 
          // ONLY if the destination target has the same color spec as the loaded tgt had prior to the switch!
          case IDC_TARGF_GRAY :
-            if(!bIsXY)
+            if(!bModify)
             {
-               if(!bModify)
+               bModify = (dstParms.rmv.iRGBMean[0] == oldParms.rmv.iRGBMean[0]) &&
+                  (dstParms.rmv.iRGBMean[1] == oldParms.rmv.iRGBMean[1]) &&
+                  (dstParms.rmv.iRGBCon[0] == oldParms.rmv.iRGBCon[0]) &&
+                  (dstParms.rmv.iRGBCon[1] == oldParms.rmv.iRGBCon[1]);
+            }
+            if(bModify)
+            {
+               for(int i = 0; i < 2; i++)
                {
-                  bModify = (dstParms.rmv.iRGBMean[0] == oldParms.rmv.iRGBMean[0]) &&
-                     (dstParms.rmv.iRGBMean[1] == oldParms.rmv.iRGBMean[1]) &&
-                     (dstParms.rmv.iRGBCon[0] == oldParms.rmv.iRGBCon[0]) &&
-                     (dstParms.rmv.iRGBCon[1] == oldParms.rmv.iRGBCon[1]);
-               }
-               if(bModify)
-               {
-                  for(int i=0; i<2; i++)
-                  {
-                     dstParms.rmv.iRGBMean[i] = m_tgParms.rmv.iRGBMean[i];
-                     dstParms.rmv.iRGBCon[i] = m_tgParms.rmv.iRGBCon[i];
-                  }
+                  dstParms.rmv.iRGBMean[i] = m_tgParms.rmv.iRGBMean[i];
+                  dstParms.rmv.iRGBCon[i] = m_tgParms.rmv.iRGBCon[i];
                }
             }
             break;
 
-         // red intensity, 0..255; _REDMEAN2 is for 2nd grating of a plaid (RMVideo targets only). If the grayscale btn 
+         // red intensity, 0..255; _REDMEAN2 is for 2nd grating of a plaid. If the grayscale btn 
          // is checked, the green and blue cmpts are also set. However, in this case, when the modification mode is 
          // MATCHTGTS, a matching target must have a grayscale color spec and must have the same RGB triplet as the 
          // loaded target had prior to the change!
          case IDC_TARGF_REDMEAN : 
          case IDC_TARGF_REDMEAN2 : 
-            if(!bIsXY)
+            iGrat = (cid == IDC_TARGF_REDMEAN) ? 0 : 1;
+            if(m_bGrayScale)
             {
-               iGrat = (cid==IDC_TARGF_REDMEAN) ? 0 : 1;
-               if(m_bGrayScale)
-               {
-                  if(!bModify) 
-                     bModify = IsGrayscale(pDstTgt) && (dstParms.rmv.iRGBMean[iGrat] == oldParms.rmv.iRGBMean[iGrat]);
-                  if(bModify)
-                     dstParms.rmv.iRGBMean[iGrat] = m_tgParms.rmv.iRGBMean[iGrat];
-               }
-               else if(bModify || 
-                      ((dstParms.rmv.iRGBMean[iGrat] & redMask) == (oldParms.rmv.iRGBMean[iGrat] & redMask)))
-               {
-                  dstParms.rmv.iRGBMean[iGrat] = 
-                     (dstParms.rmv.iRGBMean[iGrat] & (~redMask)) | (m_tgParms.rmv.iRGBMean[iGrat] & redMask);
-               }
+               if(!bModify)
+                  bModify = IsGrayscale(pDstTgt) && (dstParms.rmv.iRGBMean[iGrat] == oldParms.rmv.iRGBMean[iGrat]);
+               if(bModify)
+                  dstParms.rmv.iRGBMean[iGrat] = m_tgParms.rmv.iRGBMean[iGrat];
+            }
+            else if(bModify ||
+               ((dstParms.rmv.iRGBMean[iGrat] & redMask) == (oldParms.rmv.iRGBMean[iGrat] & redMask)))
+            {
+               dstParms.rmv.iRGBMean[iGrat] =
+                  (dstParms.rmv.iRGBMean[iGrat] & (~redMask)) | (m_tgParms.rmv.iRGBMean[iGrat] & redMask);
             }
             break;
 
-         // green intensity, 0..255; _GRNMEAN2 is for 2nd grating of a plaid (RMVideo targets only) [not enabled in 
-         // grayscale mode]
+         // green intensity, 0..255; _GRNMEAN2 is for 2nd grating of a plaid [not enabled in grayscale mode]
          case IDC_TARGF_GRNMEAN : 
          case IDC_TARGF_GRNMEAN2 : 
-            if(!bIsXY)
+            iGrat = (cid == IDC_TARGF_GRNMEAN) ? 0 : 1;
+            if(bModify || ((dstParms.rmv.iRGBMean[iGrat] & grnMask) == (oldParms.rmv.iRGBMean[iGrat] & grnMask)))
             {
-               iGrat = (cid==IDC_TARGF_GRNMEAN) ? 0 : 1;
-               if(bModify || ((dstParms.rmv.iRGBMean[iGrat] & grnMask) == (oldParms.rmv.iRGBMean[iGrat] & grnMask)))
-               {
-                  dstParms.rmv.iRGBMean[iGrat] = 
-                     (dstParms.rmv.iRGBMean[iGrat] & (~grnMask)) | (m_tgParms.rmv.iRGBMean[iGrat] & grnMask);
-               }
+               dstParms.rmv.iRGBMean[iGrat] =
+                  (dstParms.rmv.iRGBMean[iGrat] & (~grnMask)) | (m_tgParms.rmv.iRGBMean[iGrat] & grnMask);
             }
             break;
 
-         // blue intensity, 0..255; _BLUMEAN2 is for 2nd grating of a plaid (RMVideo targets only) [not enabled in 
-         // grayscale mode]
+         // blue intensity, 0..255; _BLUMEAN2 is for 2nd grating of a plaid  [not enabled in grayscale mode]
          case IDC_TARGF_BLUMEAN : 
          case IDC_TARGF_BLUMEAN2 : 
-            if(!bIsXY)
+            iGrat = (cid == IDC_TARGF_BLUMEAN) ? 0 : 1;
+            if(bModify || ((dstParms.rmv.iRGBMean[iGrat] & bluMask) == (oldParms.rmv.iRGBMean[iGrat] & bluMask)))
             {
-               iGrat = (cid==IDC_TARGF_BLUMEAN) ? 0 : 1;
-               if(bModify || ((dstParms.rmv.iRGBMean[iGrat] & bluMask) == (oldParms.rmv.iRGBMean[iGrat] & bluMask)))
-               {
-                  dstParms.rmv.iRGBMean[iGrat] = 
-                     (dstParms.rmv.iRGBMean[iGrat] & (~bluMask)) | (m_tgParms.rmv.iRGBMean[iGrat] & bluMask);
-               }
+               dstParms.rmv.iRGBMean[iGrat] =
+                  (dstParms.rmv.iRGBMean[iGrat] & (~bluMask)) | (m_tgParms.rmv.iRGBMean[iGrat] & bluMask);
             }
             break;
 
-         // %contrast in red cmpt, 0..100; _REDCON2 is for 2nd grating of a plaid (RMVideo targets only). If the 
+         // %contrast in red cmpt, 0..100; _REDCON2 is for 2nd grating of a plaid. If the 
          // grayscale btn is checked, the green and blue cmpts are also set. However, in this case, when the 
          // modification mode is MATCHTGTS, a matching target must have a grayscale color spec and must have the same 
          // RGB contrast triplet as the loaded target had prior to the change!
          case IDC_TARGF_REDCON :  
          case IDC_TARGF_REDCON2 :
-            if(!bIsXY)
+            iGrat = (cid == IDC_TARGF_REDCON) ? 0 : 1;
+            if(m_bGrayScale)
             {
-               iGrat = (cid==IDC_TARGF_REDCON) ? 0 : 1;
-               if(m_bGrayScale)
-               {
-                  if(!bModify) 
-                     bModify = IsGrayscale(pDstTgt) && (dstParms.rmv.iRGBCon[iGrat] == oldParms.rmv.iRGBCon[iGrat]);
-                  if(bModify)
-                     dstParms.rmv.iRGBCon[iGrat] = m_tgParms.rmv.iRGBCon[iGrat];
-               }
-               else if(bModify || 
-                      ((dstParms.rmv.iRGBCon[iGrat] & redMask) == (oldParms.rmv.iRGBCon[iGrat] & redMask)))
-               {
-                  dstParms.rmv.iRGBCon[iGrat] = 
-                     (dstParms.rmv.iRGBCon[iGrat] & (~redMask)) | (m_tgParms.rmv.iRGBCon[iGrat] & redMask);
-               }
+               if(!bModify)
+                  bModify = IsGrayscale(pDstTgt) && (dstParms.rmv.iRGBCon[iGrat] == oldParms.rmv.iRGBCon[iGrat]);
+               if(bModify)
+                  dstParms.rmv.iRGBCon[iGrat] = m_tgParms.rmv.iRGBCon[iGrat];
+            }
+            else if(bModify ||
+               ((dstParms.rmv.iRGBCon[iGrat] & redMask) == (oldParms.rmv.iRGBCon[iGrat] & redMask)))
+            {
+               dstParms.rmv.iRGBCon[iGrat] =
+                  (dstParms.rmv.iRGBCon[iGrat] & (~redMask)) | (m_tgParms.rmv.iRGBCon[iGrat] & redMask);
             }
             break;
 
-         // %contrast in green cmpt, 0..100; _GRNCON2 is for 2nd grating of a plaid (RMVideo targets only) [not 
-         // enabled in grayscale mode]
+         // %contrast in green cmpt, 0..100; _GRNCON2 is for 2nd grating of a plaid [not enabled in grayscale mode]
          case IDC_TARGF_GRNCON :
          case IDC_TARGF_GRNCON2 :
-            if(!bIsXY)
+            iGrat = (cid == IDC_TARGF_GRNCON) ? 0 : 1;
+            if(bModify || ((dstParms.rmv.iRGBCon[iGrat] & grnMask) == (oldParms.rmv.iRGBCon[iGrat] & grnMask)))
             {
-               iGrat = (cid==IDC_TARGF_GRNCON) ? 0 : 1;
-               if(bModify || ((dstParms.rmv.iRGBCon[iGrat] & grnMask) == (oldParms.rmv.iRGBCon[iGrat] & grnMask)))
-               {
-                  dstParms.rmv.iRGBCon[iGrat] = 
-                     (dstParms.rmv.iRGBCon[iGrat] & (~grnMask)) | (m_tgParms.rmv.iRGBCon[iGrat] & grnMask);
-               }
+               dstParms.rmv.iRGBCon[iGrat] =
+                  (dstParms.rmv.iRGBCon[iGrat] & (~grnMask)) | (m_tgParms.rmv.iRGBCon[iGrat] & grnMask);
             }
             break;
 
-         // %contrast in blue cmpt, 0..100; _BLUCON2 is for 2nd grating of a plaid (RMVideo targets only) [not 
-         // enabled in grayscale mode]
+         // %contrast in blue cmpt, 0..100; _BLUCON2 is for 2nd grating of a plaid [not enabled in grayscale mode]
          case IDC_TARGF_BLUCON :
          case IDC_TARGF_BLUCON2 :
-            if(!bIsXY)
+            iGrat = (cid == IDC_TARGF_BLUCON) ? 0 : 1;
+            if(bModify || ((dstParms.rmv.iRGBCon[iGrat] & bluMask) == (oldParms.rmv.iRGBCon[iGrat] & bluMask)))
             {
-               iGrat = (cid==IDC_TARGF_BLUCON) ? 0 : 1;
-               if(bModify || ((dstParms.rmv.iRGBCon[iGrat] & bluMask) == (oldParms.rmv.iRGBCon[iGrat] & bluMask)))
-               {
-                  dstParms.rmv.iRGBCon[iGrat] = 
-                     (dstParms.rmv.iRGBCon[iGrat] & (~bluMask)) | (m_tgParms.rmv.iRGBCon[iGrat] & bluMask);
-               }
+               dstParms.rmv.iRGBCon[iGrat] =
+                  (dstParms.rmv.iRGBCon[iGrat] & (~bluMask)) | (m_tgParms.rmv.iRGBCon[iGrat] & bluMask);
             }
             break;
 
          // #dots in target's random-dot pattern
          case IDC_TARGF_NDOTS : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.ndots == oldParms.xy.ndots))
-                  dstParms.xy.ndots = m_tgParms.xy.ndots;
-            }
-            else
-            {
-               if(bModify || (dstParms.rmv.nDots == oldParms.rmv.nDots))
-                  dstParms.rmv.nDots = m_tgParms.rmv.nDots;
-            }
+            if(bModify || (dstParms.rmv.nDots == oldParms.rmv.nDots))
+               dstParms.rmv.nDots = m_tgParms.rmv.nDots;
             break;
 
-         // size of a "dot" in pixels (RMVideo targets only)
+         // size of a "dot" in pixels
          case IDC_TARGF_DOTSZ : 
-            if((!bIsXY) && (bModify || (dstParms.rmv.nDotSize == oldParms.rmv.nDotSize)))
+            if(bModify || (dstParms.rmv.nDotSize == oldParms.rmv.nDotSize))
                dstParms.rmv.nDotSize = m_tgParms.rmv.nDotSize;
             break;
 
          // target dot life in deg or msecs
          case IDC_TARGF_DOTLIFE : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.fDotLife == oldParms.xy.fDotLife))
-                  dstParms.xy.fDotLife = m_tgParms.xy.fDotLife;
-            }
-            else
-            {
-               if(bModify || (dstParms.rmv.fDotLife == oldParms.rmv.fDotLife))
-                  dstParms.rmv.fDotLife = m_tgParms.rmv.fDotLife;
-            }
+            if(bModify || (dstParms.rmv.fDotLife == oldParms.rmv.fDotLife))
+               dstParms.rmv.fDotLife = m_tgParms.rmv.fDotLife;
             break;
 
-         // percent coherence. For XY scope targets, this is stored in the field XYPARMS.fInnerW.
+         // percent coherence
          case IDC_TARGF_COHER : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.fInnerW == oldParms.xy.fInnerW))
-                  dstParms.xy.fInnerW = m_tgParms.xy.fInnerW;
-            }
-            else
-            {
-               if(bModify || (dstParms.rmv.iPctCoherent == oldParms.rmv.iPctCoherent))
-                  dstParms.rmv.iPctCoherent = m_tgParms.rmv.iPctCoherent;
-            }
+            if(bModify || (dstParms.rmv.iPctCoherent == oldParms.rmv.iPctCoherent))
+               dstParms.rmv.iPctCoherent = m_tgParms.rmv.iPctCoherent;
             break;
 
-         // noise range limit. For XY scope targets, this is stored in the field XYPARMS.fInnerW.
+         // noise range limit
          case IDC_TARGF_NOISERNG : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.fInnerW == oldParms.xy.fInnerW))
-                  dstParms.xy.fInnerW = m_tgParms.xy.fInnerW;
-            }
-            else
-            {
-               if(bModify || (dstParms.rmv.iNoiseLimit == oldParms.rmv.iNoiseLimit))
-                  dstParms.rmv.iNoiseLimit = m_tgParms.rmv.iNoiseLimit;
-            }
+            if(bModify || (dstParms.rmv.iNoiseLimit == oldParms.rmv.iNoiseLimit))
+               dstParms.rmv.iNoiseLimit = m_tgParms.rmv.iNoiseLimit;
             break;
 
-         // noise update interval. For XY scope targets, this is stored in the field XYPARMS.fInnerH.
+         // noise update interval
          case IDC_TARGF_NOISEUPD : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.fInnerH == oldParms.xy.fInnerH))
-                  dstParms.xy.fInnerH = m_tgParms.xy.fInnerH;
-            }
-            else
-            {
-               if(bModify || (dstParms.rmv.iNoiseUpdIntv == oldParms.rmv.iNoiseUpdIntv))
-                  dstParms.rmv.iNoiseUpdIntv = m_tgParms.rmv.iNoiseUpdIntv;
-            }
+            if(bModify || (dstParms.rmv.iNoiseUpdIntv == oldParms.rmv.iNoiseUpdIntv))
+               dstParms.rmv.iNoiseUpdIntv = m_tgParms.rmv.iNoiseUpdIntv;
             break;
 
-         // 1st/2nd grating drift axis in deg CCW (RMVideo targets only)
+         // 1st/2nd grating drift axis in deg CCW
          case IDC_TARGF_GRAT1_DA : 
          case IDC_TARGF_GRAT2_DA : 
             iGrat = (cid==IDC_TARGF_GRAT1_DA) ? 0 : 1;
-            if((!bIsXY) && (bModify || (dstParms.rmv.fDriftAxis[iGrat] == oldParms.rmv.fDriftAxis[iGrat])))
+            if(bModify || (dstParms.rmv.fDriftAxis[iGrat] == oldParms.rmv.fDriftAxis[iGrat]))
                dstParms.rmv.fDriftAxis[iGrat] = m_tgParms.rmv.fDriftAxis[iGrat];
             break;
 
-         // 1st/2nd grating spatial frequency in cyc/deg (RMVideo targets only)
+         // 1st/2nd grating spatial frequency in cyc/deg
          case IDC_TARGF_GRAT1_SF : 
          case IDC_TARGF_GRAT2_SF : 
             iGrat = (cid==IDC_TARGF_GRAT1_SF) ? 0 : 1;
-            if((!bIsXY) && (bModify || (dstParms.rmv.fSpatialFreq[iGrat] == oldParms.rmv.fSpatialFreq[iGrat])))
+            if(bModify || (dstParms.rmv.fSpatialFreq[iGrat] == oldParms.rmv.fSpatialFreq[iGrat]))
                dstParms.rmv.fSpatialFreq[iGrat] = m_tgParms.rmv.fSpatialFreq[iGrat];
             break;
 
-         // 1st/2nd grating spatial phase in deg (RMVideo targets only)
+         // 1st/2nd grating spatial phase in deg
          case IDC_TARGF_GRAT1_PH : 
          case IDC_TARGF_GRAT2_PH : 
             iGrat = (cid==IDC_TARGF_GRAT1_PH) ? 0 : 1;
-            if((!bIsXY) && (bModify || (dstParms.rmv.fGratPhase[iGrat] == oldParms.rmv.fGratPhase[iGrat])))
+            if(bModify || (dstParms.rmv.fGratPhase[iGrat] == oldParms.rmv.fGratPhase[iGrat]))
                dstParms.rmv.fGratPhase[iGrat] = m_tgParms.rmv.fGratPhase[iGrat];
             break;
 
-         // the X-offset of the hole in the XYScope RECTANNU target only. For RMVideo targets, this is the X std dev 
-         // of the Gaussian window
+         // X std dev of the Gaussian window
          case IDC_TARGF_XSIGMA : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.fInnerX == oldParms.xy.fInnerX))
-                  dstParms.xy.fInnerX = m_tgParms.xy.fInnerX;
-            }
-            else
-            {
-               if(bModify || (dstParms.rmv.fSigma[0] == oldParms.rmv.fSigma[0]))
-                  dstParms.rmv.fSigma[0] = m_tgParms.rmv.fSigma[0];
-            }
+            if(bModify || (dstParms.rmv.fSigma[0] == oldParms.rmv.fSigma[0]))
+               dstParms.rmv.fSigma[0] = m_tgParms.rmv.fSigma[0];
             break;
 
-         // the Y-offset of the hole in the XYScope RECTANNU target only. For RMVideo targets, this is the Y std dev 
-         // of the Gaussian window
+         // Y std dev of the Gaussian window
          case IDC_TARGF_YSIGMA : 
-            if(bIsXY)
-            {
-               if(bModify || (dstParms.xy.fInnerY == oldParms.xy.fInnerY))
-                  dstParms.xy.fInnerY = m_tgParms.xy.fInnerY;
-            }
-            else
-            {
-               if(bModify || (dstParms.rmv.fSigma[1] == oldParms.rmv.fSigma[1]))
-                  dstParms.rmv.fSigma[1] = m_tgParms.rmv.fSigma[1];
-            }
+            if(bModify || (dstParms.rmv.fSigma[1] == oldParms.rmv.fSigma[1]))
+               dstParms.rmv.fSigma[1] = m_tgParms.rmv.fSigma[1];
             break;
 
-         // seed for random-dot generation (RMVideo targets only)
+         // seed for random-dot generation
          case IDC_TARGF_RANDSEED : 
-            if((!bIsXY) && (bModify || (dstParms.rmv.iSeed == oldParms.rmv.iSeed)))
+            if(bModify || (dstParms.rmv.iSeed == oldParms.rmv.iSeed))
                dstParms.rmv.iSeed = m_tgParms.rmv.iSeed;
             break;
 
-         // flicker parameters (RMVideo targets only)
+         // flicker parameters
          case IDC_TARGF_FLICKON :
-            if((!bIsXY) && (bModify || (dstParms.rmv.iFlickerOn == oldParms.rmv.iFlickerOn)))
+            if(bModify || (dstParms.rmv.iFlickerOn == oldParms.rmv.iFlickerOn))
                dstParms.rmv.iFlickerOn = m_tgParms.rmv.iFlickerOn;
             break;
          case IDC_TARGF_FLICKOFF :
-            if((!bIsXY) && (bModify || (dstParms.rmv.iFlickerOff == oldParms.rmv.iFlickerOff)))
+            if(bModify || (dstParms.rmv.iFlickerOff == oldParms.rmv.iFlickerOff))
                dstParms.rmv.iFlickerOff = m_tgParms.rmv.iFlickerOff;
             break;
          case IDC_TARGF_FLICKDELAY :
-            if((!bIsXY) && (bModify || (dstParms.rmv.iFlickerDelay == oldParms.rmv.iFlickerDelay)))
+            if(bModify || (dstParms.rmv.iFlickerDelay == oldParms.rmv.iFlickerDelay))
                dstParms.rmv.iFlickerDelay = m_tgParms.rmv.iFlickerDelay;
             break;
 

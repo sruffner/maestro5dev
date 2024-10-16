@@ -44,7 +44,6 @@
 #define IDC_CH_GRID                     465
 #define IDC_POPUP_TREE                  1000
 #define IDC_TARGF_MODMODE               1000
-#define IDC_TARGF_TYPELBL               1003
 #define IDC_TARGF_TYPE                  1004
 #define IDC_TARGF_SHAPE                 1005
 #define IDC_TARGF_ORECTW                1010
@@ -98,10 +97,8 @@
 #define IDC_TARGF_MVRATE                1062
 #define IDC_TARGF_WRTSCRN               1063
 #define IDC_TARGF_WLBL                  1070
-#define IDC_TARGF_HLBL                  1071
 #define IDC_TARGF_ORLBL                 1072
 #define IDC_TARGF_IRLBL                 1073
-#define IDC_TARGF_STDEVLBL              1074
 #define IDC_RF_DUTYPER                  1100
 #define IDC_RF_AUTOSTOP                 1101
 #define IDC_RF_HOFFSET                  1102
