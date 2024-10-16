@@ -112,9 +112,6 @@ public:
    BOOL IsMidTrialRewEnable() const { return( m_hdr.bEnaRew ); }
    BOOL SetMidTrialRewEnable( BOOL bVal );
 
-   int GetXYFramePeriod() const { return( m_hdr.iXYFrame ); }
-   BOOL SetXYFramePeriod( int iVal );
-
    int GetMarker() const { return( m_hdr.iMarker ); }
    BOOL SetMarker( int iVal );
 
@@ -192,7 +189,6 @@ public:
       NOTAPARAM = -1,
       MINDURATION = 100,
       MAXDURATION,
-      XYFRAMEPERIOD,
       RMVSYNCENA,
       FIXTARG1,
       FIXTARG2,
@@ -386,7 +382,6 @@ public:
    int GetMarkSeg2Pos() const { return( m_hdr.iMarkSeg2 ); }
    int GetMidTrialRewardIntv() const { return( m_hdr.iMTRIntv ); }
    int GetMidTrialRewardLen() const { return( m_hdr.iMTRLen ); }
-   int GetNumXYInterleave() const { return( m_hdr.nXYInterleave ); }
    int GetSaccadeThreshold() const { return( m_hdr.iSaccVt ); }
    int GetReward1PulseLen() const { return( m_hdr.reward1[0] ); }
    int GetReward1WHVRNumerator() const { return(m_hdr.reward1[1]); }
@@ -399,8 +394,6 @@ public:
    VOID SetChannels( WORD wChanKey )  { m_hdr.wChanKey = wChanKey; }
    int GetSgmSegPos() const { return( m_hdr.iSGMSeg ); }
    VOID GetSgmParms( SGMPARMS& sgm ) const { sgm = m_hdr.sgm; }
-
-   int GetAltXYDotSeed() const { return(m_hdr.iXYDotSeedAlt); }
 
    int GetFixTarg1Pos( int iSeg ) const { return( RetrieveSegment( iSeg )->GetFixTarg1Pos() ); }
    BOOL SetFixTarg1Pos( int iSeg, int iVal )
@@ -436,12 +429,6 @@ public:
    BOOL SetMidTrialRewEnable( int iSeg, BOOL bVal  )
    {
       return( IsValidSeg( iSeg ) ? RetrieveSegment( iSeg )->SetMidTrialRewEnable( bVal ) : FALSE );
-   }
-
-   int GetXYFramePeriod( int iSeg ) const { return( RetrieveSegment( iSeg )->GetXYFramePeriod() ); }
-   BOOL SetXYFramePeriod( int iSeg, int iVal )
-   {
-      return( IsValidSeg( iSeg ) ? RetrieveSegment( iSeg )->SetXYFramePeriod( iVal ) : FALSE );
    }
 
    BOOL IsRMVSyncFlashOn(int iSeg) const { return(RetrieveSegment(iSeg)->IsRMVSyncFlashOn()); }

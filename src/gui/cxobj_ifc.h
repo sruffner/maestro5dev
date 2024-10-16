@@ -574,7 +574,7 @@ const int   SGH_MINMARKER  = 0;        // the range of valid marker pulse values
 const int   SGH_MAXMARKER  = 10;       // pulse is delivered.
 const float SGH_MINFIXACC  = 0.1f;
 
-// [DEPRECATED] The XYScope is unsupported a/o V4.0, and implementation remove a/o V5.0.
+// [DEPRECATED] The XYScope is unsupported a/o V4.0, and implementation removed a/o V5.0.
 const int   SGH_MINXYFRAME = 2;        // [deprecated] XY frame interval range; also must be a multiple of min value!
 const int   SGH_MAXXYFRAME = 256;
 
@@ -592,8 +592,8 @@ typedef struct tagSegHeader   // the segment header parameters:
    int      iFixTarg2;        // target list.  if negative, then no fixation target is assigned.
    float    fFixAccH;         // required H,V fixation accuracies during segment (deg subtended at eye).
    float    fFixAccV;         //
-   int      iGrace;           // grace period (after segment start) during which fixation is not checked (msec).
-   int      iXYFrame;         // update interval for XY scope targets participating in trial (msec).
+   int      iGrace;           // grace period (after segment start) during which fixation is not checked (ms).
+   int      iXYFrame;         // [DEPRECATED a/o V5.0] update interval for XY scope targets participating in trial (ms)
    int      iMarker;          // marker pulse delivered at start of segment (0 = no pulse)
    BOOL     bChkResp;         // if TRUE, check for correct response during this segment (staircase trials only)
    BOOL     bEnaRew;          // if TRUE, enable periodic "mid-trial" rewards during this segment (special feature)
