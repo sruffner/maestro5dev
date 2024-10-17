@@ -177,6 +177,9 @@
 // in RMVideo v8. As of Maestro v4.0.0.
 // 09sep2019-- Mod to Open(): Gets "SetDOBusyWaits" registry entry, parses it into 3 busy wait times, and stores these
 // times in CXIPC for use by CXDRIVER. See CXIPC.H.
+// 17oct2024-- Mod to UpdateVideoCfg(): XYScope is officially dropped a/o Maestro 5.0. Rather than modify the 
+// CX_SETDISPLAY command, we simply set all deprecated XYScope display parameters to 0 -- CXDRIVER ignores them.
+//          -- Mod to StartTrial(): iXYDotSeedAlt was removed from the IPC shared memory struct, CXIPC.
 //=====================================================================================================================
 
 
@@ -1391,14 +1394,17 @@ VOID CCxRuntime::ConfigurePositionPlot()
 
 //=== CanUpdateVideoCfg, UpdateVideoCfg, CanUpdateFixRewSettings, UpdateFixRewSettings ================================
 //
-//    The CNTRLX application settings object (CCxSettings) contains a variety of application settings, some of which
+//    The Maestro application settings object (CCxSettings) contains a variety of application settings, some of which
 //    must be communicated to CXDRIVER whenever they change:
-//       1) Video display configuration -- Controls the appearance of targets on the XY scope and RMVideo displays.
+//       1) Video display configuration -- Controls the appearance of targets on the RMVideo display.
 //       2) Fix/Reward settings -- Fixation requirements, and options governing how rewards are delivered to animal.
 //    The user can modify these settings during any operational mode as long as the master mode control panel permits
 //    it.  Invoke CanUpdate***() to check whether or not an update of the relevant settings is currently permissible,
 //    and call Update***() to send those settings to CXDRIVER via the CX_SETDISPLAY or CX_FIXREWSETTINGS command.
 //
+//    NOTE: XYScope platform, unsupported since V4.0, was dropped entirely for Maestro 5.0. The CX_SETDISPLAY command
+//    is unchanged -- except all deprecated XYScope display parameters are set to 0. CXDRIVER ignores them.
+// 
 //    ARGS:       NONE.
 //
 //    RETURNS:    CanUpdate***(): TRUE if update is possible in current operational state; FALSE otherwise.
@@ -1418,13 +1424,14 @@ BOOL CCxRuntime::UpdateVideoCfg()
    CCxSettings* pSet = (CCxSettings*) pDoc->GetSettings();
    ASSERT( pSet );
 
-   m_pShm->iData[0] = pSet->GetXYDistToEye();                  // fill in int-valued data for CX_SETDISPLAY cmd
-   m_pShm->iData[1] = pSet->GetXYWidth();
-   m_pShm->iData[2] = pSet->GetXYHeight();
-   m_pShm->iData[3] = pSet->GetXYDrawDelay();
-   m_pShm->iData[4] = pSet->GetXYDrawDur();
-   m_pShm->iData[5] = pSet->IsXYDotSeedFixed() ? 0 : 1;        // FALSE to use a fixed value for random pattern genr;
-   m_pShm->iData[6] = int(pSet->GetFixedXYDotSeedValue());     // else a new seed is auto-generated for each animation
+   // fill in int-valued data for CX_SETDISPLAY. Note that XYScope is deprecated, so first 7 parameters are zeroed.
+   m_pShm->iData[0] = 0;
+   m_pShm->iData[1] = 0;
+   m_pShm->iData[2] = 0;
+   m_pShm->iData[3] = 0;
+   m_pShm->iData[4] = 0;
+   m_pShm->iData[5] = 0; 
+   m_pShm->iData[6] = 0;
 
    m_pShm->iData[7] = pSet->GetFBDistToEye();
    m_pShm->iData[8] = pSet->GetFBWidth();
@@ -2029,8 +2036,6 @@ BOOL CCxRuntime::StartTrial( CCxTrialSequencer* pCtrl, LPCTSTR strData, BOOL bSp
             &t0, &t1,                                             //    display interval (if shorter than trial)
             bSave ) )                                             //    save this trial's data?
       return( FALSE );
-
-   m_pShm->iXYDotSeedAlt = pTrial->GetAltXYDotSeed();             //    alt. XY dot seed (>=0 overrides disp settings)
 
    memset( &(m_pShm->strDataPath[0]), 0, CX_MAXPATH );            // clear previous pathname
    if( bSave )                                                    // if we're saving trial data...

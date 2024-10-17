@@ -516,7 +516,7 @@ BOOL CCxDoc::IsTrialSetEmpty(const WORD wSet) const
 }
 
 /** Excise all trial sets that are empty or contain only empty trial subsets. */
-BOOL CCxDoc::RemoveEmptyTrialSets()
+VOID CCxDoc::RemoveEmptyTrialSets()
 {
    CWordArray setsToDelete;
    setsToDelete.RemoveAll();

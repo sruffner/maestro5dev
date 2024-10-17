@@ -910,8 +910,7 @@ void CCxContRunForm::Dump( CDumpContext& dc ) const
       m_pPasteStim->Dump( dc );
    }
 
-   msg.Format( "\nTransient state: context cell = (%d,%d), tgt insert pos = %d", 
-               m_contextCell.row, m_contextCell.col, m_iInsTgtPos ); 
+   msg.Format( "\nTransient state: context cell = (%d,%d)", m_contextCell.row, m_contextCell.col); 
    dc << msg;
 }
 
