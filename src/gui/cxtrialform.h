@@ -50,7 +50,6 @@ private:
    CSpinButtonCtrl   m_spinSpecial;             //    "sacc-trig'd op" segment
    CSpinButtonCtrl   m_spinMark1;               //    "display marker" segments #1 and #2
    CSpinButtonCtrl   m_spinMark2;               //
-   CSpinButtonCtrl   m_spinXYIL;                //    # of XY scope targets interleaved
 
                                                 // formatted numeric edit controls:
    CNumEdit          m_edSaccVt;                //    saccade threshold velocity
@@ -64,7 +63,6 @@ private:
    CNumEdit          m_edMTRIntv;               //    mid-trial reward interval
    CNumEdit          m_edMTRLen;                //    mid-trial reward pulse length
    CNumEdit          m_edWeight;                //    trial weight (editable buddy window for a spin ctrl!)
-   CNumEdit          m_edXYDotSeedAlt;          //    alternate XY dot seed
 
    CCxMainPage(const CCxMainPage& src);                   // no copy constructor or assignment operator defined
    CCxMainPage& operator=( const CCxMainPage& src );

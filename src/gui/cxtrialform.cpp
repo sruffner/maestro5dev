@@ -7,33 +7,34 @@
 // DESCRIPTION:
 //
 // CCxTrialForm encapsulates Maestro's trial editor, a form view through which the user modifies the definition of the
-// Maestro trial object, CCxTrial.  A trial is the most complex of all the Maestro data objects.  Its definition
+// Maestro trial object, CCxTrial. A trial is the most complex of all the Maestro data objects.  Its definition
 // includes a number of "header" parameters, a list of perturbations used in the trial, and a variably-sized "segment
 // table" that lists the targets participating in the trial and their motion trajectories during each segment of the
-// trial.  Since a trial can contain many different segments and participating targets, the segment table can grow
-// relatively large.  See CCxTrial for the details.
+// trial. Since a trial can contain many different segments and participating targets, the segment table can grow
+// relatively large. See CCxTrial for the details.
 //
 // ==> Construction of form; layout of controls; use of grid controls.
-// The layout of the CCxTrialForm view is defined in the dialog template resource IDD_TRIALFORM.  Since we supply this
-// ID in the default constructor, the MFC framework handles the details of loading the template and creating the view.
-// Use the Dev Studio Resource Editor to review the layout of IDD_TRIALFORM.  We use various "Windows common controls"
-// to represent the different parameters in the trial header.
+// The layout of the CCxTrialForm view is defined in several dialog template resources: IDD_TRIALFORM defines the
+// overall layout, with a tab pane container (IDC_TRH_TABPROPS), a "partitions" grid (IDC_TRH_PARTITIONS), and the 
+// segment table (IDC_TRH_SEGTABLE) arranged vertically; the "Main" properties tab pane (IDC_TRIALFORM_MAIN);
+// the "Perturbations/PSGM" tab (IDC_TRIALFORM_OTHER), and the "Random Variables" tab (IDC_TRIALFORM_RV). Use the
+// Visual Studio Resource Editor to review the layout of these templates. We use various "Windows common controls" on
+// the "Main" and "Perts/PSGM" tab panes to represent the various parameters in the trial header.
 //
-// Of special note are four custom controls used to represent the segment table (IDC_TRH_SEGTABLE), a "partitions"
-// grid (IDC_TRH_PARTITIONS) that serves as a column header for the segment table, the perturbation table
-// (IDC_TRH_PERTS), and the random variables table (ID_TRV_GRID). These are instances of Chris Maunder's spreadsheet-
-// like "MFC Grid Control" (see CREDITS), CGridCtrl. In the case of the segment table, it offers a compact way of 
-// laying out the trial's segments, each of which includes some general parameters (the "segment header") followed by
-// a set of motion parameters (the "target trajectory record") for each tgt participating in the trial. We actually 
-// employ a derivative of CGridCtrl, CLiteGrid, which is designed to work only in "virtual mode" and which provides a
-// number of built-in "inplace editors" (text string, formatted numeric text, combo box, and tree item selector) which
-// are not available in CGridCtrl. The layout and usage of each CLiteGrid is described later. Because it is a custom 
-// control, we must dynamically subclass each grid's HWND to a CLiteGrid object before we use it. 
-// See CCxTrialForm::OnInitialUpdate().
+// Of special note are four custom controls used to represent the segment table, a "partitions" grid that serves as a
+// column header for the segment table, the perturbation table (IDC_TRH_PERTS), and the random variables table 
+// (ID_TRV_GRID). These are instances of Chris Maunder's spreadsheet-like "MFC Grid Control" (see CREDITS), CGridCtrl.
+// In the case of the segment table, it offers a compact way of laying out the trial's segments, each of which includes
+// some general parameters (the "segment header") followed by a set of motion parameters ("target trajectory record") 
+// for each tgt participating in the trial. We actually employ a derivative of CGridCtrl, CLiteGrid, which is designed 
+// to work only in "virtual mode" and which provides a number of built-in "inplace editors" (text string, formatted 
+// numeric text, combo box, and tree item selector) which are not available in CGridCtrl. The layout and usage of each 
+// CLiteGrid is described later. Because it is a custom control, we must dynamically subclass each grid's HWND to a 
+// CLiteGrid object before we use it. See CCxTrialForm::OnInitialUpdate().
 //
 // NOTE:  The integer resource IDs below must represent a contiguous range of values.
 //    1) IDC_TRH_WTSPIN...IDC_TRH_SGMSEGSPIN ==> The spin controls for relative weight, first save seg, failsafe seg,
-//       special operation seg, # of XY interleaved targets, display marker segments, and the SGM op mode.
+//       special operation seg, display marker segments, and the SGM op mode. 
 //    2) IDC_TRH_KEEP...IDC_TRH_IGNVELROT ==> The PB controls for keep/toss flag, sacc-trig'd op selection, staircase
 //       trial designation ("normal", or a member of one of 5 staircases), staircase response input selection, and
 //       mid-trial reward mode ("periodic" or "segEnd") -- plus checkbox control for selecting whether or not an SGM
@@ -42,7 +43,7 @@
 //       of this range.
 //    3) IDC_TRH_SACCVT...IDC_TRH_WHVR2DEN ==> Edit ctrls for saccade threshold velocity, staircase strength, pulse
 //       length and WHVR numerator/denominator for reward pulses 1 and 2, mid-trial reward interval and pulse length, 
-//       trial weight, and alternate XY random dot seed. These all appear on the "Main" page of the form.
+//       and trial weight. These all appear on the "Main" page of the form.
 //    3a) IDC_TRH_SGMPA1...IDC_TRH_SGMNT ==> Edit controls for selected PSGM parameters appearing on the 
 //       "Perturbations/PSGM" page of the form.
 //    4) IDC_TRH_CHCFG...IDC_TRH_SGMOP ==> Combo box controls specifying the channel config associated with trial and
@@ -51,6 +52,12 @@
 //       table, partitions grid, and perturbation list grid.
 //    6) IDC_TRH_SEGTABLE...IDC_TRV_GRID ==> Control IDs for the four grid controls on the form.
 //
+// ==> XYScope functionality removed for Maestro 5.0.
+// The XYScope platform has been unsupported since Maestro 4.0, and all GUI elements related to the XYScope were
+// removed in v5.0. On CCxTrialForm, two parameter controls were removed from the "Main" tab pane: IDC_TRH_XYILSPIN
+// (spin ctrl, id=1304) and IDC_TRH_XYIL (read-only edit, id=?) controlled the # of interleaved XYScope targets in the 
+// trial, and IDC_TRH_XYDOTSEED (edit ctrl, id=1397) specified the alternate random dot seed for the trial. 
+// 
 // ==> The segment table:  Presenting trial trajectory parameters in a CLiteGrid.
 // Each segment is represented by a PAIR of columns in the grid.  The first ROWSINHDR rows of a column-pair contain all
 // the "segment header" parameters (min & max duration, fixation targets, etc).  The next M * ROWSINTGT rows define
@@ -223,11 +230,11 @@
 // mode from the context menu.
 //
 // ==> Disabling controls for selected trial header parameters.
-// Not all of the trial header parameters laid out on IDD_TRIALFORM are applicable at all times.  For example, for
-// "normal" (vs "staircase") trials, the staircase trial response channel and staircase strength have no meaning.  To
-// handle such situations, CCxTrialForm disables any irrelevant controls as needed.  When no trial is loaded, all
-// controls are disabled.  For example, the segment table is empty in this situation, and its associated  context menu
-// is disabled.  See EnableControls().
+// Not all of the trial header parameters laid out in the trial editor property pages are applicable at all times. For 
+// example, for "normal" (vs "staircase") trials, the staircase trial response channel and staircase strength have no 
+// meaning. To handle such situations, CCxTrialForm disables any irrelevant controls as needed. When no trial is 
+// loaded, all controls are disabled. The segment table is empty in this situation, and its associated context menu
+// is disabled. See EnableControls().
 //
 // ==> Changes to trial definition are applied immediately; DDX not used.
 // Any change made on the CCxTrialForm is handled as soon as it occurs, rather than waiting for the user to press an
@@ -245,13 +252,13 @@
 // edit controls.  This is done just before the view is displayed, in OnInitialUpdate().
 //
 // ==> Updating a trial's "object dependencies.
-// The trial definition laid out in this view is "dependent" on other CNTRLX data objects -- the participating targets
-// and perturbations, and an associated channel config object.  The trial's definition would be compromised if the user
-// could delete these objects.  Hence, we prevent user from doing so via a dependency locking mechanism available thru
-// the CNTRLX document method CCxDoc::UpdateObjDeps().  This scheme requires cooperation by views.  For example, after
+// The trial definition laid out in this view is "dependent" on other Maestro data objects -- the participating targets
+// and perturbations, and an associated channel config object. The trial's definition would be compromised if the user
+// could delete these objects. Hence, we prevent user from doing so via a dependency locking mechanism available thru
+// the Maestro document method CCxDoc::UpdateObjDeps(). This scheme requires cooperation by views. For example, after
 // the user adds, deletes, or changes the identity of a dependent obj in the trial displayed on CCxTrialForm, we must
-// call UpdateObjDeps(), passing it the old set of dependencies existing prior to the change.  Hence, we keep track of
-// the current trial's dependencies in a protected member, m_arDepObjs.  Also note that, if a dependent object's name
+// call UpdateObjDeps(), passing it the old set of dependencies existing prior to the change. Hence, we keep track of
+// the current trial's dependencies in a protected member, m_arDepObjs. Also note that, if a dependent object's name
 // is changed outside this view, CCxTrialForm must update itself accordingly (see OnUpdate()).
 //
 // ==> Interactions with CCxTrial, CCxDoc, other CNTRLX views.
@@ -464,6 +471,8 @@
 // and route that pulse for timestamping by Maestro.
 // 15may2019-- Mod to include 4 new trial header controls that define the random withhold variable ratio N/D for 
 // reward pulses 1 and 2: IDC_TRH_WHVR1NUM .. IDC_TRH_WHVR2DEN.
+// 17oct2024-- XYScope-specific parameters removed from CCXTrialForm for Maestro v5.0 (XYScope support was dropped in
+// v4.0): #XYscope interleaved targets, alternate random dot seed, and the per-segment XY frame period.
 //=====================================================================================================================
 
 
@@ -528,7 +537,6 @@ BOOL CCxMainPage::OnInitDialog()
    bOk = bOk && m_spinSpecial.SubclassDlgItem( IDC_TRH_SPECSEGSPIN, this );
    bOk = bOk && m_spinMark1.SubclassDlgItem( IDC_TRH_MARK1SPIN, this );
    bOk = bOk && m_spinMark2.SubclassDlgItem( IDC_TRH_MARK2SPIN, this );
-   bOk = bOk && m_spinXYIL.SubclassDlgItem( IDC_TRH_XYILSPIN, this );
    bOk = bOk && m_edSaccVt.SubclassDlgItem( IDC_TRH_SACCVT, this );
    bOk = bOk && m_edStairStren.SubclassDlgItem( IDC_TRH_STAIRSTREN, this );
    bOk = bOk && m_edRewP1.SubclassDlgItem( IDC_TRH_REWP1, this );
@@ -539,7 +547,6 @@ BOOL CCxMainPage::OnInitDialog()
    bOk = bOk && m_edWHVR2Den.SubclassDlgItem(IDC_TRH_WHVR2DEN, this);
    bOk = bOk && m_edMTRIntv.SubclassDlgItem( IDC_TRH_MTRINTV, this );
    bOk = bOk && m_edMTRLen.SubclassDlgItem( IDC_TRH_MTRLEN, this );
-   bOk = bOk && m_edXYDotSeedAlt.SubclassDlgItem( IDC_TRH_XYDOTSEED, this );
    bOk = bOk && m_edWeight.SubclassDlgItem( IDC_TRH_WEIGHT, this );
    bOk = bOk && m_cbSelChan.SubclassDlgItem( IDC_TRH_CHCFG, this );
 
@@ -556,7 +563,6 @@ BOOL CCxMainPage::OnInitDialog()
    m_edMTRIntv.SetFormat( TRUE, TRUE, 4, 1 );
    m_edMTRLen.SetFormat( TRUE, TRUE, 3, 1 );
    m_edWeight.SetFormat( TRUE, TRUE, 3, 1 );
-   m_edXYDotSeedAlt.SetFormat( TRUE, FALSE, 9, 1 );
 
    m_spinWeight.SetRange( 0, 255 );
 
@@ -809,7 +815,7 @@ LPCTSTR CCxTrialForm::strPertAffectedCmptLabels[] =
 LPCTSTR CCxTrialForm::strSegHdrLabels[] =
    {
       _T("Min & Max Duration (ms)"),
-      _T("XY Frame (ms); RMV Sync"),
+      _T("RMV Sync"),
       _T("Fixation Targets 1 & 2"),
       _T("H,V Fixation Accuracy (deg)"),
       _T("Grace(ms); Mid-trial Reward?"),
@@ -941,7 +947,7 @@ void CCxTrialForm::OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pWnd )
 
    // if message was from one of our spin controls, forward to OnChange() for processing...
    UINT id = (UINT) pWnd->GetDlgCtrlID();                      
-   if( id >= IDC_TRH_WTSPIN && id <= IDC_TRH_SGMSEGSPIN )
+   if( id >= IDC_TRH_WTSPIN && id <= IDC_TRH_SGMSEGSPIN)
       OnChange( id );
 }
 
@@ -1028,9 +1034,6 @@ void CCxTrialForm::OnChange(UINT id)
       case IDC_TRH_MARK2SPIN :                                 //    update display marker segment #2 index
          hdr.iMarkSeg2 = m_mainPage.m_spinMark2.GetPos();
          break;
-      case IDC_TRH_XYILSPIN :                                  //    update the # of XY targets to be interleaved
-         hdr.nXYInterleave = m_mainPage.m_spinXYIL.GetPos();
-         break;
       case IDC_TRH_SGMSEGSPIN :                                //    update the SGM start segment index
          hdr.iSGMSeg = m_pertsPage.m_spinSgmSeg.GetPos();
          break;
@@ -1082,9 +1085,6 @@ void CCxTrialForm::OnChange(UINT id)
          break;
       case IDC_TRH_MTRLEN :                                    //    update mid-trial reward pulse length
          hdr.iMTRLen = m_mainPage.m_edMTRLen.AsInteger();
-         break;
-      case IDC_TRH_XYDOTSEED :                                 //    update alternate XY dot seed value
-         hdr.iXYDotSeedAlt = m_mainPage.m_edXYDotSeedAlt.AsInteger();
          break;
       case IDC_TRH_SGMNP :                                     //    update #pulses per SGM pulse train
          hdr.sgm.nPulses = m_pertsPage.m_edSgmNP.AsInteger();
@@ -1263,7 +1263,7 @@ void CCxTrialForm::OnEditCommand( UINT nID )
 //    later by the popup menu handling routines OnUpdGridOps() and OnGridOps().
 //
 //    Similarly, if the user right-clicks on the first column of the perturbation list grid, we pop up a different
-//    menu (submenu 4 of IDR_CXPOPUPS) allowing the user to perform operations on that grid.  We again save the coords
+//    menu (submenu 3 of IDR_CXPOPUPS) allowing the user to perform operations on that grid.  We again save the coords
 //    of the "context cell" so that it can be accessed later by OnUpdGridOps and OnGridOps().
 //
 //    ARGS:       id       -- [in] control ID of the grid that was right-clicked
@@ -1896,24 +1896,25 @@ void CCxTrialForm::OnUpdGridOps( CCmdUI* pCmdUI )
 //    Below the property sheet is the segment table, consisting of two CLiteGrid objects -- one for the segment grid
 //    itself, and one for the partitions grid that serves as a header for the segment table and manages the definition
 //    of tagged sections. These are defined as custom controls on the dialog template resource and are dynamically 
-//    subclassed to CLiteGrid during the one-time inits. The various widgets on the property pages are subclassed in
-//    the parent page's OnInitDialog() call. Subclassing serves to simplify communication with all the various controls
-//    and to take advantage of specialized functionality:
+//    subclassed to CLiteGrid during the one-time inits. 
 //       1) The custom control IDC_TRH_SEGTABLE is subclassed to a CLiteGrid object.  CLiteGrid is derived from the
 //          MFC Grid Control class CGridCtrl and is designed to work only in "virtual" mode.  It requires a number of
 //          different callback methods to do its work -- those callbacks are installed here.  The grid control is
 //          initialized to an "empty" state.
 //       1a) Custom control IDC_TRH_PARTITIONS is subclassed to CLiteGrid and appropriate callbacks installed.
 //       2) Custom control IDC_TRH_PERTS is subclassed to a CLiteGrid and appropriate callbacks installed.
+//    The various widgets on the IDC_TRIALFORM_MAIN and IDC_TRIALFORM_OTHER property pages are subclassed in the 
+//    parent page's OnInitDialog() call. Subclassing serves to simplify communication with all the various controls
+//    and to take advantage of specialized functionality:
 //       3) The combo box IDC_TRH_CHCFG is subclassed to CCxObjCombo, which selects among the CNTRLX child objects
 //          under a specified parent.  We use it to select the channel configuration associated with the current trial.
 //       4) The combo box IDC_TRH_SGMOP is subclassed to CComboBox.  We stuff the combo box with strings describing
 //          the available operational modes for the pulse stimulus generator module, and set the initial selection.
-//       5) Certain edit controls on the form are subclassed to CNumEdit objects in order to restrict the input to
-//          them.  The format traits of these numeric edit controls are also set here.
+//       5) Certain edit controls on the property pages are subclassed to CNumEdit objects in order to restrict the 
+//          input to them. The format traits of these numeric edit controls are also set.
 //       6) The spin controls are subclassed to CSpinButtonCtrl objects.
 //
-//    The "per-document" inits:  ensure that the form is emptied each time this method is called (since the previously
+//    The "per-document" inits: ensure that the form is emptied each time this method is called (since the previously
 //    loaded trial object, if any, was defined in a document that is no longer there!), and reinstall the "tree info"
 //    grid callback for each grid (both are handled by a CCxDoc method).
 //
@@ -2374,7 +2375,6 @@ VOID CCxTrialForm::StuffHdrControls()
       hdr.iMarkSeg2 = -1;
       hdr.iSpecialSeg = 0;
       hdr.iSpecialOp = TH_SOP_NONE;
-      hdr.nXYInterleave = 0;
       hdr.reward1[0] = hdr.reward2[0] = TH_DEFREWLEN;
       hdr.reward1[1] = hdr.reward2[1] = TH_DEFWHVR;
       hdr.reward1[2] = hdr.reward2[2] = TH_DEFWHVR + 1;
@@ -2382,7 +2382,6 @@ VOID CCxTrialForm::StuffHdrControls()
       hdr.fStairStrength = TH_MINSTAIRSTR;
       hdr.iMTRIntv = TH_DEFREWINTV;
       hdr.iMTRLen = TH_DEFREWLEN;
-      hdr.iXYDotSeedAlt = -1;
 
       hdr.iSGMSeg = 0;
       hdr.sgm.iOpMode = SGM_NOOP;
@@ -2416,8 +2415,6 @@ VOID CCxTrialForm::StuffHdrControls()
    m_mainPage.m_spinMark1.SetPos( hdr.iMarkSeg1 );
    m_mainPage.m_spinMark2.SetRange( -1, nSegs - 1 ); 
    m_mainPage.m_spinMark2.SetPos( hdr.iMarkSeg2 );
-   m_mainPage.m_spinXYIL.SetRange( 0, nTargs );
-   m_mainPage.m_spinXYIL.SetPos( hdr.nXYInterleave ); 
 
    // load various numeric edit controls on the "Main" property page
    m_mainPage.m_edSaccVt.SetWindowText( hdr.iSaccVt ); 
@@ -2430,7 +2427,6 @@ VOID CCxTrialForm::StuffHdrControls()
    m_mainPage.m_edStairStren.SetWindowText( hdr.fStairStrength );
    m_mainPage.m_edMTRIntv.SetWindowText( hdr.iMTRIntv );
    m_mainPage.m_edMTRLen.SetWindowText( hdr.iMTRLen );
-   m_mainPage.m_edXYDotSeedAlt.SetWindowText( hdr.iXYDotSeedAlt );
 
    // load SGM parameters into various controls on the "Perturbation/PSGM" property page
    m_pertsPage.m_cbSgmOp.SetCurSel( hdr.sgm.iOpMode ); 
@@ -2545,7 +2541,6 @@ VOID CCxTrialForm::EnableHdrControls()
       m_mainPage.m_edWeight.EnableWindow( FALSE );
       m_mainPage.m_spinSave.EnableWindow( FALSE );
       m_mainPage.m_spinFailsafe.EnableWindow( FALSE );
-      m_mainPage.m_spinXYIL.EnableWindow( FALSE );
       m_mainPage.m_spinMark1.EnableWindow( FALSE );
       m_mainPage.m_spinMark2.EnableWindow( FALSE );
       m_mainPage.m_edRewP1.EnableWindow(FALSE);
@@ -2571,8 +2566,6 @@ VOID CCxTrialForm::EnableHdrControls()
       ::EnableWindow( hwnd, FALSE );
       m_mainPage.m_edMTRIntv.EnableWindow( FALSE );
       m_mainPage.m_edMTRLen.EnableWindow( FALSE );
-
-      m_mainPage.m_edXYDotSeedAlt.EnableWindow( FALSE );
 
       m_mainPage.m_edStairStren.EnableWindow( FALSE );
       m_mainPage.GetDlgItem( IDC_TRH_STAIRRESP, &hwnd );
@@ -2615,7 +2608,6 @@ VOID CCxTrialForm::EnableHdrControls()
          m_mainPage.m_edWeight.EnableWindow( TRUE );
          m_mainPage.m_spinSave.EnableWindow( TRUE );
          m_mainPage.m_spinFailsafe.EnableWindow( TRUE );
-         m_mainPage.m_spinXYIL.EnableWindow( TRUE );
          m_mainPage.m_spinMark1.EnableWindow( TRUE );
          m_mainPage.m_spinMark2.EnableWindow( TRUE );
          m_mainPage.m_edRewP1.EnableWindow(TRUE);
@@ -2631,8 +2623,6 @@ VOID CCxTrialForm::EnableHdrControls()
          m_mainPage.GetDlgItem( IDC_TRH_MTRMODE, &hwnd );
          ::EnableWindow( hwnd, TRUE );
          m_mainPage.m_edMTRLen.EnableWindow( TRUE );
-
-         m_mainPage.m_edXYDotSeedAlt.EnableWindow( TRUE );
 
          m_pertsPage.m_cbSgmOp.EnableWindow( TRUE );
 
@@ -3146,11 +3136,11 @@ BOOL CALLBACK CCxTrialForm::PertGridEndEditCB( ENDEDITINFO *pEEI, LPARAM lParam 
 //
 //    Callback function queried by the embedded grid control to obtain the contents of each cell in the grid.
 //
-//    The trial table grid is quite complex.  Each participating target's trajectory information is displayed in
-//    ROWSINTGT rows, and each segment is represented by two columns.  The target rows are preceded by ROWSINHDR fixed
-//    rows, in which the segment "header" parameters are displayed.  The first column is fixed and contains row labels
-//    describing the the segment header parameters and the trial target trajectory parameters.  The cell occupying the
-//    first column in the first row of a target trajectory "rowset" is the "target selector cell".  The cell displays
+//    The trial table grid is quite complex. Each participating target's trajectory information is displayed in
+//    ROWSINTGT rows, and each segment is represented by two columns. The target rows are preceded by ROWSINHDR fixed
+//    rows, in which the segment "header" parameters are displayed. The first column is fixed and contains row labels
+//    describing the the segment header parameters and the trial target trajectory parameters. The cell occupying the
+//    first column in the first row of a target trajectory "rowset" is the "target selector cell". The cell displays
 //    the target's name, while a title tip will appear displaying the full "path" name under the MAESTRO "Targets"
 //    subtree whenever the mouse hovers over the cell.
 //
@@ -3162,11 +3152,11 @@ BOOL CALLBACK CCxTrialForm::PertGridEndEditCB( ENDEDITINFO *pEEI, LPARAM lParam 
 //          target trajectory field).
 //
 //    When no trial is loaded, the grid should be empty except for the segment header labels in the first, fixed column
-//    (type SEGHLABEL).  The callback routine works in this case also.
+//    (type SEGHLABEL). The callback routine works in this case also.
 //
-//    NOTE:  Callback functions must be implemented as static.  Since it is a static class method, it does not have
-//    access to instance fields and methods and it does not get the implied argument THIS.  To circumvent this problem,
-//    we take advantage of the generic LPARAM argument, using it to pass a reference to THIS view!!  This is done when
+//    NOTE: Callback functions must be implemented as static. Since it is a static class method, it does not have
+//    access to instance fields and methods and it does not get the implied argument THIS. To circumvent this problem,
+//    we take advantage of the generic LPARAM argument, using it to pass a reference to THIS view!! This is done when
 //    we register the callback fcn with the grid in OnInitialUpdate().
 //
 //    ARGS:       pDispInfo   -- [in] ptr to a struct we need to fill with the appropriate display info.
@@ -3604,7 +3594,7 @@ CCxTrial::ParamID CCxTrialForm::GetCellParam( const CCellID& c ) const
    if( c.row < ROWSINHDR ) switch( c.row )                           // segment header parameters...
    {
       case 0 : paramID = (bIsLeft) ? CCxTrial::MINDURATION : CCxTrial::MAXDURATION; break;
-      case 1 : paramID = (bIsLeft) ? CCxTrial::XYFRAMEPERIOD : CCxTrial::RMVSYNCENA; break;
+      case 1 : paramID = (bIsLeft) ? CCxTrial::NOTAPARAM : CCxTrial::RMVSYNCENA; break;
       case 2 : paramID = (bIsLeft) ? CCxTrial::FIXTARG1 : CCxTrial::FIXTARG2; break;
       case 3 : paramID = (bIsLeft) ? CCxTrial::FIXACCH : CCxTrial::FIXACCV; break;
       case 4 : paramID = (bIsLeft) ? CCxTrial::FIXGRACE : CCxTrial::REWENA; break;
@@ -3627,7 +3617,7 @@ CCxTrial::ParamID CCxTrialForm::GetCellParam( const CCellID& c ) const
 
 //=== Propagate*** ====================================================================================================
 //
-//    These methods propagate changes in the currently loaded trial's definition IAW the current modification mode.  We
+//    These methods propagate changes in the currently loaded trial's definition IAW the current modification mode. We
 //    support the following "global" modification modes:
 //
 //       ALLSEGS:    Change in a segment table parameter P is propagated across all segments of the current trial.
@@ -3793,10 +3783,6 @@ VOID CCxTrialForm::PropagateHeader( UINT ctrlID, TRLHDR& oldHdr )
             if( bModify || hdr.iMarkSeg2 == oldHdr.iMarkSeg2 )
                hdr.iMarkSeg2 = hdrLoaded.iMarkSeg2;
             break;
-         case IDC_TRH_XYILSPIN :
-            if( bModify || hdr.nXYInterleave == oldHdr.nXYInterleave )
-               hdr.nXYInterleave = hdrLoaded.nXYInterleave;
-            break;
          case IDC_TRH_SGMSEGSPIN :
             if( bModify || hdr.iSGMSeg == oldHdr.iSGMSeg )
                hdr.iSGMSeg = hdrLoaded.iSGMSeg;
@@ -3831,10 +3817,6 @@ VOID CCxTrialForm::PropagateHeader( UINT ctrlID, TRLHDR& oldHdr )
          case IDC_TRH_MTRLEN :
             if( bModify || hdr.iMTRLen == oldHdr.iMTRLen )
                hdr.iMTRLen = hdrLoaded.iMTRLen;
-            break;
-         case IDC_TRH_XYDOTSEED :
-            if( bModify || hdr.iXYDotSeedAlt == oldHdr.iXYDotSeedAlt )
-               hdr.iXYDotSeedAlt = hdrLoaded.iXYDotSeedAlt;
             break;
          case IDC_TRH_SGMPA1 :
             if( bModify || hdr.sgm.iAmp1 == oldHdr.sgm.iAmp1 )

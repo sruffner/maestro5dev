@@ -814,10 +814,10 @@ BOOL CCxTarget::SetParams( PU_TGPARMS pTgt, BOOL& bChanged )
 //          existing documents. Effective Maestro v3.3.1.
 //       9: Added three integer-valued flicker parameters to RMVTGTDEF, applicable to all target types. Effective 
 //          Maestro 4.1.0.
-//       9: (30sep2024) XYScope target CX_XYTARG officially deprecated, effective Maestro 5.0.0. NO CHANGE HERE, as we
-//          must allow these obsolete target objects to be deserialized from an old document. CCxDoc takes care of
-//          removing these objects and any dependencies on them. Howver, any attempt to serialize an XYScope target
-//          will fail.
+//       9: (30sep2024) XYScope target CX_XYTARG officially deprecated, effective Maestro 5.0.0. NO CHANGE when
+//          deserializing, as we must allow these obsolete target objects to be deserialized from an old document. 
+//          CCxDoc takes care of removing these objects and any dependencies on them. Howver, any attempt to serialize an
+//          XYScope target will fail.
 //
 //    ARGS:       ar -- [in] the serialization archive.
 //

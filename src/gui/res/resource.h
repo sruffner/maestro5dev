@@ -129,14 +129,12 @@
 #define IDC_TRH_SAVESEGSPIN             1301
 #define IDC_TRH_FAILSAFESPIN            1302
 #define IDC_TRH_SPECSEGSPIN             1303
-#define IDC_TRH_XYILSPIN                1304
 #define IDC_TRH_MARK1SPIN               1305
 #define IDC_TRH_MARK2SPIN               1306
 #define IDC_TRH_SGMSEGSPIN              1307
 #define IDC_TRH_SAVESEG                 1321
 #define IDC_TRH_FAILSAFE                1322
 #define IDC_TRH_SPECSEG                 1323
-#define IDC_TRH_XYIL                    1324
 #define IDC_TRH_MARK1                   1325
 #define IDC_TRH_MARK2                   1326
 #define IDC_TRH_SGMSEG                  1327
@@ -163,7 +161,6 @@
 #define IDC_TRH_MTRINTV                 1394
 #define IDC_TRH_MTRLEN                  1395
 #define IDC_TRH_WEIGHT                  1396
-#define IDC_TRH_XYDOTSEED               1397
 #define IDC_TRH_WHVR1NUM                1398
 #define IDC_TRH_WHVR1DEN                1399
 #define IDC_TRH_WHVR2NUM                1400
