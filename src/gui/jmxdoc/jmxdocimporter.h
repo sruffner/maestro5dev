@@ -32,7 +32,6 @@ private:
    BOOL ImportChanCfgs(JSONObject* pJMX, CCxDoc* pDoc, CString& errMsg);
    BOOL ImportPerts(JSONObject* pJMX, CCxDoc* pDoc, CString& errMsg);
    BOOL ImportTargetSets(JSONObject* pJMX, CCxDoc* pDoc, CString& errMsg);
-   WORD ImportXYTarget(CCxDoc* pDoc, WORD wSet, LPCTSTR name, LPCTSTR type, JSONArray* pParams, CString& errMsg);
    WORD ImportRMVTarget(CCxDoc* pDoc, WORD wSet, LPCTSTR name, LPCTSTR type, JSONArray* pParams, CString& errMsg);
    BOOL ImportTrialSets(JSONObject* pJMX, CCxDoc* pDoc, CString& errMsg);
    WORD ImportTrialSubset(CCxDoc* pDoc, WORD wSet, JSONObject* pJSONSubset, CString& errMsg);
@@ -40,7 +39,6 @@ private:
    
    static LPCTSTR STR_JMXCHANNELIDS[38];
    static LPCTSTR STR_JMXTRACECOLORNAMES[12];
-   static LPCTSTR STR_JMXTGTTYPES_XY[NUMXYTYPES];
    static LPCTSTR STR_JMXTGTTYPES_RMV[RMV_NUMTGTTYPES];
    static LPCTSTR STR_JMXSPECIALOPS[TH_NUMSPECOPS];
    static LPCTSTR STR_JMXPERTCMPTS[PERT_NCMPTS];
@@ -51,6 +49,11 @@ private:
    CMap<CString, LPCTSTR, WORD, WORD> m_pertsMap;
    /** Maps "setName/tgtName" of each imported JMX document target to corresponding document object key. */
    CMap<CString, LPCTSTR, WORD, WORD> m_targetsMap;
+   /** 
+   Map contains "setName/tgtName" for every XYScope target that was skipped during import. Any trial that depends on an
+   XYScope target is also silently skipped (instead of aborting the import). 
+   */
+   CMap<CString, LPCTSTR, WORD, WORD> m_xyTgtsSkipped;
 };
 
 #endif  // !defined(JMXDOCIMPORTER_H__INCLUDED_)

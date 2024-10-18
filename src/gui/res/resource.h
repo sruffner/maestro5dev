@@ -44,7 +44,6 @@
 #define IDC_CH_GRID                     465
 #define IDC_POPUP_TREE                  1000
 #define IDC_TARGF_MODMODE               1000
-#define IDC_TARGF_TYPELBL               1003
 #define IDC_TARGF_TYPE                  1004
 #define IDC_TARGF_SHAPE                 1005
 #define IDC_TARGF_ORECTW                1010
@@ -98,16 +97,13 @@
 #define IDC_TARGF_MVRATE                1062
 #define IDC_TARGF_WRTSCRN               1063
 #define IDC_TARGF_WLBL                  1070
-#define IDC_TARGF_HLBL                  1071
 #define IDC_TARGF_ORLBL                 1072
 #define IDC_TARGF_IRLBL                 1073
-#define IDC_TARGF_STDEVLBL              1074
 #define IDC_RF_DUTYPER                  1100
 #define IDC_RF_AUTOSTOP                 1101
 #define IDC_RF_HOFFSET                  1102
 #define IDC_RF_VOFFSET                  1103
 #define IDC_RF_DUTYPULSE                1104
-#define IDC_RF_XYTGTS                   1105
 #define IDC_RF_STIMULI                  1106
 #define IDC_EL_XPOL                     1188
 #define IDC_EL_YPOL                     1189
@@ -133,14 +129,12 @@
 #define IDC_TRH_SAVESEGSPIN             1301
 #define IDC_TRH_FAILSAFESPIN            1302
 #define IDC_TRH_SPECSEGSPIN             1303
-#define IDC_TRH_XYILSPIN                1304
 #define IDC_TRH_MARK1SPIN               1305
 #define IDC_TRH_MARK2SPIN               1306
 #define IDC_TRH_SGMSEGSPIN              1307
 #define IDC_TRH_SAVESEG                 1321
 #define IDC_TRH_FAILSAFE                1322
 #define IDC_TRH_SPECSEG                 1323
-#define IDC_TRH_XYIL                    1324
 #define IDC_TRH_MARK1                   1325
 #define IDC_TRH_MARK2                   1326
 #define IDC_TRH_SGMSEG                  1327
@@ -167,7 +161,6 @@
 #define IDC_TRH_MTRINTV                 1394
 #define IDC_TRH_MTRLEN                  1395
 #define IDC_TRH_WEIGHT                  1396
-#define IDC_TRH_XYDOTSEED               1397
 #define IDC_TRH_WHVR1NUM                1398
 #define IDC_TRH_WHVR1DEN                1399
 #define IDC_TRH_WHVR2NUM                1400
@@ -261,12 +254,6 @@
 #define IDC_FIX_REWOVR                  1810
 #define IDC_FIX_REWBEEP                 1811
 #define IDC_FIX_RESETREW                1812
-#define IDC_DISP_XY_DIST                1900
-#define IDC_DISP_XY_W                   1901
-#define IDC_DISP_XY_H                   1902
-#define IDC_DISP_XY_DELAY               1903
-#define IDC_DISP_XY_DUR                 1904
-#define IDC_DISP_XY_SEED                1905
 #define IDC_DISP_FB_DIST                1906
 #define IDC_DISP_FB_W                   1907
 #define IDC_DISP_FB_H                   1908
@@ -278,11 +265,8 @@
 #define IDC_DISP_GAMMA_B                1914
 #define IDC_DISP_SYNCDUR                1915
 #define IDC_DISP_SYNCSZ                 1916
-#define IDC_DISP_XYFIELD                1920
 #define IDC_DISP_FBFIELD                1921
 #define IDC_DISP_RMVMODE                1925
-#define IDC_DISP_XY_AUTO                1930
-#define IDC_DISP_XY_FIXED               1931
 #define IDC_DISP_FB_GRAY                1932
 #define IDC_PERT_GRID                   2000
 #define IDC_RPD_CURR                    2000
@@ -310,7 +294,6 @@
 #define ID_VIEW_DATAPANEL               32801
 #define ID_VIEW_LOGPANEL                32802
 #define ID_VIEW_HISTPANEL               32803
-#define ID_OBJ_XYTGT                    32820
 #define ID_OBJ_FBTGT                    32821
 #define ID_OBJ_TRIAL                    32822
 #define ID_OBJ_CHCFG                    32823
@@ -364,12 +347,6 @@
 #define ID_RUN_STIM_PASTE               32884
 #define ID_RUN_STIM_INS                 32885
 #define ID_RUN_STIM_APPEND              32886
-#define ID_RUN_TGT_CLEAR                32887
-#define ID_RUN_TGT_DEL                  32888
-#define ID_RUN_TGT_CENTER               32889
-#define ID_RUN_TGT_INS                  32890
-#define ID_RUN_TGT_APPEND               32891
-#define ID_FILE_IMPORT                  33000
 #define ID_HELP_USRGUIDE                33007
 #define ID_FILE_COPYREMOTE              33008
 #define IDS_COPYREMOTE_FILEDLGTITLE     33008
@@ -392,7 +369,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        172
+#define _APS_NEXT_RESOURCE_VALUE        173
 #define _APS_NEXT_COMMAND_VALUE         33020
 #define _APS_NEXT_CONTROL_VALUE         1212
 #define _APS_NEXT_SYMED_VALUE           104

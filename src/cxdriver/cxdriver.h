@@ -1,5 +1,5 @@
 //======================================================================================================================
-// cxdriver.h : Declaration of MaestroRTSS's application object, CCxDriver.
+// cxdriver.h : Declaration of Maestro's RTSS-based hardware and experiment controller, CCxDriver.
 //======================================================================================================================
 
 #if !defined(CXDRIVER_H__INCLUDED_)
@@ -71,8 +71,6 @@ private:
    static const int     CONTSCANINTVUS;            // ContMode scan interval, in microsecs
    static const int     SPIKESAMPINTVUS;           // sample interval for high-res spike trace recording, in microsecs
 
-   static const int     DEF_XYFRAME;               // the default XY refresh period in ContMode (ms)
-
    static const double  MIN_MARKERINTVUS;          // minimum spread between marker pulses triggered on any DO line
    static const DWORD   RECORDMARKER_MASK;         // record "start" and "stop" pulses are triggered on this dedicated
                                                    // line in timer's DO port
@@ -90,7 +88,7 @@ private:
    struct CTrialTraj 
    {
       WORD     wType;                              //    target type - for quick reference
-      int      iSubType;                           //    [CX_RMVTARG or CX_XYTARG only] - target subtype
+      int      iSubType;                           //    [CX_RMVTARG only] - target subtype
       int      iFlags;                             //    [CX_RMVTARG only] - target flags
       
       CFPoint  pos;                                //    tgt position at start of current tick, in deg subtended at eye
@@ -113,7 +111,7 @@ private:
       CFPoint  ptPosPat;                           //       outside of tgt's interleave slot
       float    remDotLife;                         //    dot life "remainder" for FCDOTLIFE tgt when dotlife units are
                                                    //       in 0.01deg travelled.  units = 0.01deg/tick.
-      int      iUpdatePos;                         //    ordinal pos of this tgt in the set of XY tgts partic in trial
+      int      iUpdatePos;                         //    ordinal pos of this tgt in the set of tgts partic in trial
       int      iILSlot;                            //    if interleaving, tgt is updated in this interleave slot #
       BOOL     bIsOn;                              //    if TRUE, target is currently turned ON
       BOOL     bIsMoving;                          //    if TRUE, then tgt window moves at some point during trial; for
@@ -140,7 +138,6 @@ private:
    struct CTrialSeg                                // selected state variables that can change from segment to segment
    {                                               // during a trial:
       int      tStart;                             //    segment's start time in ticks (msec)
-      int      iXYUpdIntv;                         //    the XY scope frame update interval (ms) during this segment
       int      iPulseOut;                          //    if >= 0, pulse specified timer DOUT line at start of this seg
       CFPoint  fpFixAcc;                           //    H,V fix accuracy during this seg (in deg subtended at eye)
       int      tGrace;                             //    grace time (msec) for segment.  fixation is not enforced until
@@ -175,7 +172,6 @@ private:
       CFPoint  posNext;                            //    next window position of tgt (becomes curr WHEN tgt turned ON)
       float    fPatSpeed;                          //    pattern speed in deg/sec (if applicable)
       float    fPatDir;                            //    direction of pattern velocity in deg CCW (if applicable)
-      float    fRemDotLife;                        //    runtime: dot life remainder for XY scope tgt of relevant type
       BOOL     bOn;                                //    is target turned on?
    };
 
@@ -196,7 +192,6 @@ private:
       CONTRUN     def;                             //    the run definition
 
       BOOL        bUsesChair;                      //    TRUE if corresponding stimulus platform is used during run
-      BOOL        bUsesXYseq;
       BOOL        bUsesPSGM;
 
       int         tLastUpdate;                     //    timepoint (within duty cycle) of last trajectory update (ms)
@@ -208,18 +203,6 @@ private:
       DWORD       dwMarkers;                       //    marker pulses to be delivered on next update
 
       int         tStartPSGM;                      //    timepoint (within duty cycle) at which SGM seq is started (ms)
-
-                                                   //    XYseq motion control variables:
-      PSTIMCHAN   pXYseq;                          //    the one-and-only enabled XYseq stimulus in the current run
-      CFPoint     ptVec[MAX_XYSEQVECS+1];          //    precomputed "per-refresh" pos displacement (H,V) in deg for
-                                                   //    each possible motion vector; last entry is always (0,0)
-      int         iCurrVec[MAXTGTSINXYSEQ];        //    index of current motion vector applied to each XY tgt in seq
-      int         tCurrSeg,                        //    curr motion seg began at this time t'=tActual-tStart (ms)
-                  iCurrSparseTgt;                  //    index of XY tgt currently moving in a "sparse" XYseq stimulus
-      BOOL        bInitialUpdate;                  //    TRUE for first update of XYseq at "t=0" (to init tgt locs)
-      BOOL        bXYseqOn;                        //    TRUE while XYseq running (may be off for part of duty cycle)
-      BOOL        bSparse;                         //    TRUE for "sparse" seq, FALSE otherwise.
-      CRand16     randGen;                         //    pseudo-rand# generator for XYseq
    };
 
 
@@ -252,7 +235,6 @@ private:
    volatile int      m_viElapsedTicks;             //    # of ADC interrupts (ie, # of scans) since AI operation began
    volatile int      m_viScanInterval;             //    current ADC scan interval in milliseconds
    volatile int      m_viPlotUpdateMS;             //    # msec until next update of GUI eye/tgt pos plot
-   volatile int      m_viXYUpdateMS;               //    # msec until next XY scope update
    volatile int      m_viFixChkMS;                 //    # msec until next fixation check (ContMode only)
    volatile BOOL     m_vbStimOn;                   //    TRUE if a cont-mode stimulus run is currently executing
    volatile int      m_viStimTicks;                //    # scans elapsed in duty cycle of a cont-mode stimulus run
@@ -275,11 +257,6 @@ private:
 
    CTrialTraj        m_traj[MAX_TRIALTARGS];       // used during precomputation of target trajectories for a trial
    CTrialSeg         m_seg[MAX_SEGMENTS];          // segment-based representation of selected trial state variables
-
-   // XYScope target window and pattern pos change and update interval for the current or next display frame
-   CFPoint           m_ptXYWindow[MAX_TRIALTARGS]; 
-   CFPoint           m_ptXYPattern[MAX_TRIALTARGS]; 
-   WORD              m_wXYUpdIntv[MAX_TRIALTARGS]; 
    
    // RMVideo target motion update vectors for current display frame and the next two frames
    RMVTGTVEC         m_RMVUpdVecs[3*MAX_TRIALTARGS];
@@ -402,12 +379,10 @@ private:
 
    VOID RTFCNDCL UpdateFixRewSettings();                 // update fixation/reward settings (CX_FIXREWSETTINGS cmd)
 
-   VOID RTFCNDCL UpdateVideoDisplaysAndAck();            // update display params for XY & RM video (CX_SETDISPLAY cmd)
+   VOID RTFCNDCL UpdateVideoDisplaysAndAck();            // update display params for RMVideo (CX_SETDISPLAY cmd)
    VOID RTFCNDCL UpdateVideoDisplays(int* piParms);      // alternate version
 
    BOOL RTFCNDCL LoadRMVideoTargets();                   // load any RMVideo tgts to be animated in Trial or Cont mode
-   BOOL RTFCNDCL SendXYScopeParameters_TM();             // load targets onto XY scope device and prepare for animation
-   BOOL RTFCNDCL SendXYScopeParameters_CM();             //    sequence in Trial and Cont Modes
 
    // if Eyelink tracker in use, retrieve latest tracker sample and use it to update eye trajectory (HGPOS, VEPOS, etc)
    BOOL RTFCNDCL UnloadEyelinkSample(BOOL* pbBlink, int tCurr);

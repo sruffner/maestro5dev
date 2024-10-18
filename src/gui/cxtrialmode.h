@@ -406,7 +406,7 @@ private:
    CCxTrialStatsDlg*    m_pStatsDlg;            // the "Statistics" dlg page
    CCxRPDistroDlg*      m_pRPDistroDlg;         // the "R/P Distro" dlg page
    CCxFixRewDlg*        m_pFixRewDlg;           // the "Fix/Reward" dlg page
-   CCxVideoDspDlg*      m_pVideoDspDlg;         // the "Video Display" dlg page
+   CCxVideoDspDlg*      m_pVideoDspDlg;         // the "RMVideo Display" dlg page
    CCxEyelinkDlg*       m_pEyelinkDlg;          // the "Eyelink" dlg page
 
    DWORD                m_dwState;              // trial mode state flags

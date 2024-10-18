@@ -111,7 +111,6 @@
 #include "cxmainframe.h"                     // CCxMainFrame -- the CNTRLX main frame window (SDI)
 #include "cxdoc.h"                           // CCxDoc -- the CNTRLX "experiment" document
 #include "dirchooser.h"                      // CDirChooser -- for browsing directories in the file system
-#include "cximporter.h"                      // CCxImporter -- encapsulates the process of importing cxUNIX defn files
 #include "jmxdoc\jmxdocimporter.h"           // JMXDocImporter -- import a JSON-encoded Maestro eXperiment (JMX) doc
 #include "cxabout.h"                         // CCxAbout -- "About CNTRLX" dialog
 #include "cxmovefilequeue.h"                 // CCxMoveFileQueue -- Handles file I/O to remote drive location
@@ -140,8 +139,6 @@ BEGIN_MESSAGE_MAP( CCntrlxApp, CWinApp )
    ON_COMMAND( ID_APP_EXIT, CWinApp::OnAppExit )
    ON_COMMAND_RANGE( ID_OPT_CHAIR, ID_OPT_RMVDUPE, OnOptions )
    ON_UPDATE_COMMAND_UI_RANGE( ID_OPT_CHAIR, ID_OPT_RMVDUPE, OnUpdateMainMenu )
-   ON_COMMAND( ID_FILE_IMPORT, OnFileImport )
-   ON_UPDATE_COMMAND_UI( ID_FILE_IMPORT, OnUpdateMainMenu )
    ON_COMMAND( ID_FILE_JMXIMPORT, OnFileJMXImport )
    ON_UPDATE_COMMAND_UI( ID_FILE_JMXIMPORT, OnUpdateMainMenu )
    ON_COMMAND( ID_FILE_NEW, OnFileNew )
@@ -180,14 +177,6 @@ CCntrlxApp::CCntrlxApp()
 {
    m_pSplashThrd = NULL;                                    // these need to be set up in InitInstance()...
    m_pRuntime = NULL;
-
-   m_strImportDir.Empty();                                  // initial "import" directory is the curr sys temp dir;
-   LPTSTR lptstr = m_strImportDir.GetBuffer( _MAX_PATH );   // make sure there's no trailing slash.
-   ::GetTempPath( _MAX_PATH, lptstr );
-   m_strImportDir.ReleaseBuffer();
-   int last = m_strImportDir.GetLength() - 1;
-   if( m_strImportDir[last] == _T('\\') )
-      m_strImportDir.Delete( last );
 
    m_strHomeDir.Empty(); 
    m_strDOCmdTiming.Empty();
@@ -253,29 +242,6 @@ void CCntrlxApp::OnFileOpen()
    m_pRuntime->UpdateFixRewSettings();
 }
 
-
-//=== OnFileImport ====================================================================================================
-//
-//    Handles the "File|Import" menu item command.  See CCxImporter for a description of the import process.
-//
-//    ARGS:       NONE.
-//
-//    RETURNS:    NONE.
-//
-void CCntrlxApp::OnFileImport()
-{
-   ASSERT( m_pRuntime );
-   if( (!m_pRuntime->IsOn()) || (m_pRuntime->GetMode() == CCxRuntime::IdleMode) )
-   {
-      CDirChooser chooser;
-      if( chooser.Browse( m_pMainWnd->GetSafeHwnd(), _T("Select an import directory"), m_strImportDir ) )
-      {
-         m_strImportDir = chooser.GetChosenDirectory();
-         CCxImporter importer;
-         importer.DoImport( m_strImportDir );
-      }
-   }
-}
 
 /**
  * Handles the "File|Import JMX doc..." command. A "JMX document" is a Maestro experiment document created by the 

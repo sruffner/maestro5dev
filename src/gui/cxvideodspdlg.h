@@ -1,7 +1,7 @@
 //===================================================================================================================== 
 //
-// cxvideodspdlg.h : Declaration of CCxVideoDspDlg, a MAESTRO control panel dialog page for modifying the current XY 
-//                   scope and RMVideo display configuration.
+// cxvideodspdlg.h : Declaration of CCxVideoDspDlg, a Maestro control panel dialog page for modifying the current  
+//                   RMVideo display configuration.
 //
 // ****** FOR DESCRIPTION, REVISION HISTORY, ETC, SEE IMPLEMENTATION FILE ******
 //
@@ -18,9 +18,9 @@
 
 #include "numedit.h"             // CNumEdit -- a restricted-format numeric-only edit control
 
-#include "cxobj_ifc.h"           // MAESTRO object interface:  common constants and other defines 
+#include "cxobj_ifc.h"           // Maestro object interface:  common constants and other defines 
 #include "cxviewhint.h"          // CCxViewHint -- for communicating doc/view changes...
-#include "cxcontrolpaneldlg.h"   // CCxControlPanelDlg -- base class for MAESTRO mode contol panel dialogs
+#include "cxcontrolpaneldlg.h"   // CCxControlPanelDlg -- base class for Maestro mode contol panel dialogs
 
 class CCxSettings;               // forward declaration
 
@@ -44,15 +44,8 @@ private:
 // DATA OBJECTS
 //===================================================================================================================== 
 private:
-   BOOL        m_bIsXYEnabled;               // TRUE if ctrls for XY scope display are enabled
    BOOL        m_bIsFBEnabled;               // TRUE if ctrls for RMVideo framebuffer display are enabled
 
-   CNumEdit    m_edXYDistToEye;              // custom edit ctrls for numeric video display parameters
-   CNumEdit    m_edXYWidth;
-   CNumEdit    m_edXYHeight;
-   CNumEdit    m_edXYDrawDelay;
-   CNumEdit    m_edXYDrawDur;
-   CNumEdit    m_edXYSeedVal;
    CNumEdit    m_edFBDistToEye;
    CNumEdit    m_edFBWidth;
    CNumEdit    m_edFBHeight;
@@ -67,9 +60,7 @@ private:
 
    CComboBox   m_cbRMVMode;                  // combo box selects RMVideo display mode
 
-   CButton     m_btnIsFixed;                 // button ctrls on dialog
-   CButton     m_btnIsAuto;
-   CButton     m_btnIsGray;
+   CButton     m_btnIsGray;                  // RMVideo grayscale checkbox
 
 
 //===================================================================================================================== 
@@ -80,7 +71,7 @@ private:
    CCxVideoDspDlg& operator=( const CCxVideoDspDlg& src ); 
 
 public: 
-   CCxVideoDspDlg() : CCxControlPanelDlg( IDD )  {}
+   CCxVideoDspDlg() : CCxControlPanelDlg(IDD) { m_bIsFBEnabled = FALSE; }
    ~CCxVideoDspDlg() {}
 
 
@@ -107,16 +98,16 @@ public:
 public:
    BOOL OnInitDialog();                                  // prepare dialog for display
    VOID Refresh();                                       // to refresh dlg appearance -- updates enable state of ctrls
-   VOID OnUpdate( CCxViewHint* pHint );                  // refresh appearance IAW specified MAESTRO doc/view change
+   VOID OnUpdate( CCxViewHint* pHint );                  // refresh appearance IAW specified Maestro doc/view change
 
 
 //===================================================================================================================== 
 // IMPLEMENTATION
 //===================================================================================================================== 
 protected:
-   CCxSettings* GetSettings();                           // retrieve ptr to the MAESTRO application settings object 
+   CCxSettings* GetSettings();                           // retrieve ptr to the Maestro application settings object 
    VOID Load();                                          // reload all ctrls IAW current video display settings
-   VOID ReloadFieldOfView( BOOL bXY, BOOL bFB );         // reload readouts that indicate field of view for each disp
+   VOID ReloadFieldOfView();
    VOID Notify();                                        // notify doc/view whenever video display cfg is changed here 
 };
 

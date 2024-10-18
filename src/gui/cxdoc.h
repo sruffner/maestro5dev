@@ -15,9 +15,9 @@
 #pragma once
 #endif // _MSC_VER >= 1000
 
-#include "cxtreemap.h"                       // CCxTreeMap: the MAESTRO object tree-map collection
-#include "cxobj_ifc.h"                       // MAESTRO object interface:  common constants and other defines
-#include "cxsettings.h"                      // CCxSettings: the MAESTRO application settings object
+#include "cxtreemap.h"                       // CCxTreeMap: the Maestro object tree-map collection
+#include "cxobj_ifc.h"                       // Maestro object interface:  common constants and other defines
+#include "cxsettings.h"                      // CCxSettings: the Maestro application settings object
 
 
 
@@ -33,7 +33,7 @@ class CCxDoc : public CDocument
 // CONSTANTS
 //=====================================================================================================================
 private:
-   static const int CURRVERSION = 6;         // for versioning support in Serialize()
+   static const int CURRVERSION = 7;         // for versioning support in Serialize()
 
 
 //=====================================================================================================================
@@ -88,6 +88,11 @@ public:
 
    // checks if specified trial set contains one or more non-empty trial subsets
    BOOL HasTrialSubsets(const WORD wSet) const;
+
+   // is trial set empty (or only contains empty trial subsets)
+   BOOL IsTrialSetEmpty(const WORD wSet) const;
+   // excise any trial sets that are empty (or contain only empty trial subsets)
+   VOID RemoveEmptyTrialSets();
 
    // get key of the predefined "CHAIR" target or the predefined "default" channel configuration
    WORD GetChairTarget() const; 
@@ -249,6 +254,10 @@ protected:
 
    // migrates version 3 experiment doc to version 4, removing all references to Fiber* and REDLED* targets
    BOOL CCxDoc::MigrateToVersion4();
+   // migrates to version 7, removing all XYScope targets and the trials and stimulus runs that used them.
+   BOOL CCxDoc::MigrateToVersion7();
+   // helper method for MigrateToVersion7()
+   BOOL CCxDoc::DoesTrialOrRunUseXYScope(CTreeObj* pTreeObj) const;
 };
 
 #endif // !defined(CXDOC_H__INCLUDED_)

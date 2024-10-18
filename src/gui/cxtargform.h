@@ -57,8 +57,7 @@ private:
    WORD m_wKey;                        // unique key of target object currently displayed on form
    CCxTarget* m_pTarg;                 // ptr to the MAESTRO target object currently displayed on form
 
-   BOOL m_bGrayScale;                  // TRUE when grayscale mode is ON (RMVideo targets only)
-   BOOL m_bXYtypes;                    // TRUE when XY target type names are loaded in the tgt type combo box
+   BOOL m_bGrayScale;                  // TRUE when grayscale mode is ON
    U_TGPARMS m_tgParms;                // for getting/setting target parameters from current target record
 
    CNumEdit m_edCtrls[NUMTGEDITC];     // for subclassing controls on form to tailor their behavior
@@ -145,7 +144,6 @@ protected:
    VOID UpdateCaption( LPCTSTR szCaption );              // update tab pane caption
    VOID StuffControls();                                 // stuff relevant ctrls IAW current tgt parameters
    VOID UpdateControls();                                // update appearance of controls on form IAW curr state vars
-   VOID ReloadTargetTypes();                             // load target type dropdown list with appropriate labels
    static BOOL IsGrayscale(CCxTarget* pTgt);             // is specified tgt's defn consistent w/ grayscale mode?
 
    VOID Propagate(UINT cid, U_TGPARMS oldParms);         // propagate tgt param change IAW current modification mode

@@ -31,14 +31,7 @@ class CCxTarget : public CTreeObj
 //=====================================================================================================================
 // CONSTANTS
 //=====================================================================================================================
-private:
-   static const int NUMOLDXYTYPES = 13;               // # of XY scope tgt types in the old cntrlxUNIX, for importing
-   static const int ImportXYTypeMap[NUMOLDXYTYPES];   // maps old cntrlxUNIX XY tgt types to their Maestro equivalents
-   static const int IMPORTHW_XY;                      // cntrlxUNIX target hardware platform codes for XY & FB tgts
-   static const int IMPORTHW_FB;
-
 public:
-   static LPCTSTR XYTYPENAMES[NUMXYTYPES];            // GUI names for the XY scope target types
    static LPCTSTR RMVTYPENAMES[RMV_NUMTGTTYPES];      // GUI names for the RMVideo target types
    static LPCTSTR RMVSHAPENAMES[RMV_NUMTGTSHAPES];    // GUI names for the possible RMVideo aperture shapes
 
@@ -46,8 +39,8 @@ public:
 // DATA OBJECTS
 //=====================================================================================================================
 protected:
-   PVOID             m_pvParms;              // modifiable target parameters (points to either XYPARMS or RMVTGTDEF,
-                                             //    dynamically allocated during Initialize() or Copy())
+   // modifiable target parameters (dynamically allocated during Initialize() or Copy())
+   PVOID m_pvParms;
 
 
 
@@ -74,16 +67,15 @@ public:
 // ATTRIBUTES
 //=====================================================================================================================
 public:
-   VOID HardwareInfo( CString& desc ) const;             // return string describing hardware platform
-   BOOL IsModifiable() const                             // return TRUE if target has modifiable parameters
+   // return TRUE if target has modifiable parameters. NOTE: We still recognize the deprecated XYScope target bc
+   // we need to be able to deserialize pre-V5.0 experiment documents containing XYScope target objects.
+   BOOL IsModifiable() const
    {
       return( m_type == CX_XYTARG || m_type == CX_RMVTARG );
    }
 
    BOOL CanRemove() const                                // prevent removal of "predefined" targets
    { return( (m_flags & CX_ISPREDEF) == 0 ); }           //
-
-   int GetSubType() const;                               // retrieve tgt "subtype" for XY or RMVideo targets
 
 
 //=====================================================================================================================
@@ -94,13 +86,8 @@ public:
    BOOL SetParams( PU_TGPARMS pTgt, BOOL& bChanged );    // update target's parameters, with auto-correct
 
    void Serialize( CArchive& ar );                       // for reading/writing target parameters from/to disk file
-   BOOL Import(CStringArray& strArDefn,CString& strMsg); // set target IAW cntrlxUNIX-style, text-based definition
 
 private:
-   static BOOL ImportXY( CStringArray& strArDefn,        // helper methods for importing XY or RMVideo tgt
-                         U_TGPARMS& tgt );
-   static BOOL ImportFB( CStringArray& strArDefn,
-                         U_TGPARMS& tgt );
    static VOID ConvertOldFBVideoToRMVideo(               // translates old FB video tgt defn to a similar RMVideo tgt
       PFBPARMS pFB, PRMVTGTDEF pRMV );                   // (RMVideo introduced in Maestro v2.0)
 
@@ -120,9 +107,9 @@ public:
 protected:
    VOID AssignDefaultValues();                           // assign default values to modifiable target parameters
 
-   // checks for recognized Maestro target type. NOTE that obsolete target types CX_FIBER1 thru CX_OKNDRUM are still
-   // considered valid here -- because this test is used during object deserialization, and we must be able to open
-   // old experiment documents in order to migrate them to the current version...
+   // checks for recognized Maestro target type. NOTE that obsolete target types CX_FIBER1...CX_OKNDRUM and CX_XYTARG 
+   // are still considered valid here -- because this test is used during object deserialization, and we must be able 
+   // to open old experiment documents in order to migrate them to the current version...
    BOOL ValidTargetType( const WORD t ) const
    {
       return( (t==CX_XYTARG) || (t==CX_RMVTARG) ||

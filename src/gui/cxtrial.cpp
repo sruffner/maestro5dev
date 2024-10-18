@@ -1,36 +1,36 @@
 //=====================================================================================================================
 //
-// cxtrial.cpp : Implementation of class CCxTrial, encapsulating a CNTRLX "trial object", and class CCxSegment, which
+// cxtrial.cpp : Implementation of class CCxTrial, encapsulating a MAESTRO "trial object", and class CCxSegment, which
 //               encapsulates a single "segment" within a trial.
 //
 // AUTHOR:  saruffner
 //
 // DESCRIPTION:
-// This class encapsulates the definition of a CNTRLX "trial".  It provides a single entity for storing the complete
-// definition of the trial.  It also provides a set of operations for accessing and/or modifying this definition.  The
-// trial object is, by far, the largest and most complex CNTRLX object.  Its data composition:
+// This class encapsulates the definition of a MAESTRO "trial". It provides a single entity for storing the complete
+// definition of the trial. It also provides a set of operations for accessing and/or modifying this definition. The
+// trial object is, by far, the largest and most complex MAESTRO object. Its data composition:
 //
 //    1) A trial "header" containing a number of control flags and other parameters (trial weight, save/keep flag,
-//       channel set designation, special operation, etc).  See TRLHDR in cxobj_ifc.h.
+//       channel set designation, special operation, etc). See TRLHDR in cxobj_ifc.h.
 //    2) One or more participating targets (up to MAX_TRIALTARGS).
 //    3) One or more trial segments (up to MAX_SEGMENTS), containing...
 //       a) Segment "header" parameters, such as min/max duration, designated fixation targets for that segment,
-//          fixation requirements during that segment, etc.  See SEGHDR in cxobj_ifc.h.
-//       b) A target "trajectory record" for each target participating in the trial.  This record contains motion
+//          fixation requirements during that segment, etc. See SEGHDR in cxobj_ifc.h.
+//       b) A target "trajectory record" for each target participating in the trial. This record contains motion
 //          parameters that define how each target will behave during that segment.  See TRAJINFO in cxobj_ifc.h.
 //    4) A list of perturbation objects that modulate the defined trajectories of selected velocity components of
 //       selected targets in the trial.
 //
 // Because a trial segment is so complex, we encapsulate it by another class, CCxSegment, also defined here.  We put
-// its definition with CCxTrial because it is intended only for use by a trial object.  This design makes it relatively
+// its definition with CCxTrial because it is intended only for use by a trial object. This design makes it relatively
 // easy to work with segment objects as single entities -- given CCxSegment, the implementation of CCxTrial is much
-// simplified.  [NOTE:  Trial segments are not CNTRLX objects!  They do not exist apart from a containing trial object.
+// simplified. [NOTE: Trial segments are not Maestro objects! They do not exist apart from a containing trial object.
 // While other classes could theoretically construct and manipulate a CCxSegment object, CCxTrial exercises complete
-// control over its segments.  To insert a segment into a trial, callers must invoke a CCxTrial method which, in turn,
-// constructs and initializes a new CCxSegment object and inserts that object into its internal segment list.  It is
+// control over its segments. To insert a segment into a trial, callers must invoke a CCxTrial method which, in turn,
+// constructs and initializes a new CCxSegment object and inserts that object into its internal segment list. It is
 // also possible to copy & paste a segment from one trial to another thru the CopySeg() and PasteSeg() methods.]
 //
-// ==> The Big Picture:  Storage of CNTRLX data objects.
+// ==> The Big Picture: Storage of CNTRLX data objects.
 // The user creates experimental protocols within a CNTRLX "experiment document" (CCxDoc) by defining a variety of
 // "data objects" and establishing relationships among those objects.  For instance, each CNTRLX "trial" defines the
 // trajectories of one or more "targets", which are defined separately.  The trial object also refers to a "channel
@@ -153,25 +153,6 @@
 // GetRPDistro() will return a valid CCxRPDistro pointer only when the trial object is using the "R/P Distro" op.
 //
 // For more information, see CCxRPDistro.
-//
-// ==> Importing defn from an ASCII text file.
-// CNTRLX succeeds the cross-platform cntrlxUNIX/PC application, in which the GUI was hosted on a UNIX workstation
-// ("cntrlxUNIX") and the hardware controller resided on a WindowsNT PC ("cntrlxPC").  In that system, the various data
-// objects (targets, channel configurations, trials, etc.) could be defined in ASCII-text "definition files".  CNTRLX
-// supports importing CNTRLX data objects from such definition files via the dedicated CCxImporter.  This object
-// is responsible for interacting with the user, opening the text files and reading the definitions into an array of
-// CString's, and creating new data objects as appropriate.  Each data class provides an Import() method that takes
-// a CStringArray and reinitializes itself IAW the definition contained therein.  Thus, the details of translating the
-// cntrlxUNIX-style text definition to the CNTRLX data object is encapsulated in the data object itself, but the
-// details of opening text files and interacting with the user are handled by a user-interface object.
-//
-// In the case of the trial object:  for each cntrlxUNIX "trial definition file" it opens, CCxImporter creates a
-// new CCxTrial object in an appropriate branch of the CNTRLX object tree, then passes the entire contents of that file
-// to the trial's Import() method.  Since a trial depends on targets, perturbations, and a channel configuration for
-// its complete definition, the import process must first import all such "independent" objects before importing any
-// trials.  The unique string names of all such independent objects are stored in a map associating each string to the
-// object's unique key in the CNTRLX document's object tree.  Import() requires this "import map" to import the cxUNIX
-// trial definition into the CNTRLX trial object.  See CCxTrial::Import() for details.
 //
 // ==> Trial random variables (RV).
 // Maestro v3.3.0 introduces support for up to 10 "random variables" in a trial object. A random variable takes on a 
@@ -355,6 +336,10 @@
 // Maestro 4.1.0.
 // 20may2019-- Implemented runtime state for the random reward withholding feature -- rather than implement it in
 // CCxTrialSequencer. Key methods are InitRewardWHVR() and UpdateRewardWHVR().
+// 16oct2024-- The XYScope target platform, not supported since Maestro v4.0, is officially removed a/o V5.0. Removed
+// XYScope-specific parameters. However, we must still support deserialization of pre-V5.0 documents containing trials
+// that use XYScope targets. Such targets and trials are removed from the document AFTER deserialization! Segment
+// header parameter 'SEGHDR.iXYFrame' is no longer serialized (CCxSegment schema version 5).
 //=====================================================================================================================
 
 
@@ -379,7 +364,7 @@ static char THIS_FILE[] = __FILE__;
 // class CCxSegment
 //=====================================================================================================================
 //
-IMPLEMENT_SERIAL( CCxSegment, CObject, 4 | VERSIONABLE_SCHEMA )
+IMPLEMENT_SERIAL( CCxSegment, CObject, 5 | VERSIONABLE_SCHEMA )
 
 //=== Copy ============================================================================================================
 //
@@ -661,24 +646,8 @@ BOOL CCxSegment::SetHeader( SEGHDR& hdr )
       bOk = FALSE;
    }
 
-   int i = hdr.iXYFrame;                                 // XY frame interval has a limited range and must be a
-   if( i < SGH_MINXYFRAME )                              // multiple of the min value in that range...
-   {
-      i = SGH_MINXYFRAME;
-      bOk = FALSE;
-   }
-   else if( i > SGH_MAXXYFRAME )
-   {
-      i = SGH_MAXXYFRAME;
-      bOk = FALSE;
-   }
-   else if( (i % SGH_MINXYFRAME) != 0 )
-   {
-      i /= SGH_MINXYFRAME;
-      i *= SGH_MINXYFRAME;
-      bOk = FALSE;
-   }
-   hdr.iXYFrame = i;
+   // [deprecated] XY frame interval no longer used - XYScope platform removed in Maestro v5.0
+   hdr.iXYFrame = SGH_MINXYFRAME;
 
    if( (hdr.iMarker < SGH_MINMARKER) ||                  // the marker pulse line designation has a limited range
        (hdr.iMarker > SGH_MAXMARKER) )
@@ -756,6 +725,8 @@ BOOL CCxSegment::SetTrajInfo( int iPos, TRAJINFO& traj )
 //       3: Added support for assigning trial random variable to segment duration and trajectory parameters. No
 //          fields added to SEGHDR or TRAJINFO, but usage is different.
 //       4: Added support for RMVideo sync flash at segment start: new field BOOL SEGHDR.bEnaRMVSync (Maestro v4.0.0).
+//       5: Header parameter 'iXYFrame' is depecated. While still part of the SEGHDR struct, it is no longer used nor
+//          serialized.
 //
 //    ARGS:       ar -- [in] the serialization archive.
 //
@@ -779,7 +750,7 @@ void CCxSegment::Serialize ( CArchive& ar )
       ar << m_hdr.iMinDur << m_hdr.iMaxDur;                    // (1) the segment header....
       ar << m_hdr.iFixTarg1 << m_hdr.iFixTarg2;
       ar << m_hdr.fFixAccH << m_hdr.fFixAccV;
-      ar << m_hdr.iGrace << m_hdr.iXYFrame << m_hdr.iMarker;
+      ar << m_hdr.iGrace << m_hdr.iMarker;
       ub = (BYTE) ((m_hdr.bChkResp) ? 1 : 0);                  // (no 'BOOL' overload for CArchive::operator<< )
       ar << ub;
       ub = (BYTE) ((m_hdr.bEnaRew) ? 1 : 0);
@@ -805,7 +776,7 @@ void CCxSegment::Serialize ( CArchive& ar )
    }
    else                                                        // BEGIN:  READING FROM ARCHIVE...
    {
-      if( nSchema < 1 || nSchema > 4 )                         // unsupported version
+      if( nSchema < 1 || nSchema > 5 )                         // unsupported version
          ::AfxThrowArchiveException( CArchiveException::badSchema );
       
       ASSERT( m_trajRecs.GetCount() == 0 );                    // always deserialize to an initially empty segment!
@@ -814,7 +785,15 @@ void CCxSegment::Serialize ( CArchive& ar )
       ar >> hdr.iMinDur >> hdr.iMaxDur;                        //     into a dummy header....
       ar >> hdr.iFixTarg1 >> hdr.iFixTarg2;
       ar >> hdr.fFixAccH >> hdr.fFixAccV;
-      ar >> hdr.iGrace >> hdr.iXYFrame >> hdr.iMarker;
+      ar >> hdr.iGrace;
+      
+      // v=5: XYScope frame interval ignored - XYScope targets deprecated
+      if(nSchema < 5)
+         ar >> hdr.iXYFrame;
+      else
+         hdr.iXYFrame = 0;
+      
+      ar >> hdr.iMarker;
       ar >> ub;
       hdr.bChkResp = (ub != 0) ? TRUE : FALSE;
       ar >> ub;
@@ -967,16 +946,6 @@ BOOL CCxSegment::SetMidTrialRewEnable( BOOL bVal )
 {
    m_hdr.bEnaRew = bVal;
    return( TRUE );
-}
-
-BOOL CCxSegment::SetXYFramePeriod( int iVal )            // XY frame interval has a limited range AND must be a
-{                                                        // multiple of the min value in that range...
-   int i = iVal;
-   if( i < SGH_MINXYFRAME )               i = SGH_MINXYFRAME;
-   else if( i > SGH_MAXXYFRAME )          i = SGH_MAXXYFRAME;
-   else if( (i % SGH_MINXYFRAME) != 0 ) { i /= SGH_MINXYFRAME; i *= SGH_MINXYFRAME; }
-   m_hdr.iXYFrame = i;
-   return( BOOL(i == iVal) );
 }
 
 // out-of-bounds values are auto-corrected to wrap forwards or backwards
@@ -1152,8 +1121,7 @@ void CCxSegment::Dump( CDumpContext& dc ) const
    CObject::Dump( dc );                                                    // dump base class stuff first
    CString msg;
 
-   msg.Format( "Min/max dur, XY Frame (ms) = [%d, %d, %d]\n",              // dump segment header parameters....
-               m_hdr.iMinDur, m_hdr.iMaxDur, m_hdr.iXYFrame );
+   msg.Format("Min/max dur = [%d, %d]\n", m_hdr.iMinDur, m_hdr.iMaxDur);   // dump segment header parameters....
    dc << msg;
 
    msg.Format( "Fix 1 & 2; accH,V (deg); grace (ms); rewEna; rmvSyncEna = [%d, %d; %.2f,%.2f; %d; %d; %d]\n",
@@ -1235,7 +1203,7 @@ VOID CCxSegment::AssignDefaultHeader()
    m_hdr.fFixAccV = 5.0f;
    m_hdr.iGrace = 50;               // fixation grace period in msec
    m_hdr.bEnaRew = FALSE;           // mid-trial rewards disabled
-   m_hdr.iXYFrame = SGH_MINXYFRAME; // update interval for XY scope targets ONLY (msec)
+   m_hdr.iXYFrame = SGH_MINXYFRAME; // [deprecated] update interval for XY scope targets ONLY (msec)
    m_hdr.iMarker = SGH_NOMARKER;    // no marker pulse delivered at start of segment
    m_hdr.bChkResp = FALSE;          // subject's response not checked during this segment (when part of staircase seq)
    m_hdr.bEnaRMVSync = FALSE;       // RMVideo sync flash not enabled
@@ -1300,7 +1268,7 @@ FLOAT CCxSegment::LimitTraj( const float fVal, const float fLim,  BOOL& bFlag ) 
 // class CCxTrial
 //=====================================================================================================================
 //
-IMPLEMENT_SERIAL( CCxTrial, CTreeObj, 12 | VERSIONABLE_SCHEMA )
+IMPLEMENT_SERIAL( CCxTrial, CTreeObj, 13 | VERSIONABLE_SCHEMA )
 
 
 //=====================================================================================================================
@@ -1537,15 +1505,15 @@ BOOL CCxTrial::CopyRemoteObj(CTreeObj* pSrc, const CWordToWordMap& depKeyMap)
 
 //=== GetDependencies [base override] =================================================================================
 //
-//    Return a list of keys identifying those CNTRLX objects which are currently referenced by this trial.  The trial
-//    is "dependent" upon these CNTRLX objects for its complete definition:  all participating target objects, any
+//    Return a list of keys identifying those Maestro objects which are currently referenced by this trial. The trial
+//    is "dependent" upon these objects for its complete definition: all participating target objects, any 
 //    participating perturbations, and the channel configuration object assigned to the trial.
 //
 //    This method is required by the CTreeMap/CTreeObj framework in order to "lock" the "independent" objects in the
 //    treemap -- providing a mechanism that prevents user from removing them and thereby corrupting the "dependent"
 //    object's definition.
 //
-//    ARGS:       wArKeys -- [out] currently referenced CNTRLX object keys are stored here.  if none, array emptied.
+//    ARGS:       wArKeys -- [out] currently referenced Maestro object keys are stored here. If none, array emptied.
 //
 //    RETURNS:    NONE.
 //
@@ -1699,17 +1667,9 @@ BOOL CCxTrial::SetHeader( TRLHDR& hdr, BOOL& bChanged )
       bOk = FALSE;
    }
 
-   if( hdr.iXYDotSeedAlt < -1 )                                // alternate XY dot seed must be >= -1
-   {
-      hdr.iXYDotSeedAlt = -1;
-      bOk = FALSE;
-   }
-
-   if( hdr.nXYInterleave<0 || hdr.nXYInterleave>TargCount() )  // # of XY interleave targets cannot exceed #tgts used
-   {                                                           // in trial -- NOTE that we DON'T check that there are
-      hdr.nXYInterleave = 0;                                   // sufficient XY scope targets in trial!!!
-      bOk = FALSE;
-   }
+   // [deprecated: XYScope platform removed in Maestro 5.0] XYScope alternate dot seed and #interleaved targets
+   hdr.iXYDotSeedAlt = -1;
+   hdr.nXYInterleave = 0;
 
    if( hdr.iSaccVt < TH_MINSACCVT )                            // out-of-range saccade threshold velocity
    {
@@ -2173,15 +2133,15 @@ BOOL CCxTrial::ReplaceSeg( const int iPos, const CCxSegment* pSeg )
 
 //=== InsertTarget ====================================================================================================
 //
-//    Insert CNTRLX target object into the trial's participating target list.  Insert a target trajectory record for
-//    the new target into each of the trial's currently existing segments.  Existing records are shifted to make room
-//    for the new record.  The trajectory parameters are initialized to default values.
+//    Insert Maestro target object into the trial's participating target list. Insert a target trajectory record for
+//    the new target into each of the trial's currently existing segments. Existing records are shifted to make room
+//    for the new record. The trajectory parameters are initialized to default values.
 //
 //    If the insertion occurs before or at any target index stored in the trial's perturbation list, that index must be
 //    incremented so that it still refers to the same physical target.
 //
 //    ARGS:       iPos     -- [in] zero-based insertion position; if invalid insertion pos, target is appended.
-//                wTargKey -- [in] key identifying the CNTRLX target object to be inserted.
+//                wTargKey -- [in] key identifying the Maestro target object to be inserted.
 //
 //    RETURNS:    TRUE if successful; FALSE if we've reached target capacity or specified tgt is already in the trial.
 //
@@ -2270,9 +2230,6 @@ BOOL CCxTrial::RemoveTarget( const int iPos )
       CCxSegment* pSeg = m_Segments.GetNext( pos );
       VERIFY( pSeg->RemoveTraj( iPos ) );
    }
-
-   if( m_hdr.nXYInterleave > TargCount() )                        // make sure # interleaved tgts is still valid
-      --(m_hdr.nXYInterleave);
 
    for( int i = 0; i < m_nPerts; i++ )                            // adjust tgt indices in the pert list as needed...
    {
@@ -2378,6 +2335,8 @@ VOID CCxTrial::Clear()
 //          existing documents.
 //      11: (v3.3.0) Added support for random variables in a trial. No effect on existing documents.
 //      12: (v4.1.0) Added support for WHVR for reward pulses 1 and 2. No effect on existing documents.
+//      13: (v5.0.0) XYScope support officially removed. Deprecated trial header parameters TRLHDR.iXYDotSeedAlt and
+//          TRLHDR.nXYInterleave are no longer serialized and are ignored when a pre-v13 trial is deserialized.
 //
 //    ARGS:       ar -- [in] the serialization archive.
 //
@@ -2400,8 +2359,9 @@ void CCxTrial::Serialize ( CArchive& ar )
       ar << m_hdr.dwFlags;
       ar << m_hdr.iWeight << m_hdr.iStairNum;
       ar << m_hdr.iStartSeg << m_hdr.iFailsafeSeg << m_hdr.iSpecialSeg << m_hdr.iSpecialOp;
-      ar << m_hdr.iMarkSeg1 << m_hdr.iMarkSeg2 << m_hdr.iMTRIntv << m_hdr.iMTRLen << m_hdr.iXYDotSeedAlt;
-      ar << m_hdr.nXYInterleave << m_hdr.iSaccVt;
+      ar << m_hdr.iMarkSeg1 << m_hdr.iMarkSeg2 << m_hdr.iMTRIntv << m_hdr.iMTRLen;
+      // DEPRECATED as of v13 (Maestro 5.0): ar << m_hdr.iXYDotSeedAlt << m_hdr.nXYInterleave;
+      ar << m_hdr.iSaccVt;
       ar << m_hdr.reward1[0] << m_hdr.reward1[1] << m_hdr.reward1[2];
       ar << m_hdr.reward2[0] << m_hdr.reward2[1] << m_hdr.reward2[2];
       ar << m_hdr.fStairStrength << m_hdr.wChanKey;
@@ -2463,7 +2423,7 @@ void CCxTrial::Serialize ( CArchive& ar )
    }
    else
    {
-      if( nSchema < 1 || nSchema > 12 )                     // unsupported version
+      if( nSchema < 1 || nSchema > 13 )                     // unsupported version
          ::AfxThrowArchiveException( CArchiveException::badSchema );
 
       TRLHDR hdr;                                           // first fill in temporary header from archive...
@@ -2515,12 +2475,19 @@ void CCxTrial::Serialize ( CArchive& ar )
          hdr.iMTRLen = TH_DEFREWLEN;
       }
 
-      if( nSchema >= 6 )                                    // ver 6 includes alternate XY dot seed; set to "ignore"
-         ar >> hdr.iXYDotSeedAlt;                           // when migrating from older schema
+      // XYScope alternate dot seed: Added in v6, deprecated in v13
+      if(nSchema >= 6 && nSchema < 13) 
+         ar >> hdr.iXYDotSeedAlt; 
       else
          hdr.iXYDotSeedAlt = -1;
 
-      ar >> hdr.nXYInterleave >> hdr.iSaccVt;
+      // XYScope #interleaved targets: Deprecated. No longer serialized a/o v13.
+      if(nSchema < 13)
+         ar >> hdr.nXYInterleave;
+      else
+         hdr.nXYInterleave = 0;
+
+      ar >> hdr.iSaccVt;
 
       // ver 12 adds WHVR numerator and denomintor for reward pulses 1 and 2. Use defaults for older schema
       if(nSchema >= 12)
@@ -2630,537 +2597,6 @@ void CCxTrial::Serialize ( CArchive& ar )
 
    ASSERT_VALID( this );                                    // check validity AFTER serializing
 }
-
-
-//=== Import ==========================================================================================================
-//
-//    Reinitialize the trial IAW a cntrlxUNIX-style, text-based definition.
-//
-//    CntrlxUNIX was the GUI side of CNTRLX's predecessor, a dual-platform application with the GUI running on a UNIX
-//    workstation and the hardware controller hosted on a Windows PC.  To facilitate the move from cntrlxUNIX/PC to
-//    CNTRLX, CNTRLX provides support for reading cntrlxUNIX object definition files.
-//
-//    What follows here is a line-by-line description of the expected format for the cntrlxUNIX definition of a trial,
-//    including some of the issues involved in translating this format to the new CNTRLX trial object...
-//
-// TRIAL_FOR_CNTRLX86         MUST be the first line.
-// VERSION <v>                FP <v> is the version#; IGNORED by Cntrlx.
-// TRIALNAME <name>           STR <name> is cntrlxUNIX name assigned to this trial; IGNORED here.
-// CHANNELS <chName>          STR <chName> is cntrlxUNIX name of channel cfg; we look up CNTRLX obj key in import map.
-// WEIGHT <wt>                INT <wt> is trial weight.  Limited to <0..255>.
-// KEEPFLAG <k>               INT <k> is keep flag.  Nonzero = "keep"; zero = "toss".
-// #TARGETS <nt>              INT <nt> is #targets participating in trial.
-// HORIZONTAL <hdir>          INT <hdir> = RIGHT or LEFT in cntrlxUNIX.  IGNORED by Cntrlx.
-// VERTICAL <vdir>            INT <vdir> = UP or DOWN in cntrlxUNIX.  IGNORED by Cntrlx.
-// FAILSAFE <fsSeg>           INT <fsSeg> is zero-based index of failsafe segment, but 0 = "none" in cxUNIX.  CNTRLX
-//                               allows seg 0 as the failsafe seg, specifying -1 as "none".  Must make adjustment here.
-// STAIRCASE <stair>          INT <stair> = [0..5]; 0 = NORMAL trial; 1-5 = staircase set to which trial belongs.
-// STAIROKPB <okChan>         INT <okChan> = correct response channel for staircase trial (0 = ch12, 1 = ch13)
-// STAIRSTRENGTH <stren>      FP <stren> = strength assigned to staircase trial (for assigning it to a tier)
-// SACCTHRESH <thresh>        INT <thresh> = saccadic threshold velocity in deg/sec
-// SPECIALOP <op>             INT <op> = 0("none"), 1("skipOnSacc"), 2("selByFix"), 3("selByFix2"), or 4("switchFix")
-// SPECIALSEG <spSeg>         INT <spSeg> is zero-based index of the special segment.  Restrict to <0..nSegs-1>.
-// REWARDLEN <r1> <r2>        INT <r1>, <r2> are the pulse lengths for reward pulses 1 and 2, in msec
-// #XYIL <nIL>                INT <nIL> = # XY targets in trial that are interleaved.  0 disables interleaving
-//
-// PULSESTIM <m> <trg> <t0> <A1> <A2> <PW1> <PW2> <IPI> <ITI> <nP> <nT>       This single line defines parameters for a
-//                            pulse stimulus sequence on the pulse stimulus generator module.  All parameters are INTs:
-//                            <m> = op mode.  possible values as in cxUNIX:  SGM_SINGLE .. SGM_NOOP.
-//                            <trg> = external trigger flag. If nonzero, external trigger is used.
-//                            <t0> = index of trial seg in which sequence starts; restrict to <0..nSegs-1>.
-//                            <A1>, <A2> = pulse 1,2 amplitudes.  Translate cxUNIX's encoded form [0..255] to
-//                               [-1280..1270mV] in 10mV increments.
-//                            <PW1>, <PW2> = pulse 1,2 widths.  Translate [15..250] -> [150..2500us] in 10us incr.
-//                            <IPI> = interpulse interval in ms.  Restricted to [1..250].
-//                            <ITI> = intertrain interval. Translate [1..250] -> [10..2500ms] in 10ms increments.
-//                            <nP> = #pulses per train.  Restricted to [1..31].
-//                            <nT> = #trains per sequence.  Restricted to [1..250].
-//
-// ***for EACH TARGET participating in the trial, the following lines are included:
-// TARGET <pos> <tgName>      INT <pos> = zero-based index indicating this target's pos in trial's target list.
-//                            STR <tgName> = name of target object; we lookup tgt's CNTRLX obj key in import map.
-// VRLOOMER <pos> <value>     OBSOLETE -- ignored by Cntrlx.
-// VRCOORDS <pos> <value>     ditto.
-// VRORIGIN <pos> <value>     ditto.
-//
-// #SEGMENTS <nSegs>          INT <nSegs> = #segments in trial.
-//
-// *** for EACH SEGMENT in the trial...if any line below is missing, the param value is assumed to be zero!
-// SEGMENT <#>                INT <#> = zero-based index of this segment.
-//    mindur <minD>           INT <minD> = min duration of seg in ms.
-//    maxdur <maxD>           INT <maxD> = max duration of seg in ms.
-//    grace <period>          INT <period> = grace period in ms.
-//    adc <bOn>               INT <bOn> = nonzero to record during this segment; else zero.  We do not allow user to
-//                               turn off recording on a seg-by-seg basis in CNTRLX.  Instead, the user specifies a
-//	                              "start segment" at which recording begins.  The first segment for which "adc" is ON
-//	                              will be chosen as the "start segment", which is stored in the trial header.  If no
-//                               segment has "adc" ON, then we leave start segment at 0 anyway.
-//    pulse <pCh>             INT <pCh> = DO ch# for TTL pulse marking start of this segment; 0 = "none".
-//    chkresp <bChk>          INT <bChk> = nonzero if system should check for correct subject response during this
-//	                              segment (used in psychophysical staircase trial sequences).
-//    enaReward <bRew>        INT <bRew> = nonzero if "midtrial" rewards are enabled during this segment.
-//    fixacc <fHAcc>          FP <fHAcc> = horizontal fixation accuracy in deg subtended at eye.
-//    fixaccV <fVAcc>         FP <fVAcc> = vertical fixation accuracy in deg subtended at eye.
-//    fixE1 <nameE1>          Designate trial targets as fixation targets 1 & 2 during this segment.  if either line
-//    fixE2 <nameE2>          not present, corres. fix tgt is "none".  STR <nameE1> and <nameE2> are the cxUNIX target
-//                               names.  stored as zero-based pos of tgt in CNTRLX trial obj's target list; none = -1.
-//    deltat <DT>             INT <DT> = XY scope frame period in ms.  Must be a positive multiple of SGH_MINXYFRAME
-//                               and is restricted to [SGH_MINXYFRAME .. SGH_MAXXYFRAME].
-//
-// for EACH TARGET and EACH SEGMENT -- here's the tgt trajectory info!  if any line missing, param value is zero!
-// INT <#> is the zero-based pos of the relevant target.
-//    target <#> htpos <H>       FP <H>, <V> = target window's position at segment start, in deg.
-//    target <#> vtpos <V>
-//    target <#> ztpos <Z>       OBSOLETE -- ignored here.
-//    target <#> htvel <HV>      FP <HV>, <VV> = target window's constant velocity (deg/sec) during segment.
-//    target <#> vtvel <VV>
-//    target <#> ihtvel <IHV>    FP <IHV>, <IVV> = target pattern's constant vel (deg/s) during segment.
-//    target <#> ivtvel <IVV>
-//    target <#> ztvel <ZV>      OBSOLETE -- ignored here.
-//    target <#> htacc <HA>      FP <HA>, <VA> = target window's constant acceleration (deg/s^2) during segment
-//    target <#> vtacc <VA>
-//    target <#> ztacc <ZA>      OBSOLETE -- ignored here.
-//    target <#> onoff <bOn>     INT <bOn> = on/off flag.  Nonzero turns tgt ON during segment.
-//    target <#> rel <rel>       INT <rel> = 0 (relative position), 1 (absolute pos), 2 (openloop w/snap), 3 (openloop
-//                                  w/o snap).  As of v2.0.0, MAESTRO lets user engage velocity stabilization during
-//                                  any arbitrary segment or segment on one or more trial targets.  Prior to this vers,
-//                                  v.stab was allowed only during a single segment or contiguous range of segments and
-//                                  only on the target designated as fix tgt #1.  If <rel> bit 2 is set, v.stab. is on
-//                                  H cmpt of motion only.  If <rel> bit 3 is set, v.stab. is on V cmpt only.  Else it
-//                                  is enabled for both cmpts (the default).
-//
-//    target <#> perturb <p#>    Support for trial target perturbations is much cleaner in MAESTRO than in cxUNIX.  The
-//    target <#> pert2 <p2#>     defn file format here suggests that every target can be perturbed by two different
-//    target <#> htper <hAmp>    waveforms; in reality, only two perturbations were supported over the course of a
-//    target <#> htper2 <hAmp2>	trial.... In MAESTRO, each trial has a perturbation list of up to 4 perts.  Each entry
-//    target <#> vtper <vAmp>    in the list holds the key of a unit-amplitude perturbation object, the desired amp of
-//    target <#> vtper2 <vAmp2>  the perturbation, the start segment, the index of the affected target, and an ID
-//                               indicating which vel cmpt is affected (winH, winV, patH, patV).  In cxUNIX, a pert was
-//                               specified by its pos (INT <p#>, <p2#>) in the current pert list.  To find pert object
-//                               key, we look for string "pertN" in the import map, where N(>0) is <p#> or <p2#>.
-//                               Perts could only be applied to a target's window velocity in cxUNIX: FP <hAmp> is the
-//                               gain applied to pert1 on the horiz window velocity, etc.  For proper translation, the
-//                               "perturb" line must precede "htper" and "vtper" for a given target within a given
-//                               segment; similarly with "pert2".  NOTE that cntrlxUNIX perts did not have to be
-//                               unit-amplitude, so user may have to make corrections....
-//
-//    In the above description we make several references to the "import map".  A trial object is dependent upon a
-//    number of independent MAESTRO objects -- targets, perturbations, and a channel configuration -- for its complete
-//    definition.  In cxUNIX, such dependencies were serialized by storing the string name of the independent object in
-//    the trial definition file.  In MAESTRO, we represent these dependencies by storing the WORD-valued key that
-//    uniquely identifies the object within the MAESTRO document.  The caller must provide an "import map" that maps
-//    each cxUNIX string name to a pointer to a WORD, that WORD being the key of the independent data object in the
-//    current CNTRLX document's object tree.
-//
-// NOTE: As of Maestro 1.5, the CX_OKNDRUM target is no longer supported. As of Maestro 3.0, CX_FIBER* and CX_REDLED*
-// are no longer supported. All of these were predefined targets that would appear in the import map passed to this
-// function. Since they won't be there, any attempt to import a cxUNIX trial definition that uses any of these obsolete
-// targets will fail. No changes had to be made to this function itself.
-//
-//    Format issues:  Import() expects the format described above, although not all lines are required.  The trial
-//    header info and target list are expected first, followed by "#SEGMENTS <nSegs>" and the individual segment defns.
-//    The segment defns must be in cardinal order (seg 0, seg 1, etc.).  However, the order of lines within each of
-//    these sets is not important (with some exceptions, as noted above), and some lines may be omitted.  To succeed,
-//    the imported trial defn cannot be empty -- ie, there must be at least one participating target and one segment.
-//
-//    If the import fails for whatever reason, the trial object is restored to its state prior to the import attempt.
-// 
-// THIS METHOD DOES NOT SUPPORT importing trial definitions involving features introduced after cxUNIX was retired!!! 
-//
-//    ARGS:       strArDefn   -- [in] the cntrlxUNIX-style definition as a series of text strings.
-//                importMap   -- [in] maps original import name of each independent object (tgts, chan cfgs, perts) to
-//                               its key in the CNTRLX object tree.  Used to translate each import name in trial defn
-//                               into the CNTRLX object key that identifies the object.
-//                strMsg      -- [out] if there's an error, this should contain brief description of the error.
-//
-//    RETURNS:    TRUE if import successful; FALSE otherwise.
-//
-//    THROWS:     CMemoryException.
-//
-BOOL CCxTrial::Import( CStringArray& strArDefn, const CMap<CString, LPCTSTR, WORD, WORD>& importMap, CString& strMsg )
-{
-   int i, j, k;
-
-   static LPCTSTR INCOMPMSG = _T("Incomplete trial definition");        // common error messages from this function
-   static LPCTSTR BADFMTMSG = _T("Unrecognized format");
-   static LPCTSTR BADOBJMSG = _T("Object in import map invalid/missing");
-   static LPCTSTR BADTGTMSG = _T("Invalid target list");
-   static LPCTSTR BADSEGMSG = _T("No segments; or illegal segment#");
-
-   if( strArDefn.GetSize() < 20 )                                       // trial defn incomplete for sure!
-   {
-      strMsg = INCOMPMSG; return( FALSE );
-   }
-   if( strArDefn[0] != _T("TRIAL_FOR_CNTRLX86") )                       // this must be the first line in defn file
-   {
-      strMsg = BADFMTMSG; strMsg += _T("(1)"); return( FALSE );
-   }
-
-   CCxTrial saveTrial;                                                  // save current state in case import fails,
-   saveTrial.Copy( this );
-   Clear();                                                             // then wipe out the current state
-
-   char keyword[20];                                                    // keyword (e.g., "WEIGHT") in text line
-   char strName[CX_MAXOBJNAMELEN];                                      // name of an independent object in trial defn
-   int iParam;                                                          // integer parameter value
-   float fParam;                                                        // floating-point parameter value
-   WORD wKey;
-
-   int nSegs = 0;                                                       // #segments in trial
-
-   TRLHDR hdr;                                                          // trial header parameters
-   GetHeader( hdr );                                                    // default state initially
-
-   BOOL bOk = TRUE;                                                     // was import successful?
-   CCxDoc* pDoc = ((CCntrlxApp*) AfxGetApp())->GetDoc();                // to verify objects upon which trial depends
-
-   i = 1;                                                               // BEGIN: parse lines defining trial header
-   while( bOk && i < strArDefn.GetSize() )
-   {
-      // every line has at least two tokens
-      if(::sscanf_s(strArDefn[i], "%19s %s", keyword, 20, strName, CX_MAXOBJNAMELEN) < 2)
-      // if( ::sscanf( strArDefn[i], "%s %s", keyword, strName ) < 2 ) 
-      {
-         bOk = FALSE; strMsg = BADFMTMSG; strMsg += _T("(2)");
-      }
-      else if( ::strcmp( keyword, "CHANNELS" ) != 0 &&                  //    except for these, all other keywords are
-          ::strcmp( keyword, "TRIALNAME" ) != 0 &&                      //    assoc. with at least one INT or FP param
-          ::sscanf_s( strName, "%f", &fParam ) < 1 )
-      {
-         bOk = FALSE; strMsg = BADFMTMSG; strMsg += _T("(3)");
-      }
-      else if( ::strcmp( keyword, "CHANNELS" ) == 0 )                   //    if chan cfg name found in import map,
-      {                                                                 //    make sure obj exists in document and
-         if( importMap.Lookup( strName, wKey ) )                        //    represents a channel cfg!  if chan cfg
-         {                                                              //    NOT found in the import map, do NOT fail
-            if( pDoc->ObjExists( wKey ) &&                              //    -- in this case, no chan cfg assigned.
-                pDoc->GetObjType( wKey ) == CX_CHANCFG )
-               hdr.wChanKey = wKey;
-            else
-            {
-               bOk = FALSE; strMsg = BADOBJMSG;
-               strMsg += _T("("); strMsg += strName; strMsg += _T(")");
-            }
-         }
-      }
-      else if( ::strcmp( keyword, "STAIRSTRENGTH" ) == 0 )
-         hdr.fStairStrength = fParam;
-      else if( ::strcmp( keyword, "WEIGHT" ) == 0 )
-         hdr.iWeight = int(fParam);
-      else if( ::strcmp( keyword, "KEEPFLAG" ) == 0 )
-      {
-         if( fParam != 0 ) hdr.dwFlags |= THF_KEEP;
-         else hdr.dwFlags &= ~THF_KEEP;
-      }
-      else if( ::strcmp( keyword, "#TARGETS" ) == 0 )
-      {
-         iParam = int(fParam);
-         if(iParam > MAX_TRIALTARGS) {bOk = FALSE; strMsg = BADTGTMSG;}
-         else for( j = 0; j < iParam; j++ )                             //    init tgt key array with "null" keys;
-            m_wArTargs.Add( CX_NULLOBJ_KEY );                           //    these are filled in later via TARGET code
-      }
-      else if( ::strcmp( keyword, "FAILSAFE" ) == 0 )                   //    "no" failsafe seg = 0 in cxUNIX!
-         hdr.iFailsafeSeg = (fParam==0) ? -1 : int(fParam);
-      else if( ::strcmp( keyword, "STAIRCASE" ) == 0 )
-         hdr.iStairNum = int(fParam);
-      else if( ::strcmp( keyword, "STAIROKPB" ) == 0 )
-      {
-         if( fParam != 0 ) hdr.dwFlags |= THF_STAIRRESP;                //    1 ==> ch13 is correct response channel
-         else hdr.dwFlags &= ~THF_STAIRRESP;                            //    0 ==> ch12
-      }
-      else if( ::strcmp( keyword, "SACCTHRESH" ) == 0 )
-         hdr.iSaccVt = int(fParam);
-      else if( ::strcmp( keyword, "SPECIALOP" ) == 0 )
-      {
-         iParam = int(fParam);
-         if( iParam == 1  ) hdr.iSpecialOp = TH_SOP_SKIP;
-         else if( iParam == 2 ) hdr.iSpecialOp = TH_SOP_SELBYFIX;
-         else if( iParam == 3 ) hdr.iSpecialOp = TH_SOP_SELBYFIX2;
-         else if( iParam == 4 ) hdr.iSpecialOp = TH_SOP_SWITCHFIX;
-         else hdr.iSpecialOp = TH_SOP_NONE;
-      }
-      else if( ::strcmp( keyword, "SPECIALSEG" ) == 0 )
-         hdr.iSpecialSeg = int(fParam);
-      else if( ::strcmp( keyword, "REWARDLEN" ) == 0 )                  //    if second pulse length not specified,
-      {                                                                 //    set it = to the first pulse length
-         hdr.reward1[0] = hdr.reward2[0] = int(fParam);
-         if (::sscanf_s(strArDefn[i], "%19s %d %d", keyword, 20, &iParam, &j) > 2)
-         // if( ::sscanf( strArDefn[i], "%s %d %d", keyword, &iParam, &j ) == 3 )
-            hdr.reward2[0] = j;
-      }
-      else if( ::strcmp( keyword, "#XYIL" ) == 0 )
-         hdr.nXYInterleave = int(fParam);
-      else if( ::strcmp( keyword, "PULSESTIM" ) == 0 )
-      {
-         j = ::sscanf_s( strArDefn[i], "%19s %d %d %d %d %d %d %d %d %d %d %d",
-               keyword, 20, &(hdr.sgm.iOpMode), &(hdr.sgm.bExtTrig), &(hdr.iSGMSeg), &(hdr.sgm.iAmp1), &(hdr.sgm.iAmp2),
-               &(hdr.sgm.iPW1), &(hdr.sgm.iPW2), &(hdr.sgm.iPulseIntv), &(hdr.sgm.iTrainIntv),
-               &(hdr.sgm.nPulses), &(hdr.sgm.nTrains) );
-
-         if( j != 12 )
-         {
-            bOk = FALSE; strMsg = BADFMTMSG; strMsg += _T("(4)");
-         }
-         else                                                           //    convert SGM params from encoded cxUNIX
-         {                                                              //    format to MAESTRO format...
-            hdr.sgm.iAmp1 = 10 * (hdr.sgm.iAmp1 - 128);                 //    pulse amp: [0..255] -> [-1280..1270mV]
-            hdr.sgm.iAmp2 = 10 * (hdr.sgm.iAmp2 - 128);
-            hdr.sgm.iPW1 *= 10;                                         //    pulse width: [15..250] -> [150..2500us]
-            hdr.sgm.iPW2 *= 10;
-            hdr.sgm.iTrainIntv *= 10;                                   //    train intv: [1..250] -> [10..2500ms]
-         }
-      }
-      else if( ::strcmp( keyword, "TARGET" ) == 0 )
-      {
-         if(3 > ::sscanf_s(strArDefn[i], "%19s %d %s", keyword, 20, &j, strName, CX_MAXOBJNAMELEN))
-         // if( 3 > ::sscanf( strArDefn[i], "%s %d %s", keyword, &j, strName ) )
-         {
-            bOk = FALSE; strMsg = BADFMTMSG; strMsg += _T("(5)");
-         }
-         else if( j < 0 || j >= m_wArTargs.GetSize() )
-         {
-            bOk = FALSE; strMsg = BADTGTMSG;
-         }
-         else if( importMap.Lookup( strName, wKey ) )                   //    search import map for target key. if not
-         {                                                              //    found, or if key does not point to a tgt
-            WORD wType = pDoc->ObjExists( wKey ) ?                      //    obj in the current doc, then fail
-                                       pDoc->GetObjType( wKey ) : 0;
-            if( wType >= CX_FIRST_TARG && wType <= CX_LAST_TARG )
-               m_wArTargs.SetAt( j, wKey );
-            else
-            {
-               bOk = FALSE; strMsg = BADOBJMSG;
-               strMsg += _T("("); strMsg += strName; strMsg += _T(")");
-            }
-         }
-         else
-         {
-            bOk = FALSE; strMsg = BADOBJMSG;
-         }
-      }
-      else if( ::strcmp( keyword, "#SEGMENTS" ) == 0 )                  //    this line should be the last line
-      {                                                                 //    in the trial header definition
-         nSegs = int(fParam);
-         if(nSegs > MAX_SEGMENTS) {bOk = FALSE; strMsg = BADSEGMSG;}
-         ++i;
-         break;
-      }
-
-      ++i;                                                              //    go to next line in string array
-   }                                                                    // END: parse trial header...
-
-   if( bOk )                                                            // if we successfully read trial "header":
-   {
-      if( TargCount() == 0 ) { bOk = FALSE; strMsg = BADTGTMSG; }       //    make sure we have at least one target
-      else if( nSegs <= 0 ) { bOk = FALSE; strMsg = BADSEGMSG; }        //    and at least one segment
-      else
-      {
-         for( j = 0; j < TargCount(); j++ )                             //    make sure all targets have been
-            if( GetTarget( j ) == CX_NULLOBJ_KEY )                      //    identified and mapped to object keys
-         {
-            bOk = FALSE;
-            strMsg = BADTGTMSG;
-            break;
-         }
-
-         if( bOk ) for( j = 0; j < nSegs; j++ ) InsertSeg( -1 );        //    insert the required # of segments
-      }
-
-      BOOL bChanged;
-      SetHeader( hdr, bChanged );                                       //    set trial header, w/ auto-correction
-   }
-
-
-   int iStartSeg = -1;                                                  // first segment for which "adc" is nonzero
-
-   j = 0;                                                               // BEGIN: parse individual segment definitions
-   while( bOk && j < SegCount() && i < strArDefn.GetSize() )            // (these should be listed in cardinal order)
-   {
-      SetMinDuration( j, 0 );                                           //    unspecified params default to zero in
-      SetMaxDuration( j, 0 );                                           //    cxUNIX.  we let this be the case for
-      SetGracePeriod( j, 0 );                                           //    min/max seg dur & grace period
-      for( k = 0; k < TargCount(); k++ )
-      {
-         SetTgtOn( j, k, FALSE );
-         SetTgtVStabMode( j, k, SGTJ_VSTABOFF );
-         SetTgtVStabSnapToEye( j, k, FALSE );
-      }
-
-      if((1 != ::sscanf_s( strArDefn[i++], "SEGMENT %d", &iParam )) ||   //    1st line of seg def always "SEGMENT <#>"
-          iParam != j )
-      {
-         bOk = FALSE;
-         strMsg = _T("Invalid or missing segment");
-      }
-
-      WORD wPert1 = CX_NULLOBJ_KEY;                                     //    pert obj keys from "perturb" and "pert2"
-      WORD wPert2 = CX_NULLOBJ_KEY;
-
-      int iMinDur = 0;
-      while( bOk && i < strArDefn.GetSize() )                           //    BEGIN: read seg hdr or tgt traj param...
-      {
-         // every line has at least two tokens. We skip lines that do not satisfy this constraint (e.g., blank lines)
-         if(2 > ::sscanf_s(strArDefn[i], "%19s %s", keyword, 20, strName, CX_MAXOBJNAMELEN))
-         // if( 2 > ::sscanf( strArDefn[i], "%s %s", keyword, strName ) ) 
-         { 
-            ++i; 
-            continue;
-         }
-         else if( ::strcmp( keyword, "fixE1" ) != 0 &&                  //    except for these, all other keywords are
-                  ::strcmp( keyword, "fixE2" ) != 0 &&                  //    assoc. with at least one INT or FP param
-                  ::sscanf_s( strName, "%f", &fParam ) < 1 )
-         {
-            bOk = FALSE; strMsg = BADFMTMSG; strMsg += _T("(6)");
-         }
-
-         if( ::strcmp( keyword, "mindur" ) == 0 )                       //    NOTE: "mindur" line should come before
-            iMinDur = int(fParam);                                      //    "maxdur" line for this to work correctly
-         else if( ::strcmp( keyword, "maxdur" ) == 0 )
-         {
-            SetMaxDuration( j, int(fParam) );
-            SetMinDuration( j, iMinDur );
-         }
-         else if( ::strcmp( keyword, "grace" ) == 0 )
-            SetGracePeriod( j, int(fParam) );
-         else if( ::strcmp( keyword, "adc" ) == 0 )                     //    in CNTRLX, user specifies a "start" seg
-         {                                                              //    for data recording.  we use index of 1st
-            if( iStartSeg < 0 && fParam != 0 ) iStartSeg = j;           //    segment for which "adc" is nonzero.
-         }
-         else if( ::strcmp( keyword, "pulse" ) == 0 )
-            SetMarker( j, int(fParam) );
-         else if( ::strcmp( keyword, "chkresp" ) == 0 )
-            SetResponseChecked( j, BOOL(fParam!=0) );
-         else if( ::strcmp( keyword, "enaReward" ) == 0 )
-            SetMidTrialRewEnable( j, BOOL(fParam!=0) );
-         else if( ::strcmp( keyword, "fixacc" ) == 0 )
-            SetFixAccH( j, fParam );
-         else if( ::strcmp( keyword, "fixaccV" ) == 0 )
-            SetFixAccV( j, fParam );
-         else if( ::strcmp( keyword, "fixE1" ) == 0 ||                  //    in cxUNIX, fix tgts 1&2 were specified by
-                  ::strcmp( keyword, "fixE2" ) == 0 )                   //    name; in CNTRLX, by position in tgt list.
-         {                                                              //    we make the translation here...
-            if( importMap.Lookup( strName, wKey ) )                     //    NOTE: we ignore line if tgt name does not
-            {                                                           //    correspond to a tgt in trial's tgt list!
-               for( k = 0; k < TargCount(); k++ ) if( wKey == GetTarget( k ) )
-               {
-                  if( ::strcmp( keyword, "fixE1" ) == 0 ) SetFixTarg1Pos( j, k );
-                  else SetFixTarg2Pos( j, k );
-                  break;
-               }
-            }
-         }
-         else if( ::strcmp( keyword, "deltat" ) == 0 )
-            SetXYFramePeriod( j, int(fParam) );
-         else if( ::strcmp( keyword, "target" ) == 0 )                  //    handle target trajectory parameter:
-         {
-            // format: "target <pos> keyword <fVal>"
-            if(4 > ::sscanf_s(strArDefn[i], "%s %d %19s %f", strName, CX_MAXOBJNAMELEN, &iParam, keyword, 20, &fParam))
-            // if( 4 > ::sscanf( strArDefn[i], "%s %d %s %f", strName, &iParam, keyword, &fParam))
-            {
-               bOk = FALSE; strMsg = BADFMTMSG; strMsg += _T("(7)");
-            }
-            else if( iParam < 0 || iParam >= TargCount() )              //       invalid target index!
-            {
-               bOk = FALSE; strMsg = _T("Bad target index");
-            }
-            else if( ::strcmp( keyword, "htpos" ) == 0 )
-               SetTgtTrajParam(j, iParam, TGTHPOS, fParam, FALSE);
-            else if( ::strcmp( keyword, "vtpos" ) == 0 )
-               SetTgtTrajParam(j, iParam, TGTVPOS, fParam, FALSE);
-            else if( ::strcmp( keyword, "htvel" ) == 0 )
-               SetTgtTrajParam(j, iParam, TGTHVEL, fParam, FALSE);
-            else if( ::strcmp( keyword, "vtvel" ) == 0 )
-               SetTgtTrajParam(j, iParam, TGTVVEL, fParam, FALSE);
-            else if( ::strcmp( keyword, "ihtvel" ) == 0 )
-               SetTgtTrajParam(j, iParam, PATHVEL, fParam, FALSE);
-            else if( ::strcmp( keyword, "ivtvel" ) == 0 )
-               SetTgtTrajParam(j, iParam, PATVVEL, fParam, FALSE);
-            else if( ::strcmp( keyword, "htacc" ) == 0 )
-               SetTgtTrajParam(j, iParam, TGTHACC, fParam, FALSE);
-            else if( ::strcmp( keyword, "vtacc" ) == 0 )
-               SetTgtTrajParam(j, iParam, TGTVACC, fParam, FALSE);
-            else if( ::strcmp( keyword, "onoff" ) == 0 )
-               SetTgtOn( j, iParam, BOOL(fParam!=0) );
-            else if( ::strcmp( keyword, "rel" ) == 0 )                  //    the "rel" keyword is tricky:
-            {
-               k = int(fParam);
-               k &= 0x03;                                               //       first look at bits[1..0] only...
-               if( k < 2 )                                              //       0=relative pos; 1=absolute pos
-                  SetAbsolutePos( j, iParam, BOOL(k==1) );
-               else                                                     //       2=v.stab. w/snap, 3=v.stab w/o snap.
-               {                                                        //       Check bits[3..2] for stabilizing only
-                  BOOL bSnap = BOOL(k==2);                              //       H or V cmpt instead of both cmpts.
-                  int iMode = SGTJ_VSTABBOTH;                           //       Set v.stab state appropriately...
-                  k = int(fParam) & 0x0C;
-                  if( k == 0x04 ) iMode = SGTJ_VSTABHONLY;
-                  else if( k == 0x08 ) iMode = SGTJ_VSTABVONLY;
-
-                  SetTgtVStabMode( j, iParam, iMode );
-                  SetTgtVStabSnapToEye( j, iParam, iMode );
-               }
-            }
-            else if( ::strcmp( keyword, "perturb" ) == 0 ||             //    NOTE: the pert obj ("perturb", "pert2")
-                     ::strcmp( keyword, "pert2" ) == 0 )                //    must be specified before gain value for
-            {                                                           //    proper translation!!
-               wKey = CX_NULLOBJ_KEY;
-               ::sprintf_s( strName, "pert%d", int(fParam) );
-               if( importMap.Lookup( strName, wKey ) )
-               {
-                  if( (!pDoc->ObjExists( wKey )) || pDoc->GetObjType( wKey ) != CX_PERTURB )
-                     wKey = CX_NULLOBJ_KEY;
-               }
-               if( wKey == CX_NULLOBJ_KEY )                             //       fail if pert obj not found
-               {
-                  bOk = FALSE; strMsg += BADOBJMSG;
-                  strMsg += _T("("); strMsg += strName; strMsg += _T(")");
-               }
-               else if( ::strcmp( keyword, "perturb" ) == 0 ) wPert1 = wKey;
-               else wPert2 = wKey;
-            }
-            else if( ::strcmp( keyword, "htper" ) == 0 ||               //    add "pert1" on H or V cmpt of specified
-                     ::strcmp( keyword, "vtper" ) == 0 )                //    tgt's window vel, but only if gain != 0,
-            {                                                           //    and there's room in trial's pert list
-               if( fParam != 0.0f && AppendPert( wPert1 ) )
-               {
-                  k = (::strcmp( keyword, "htper" ) == 0) ? PERT_ON_HWIN : PERT_ON_VWIN;
-                  SetPert( PertCount()-1, wPert1, fParam, j, iParam, k );
-               }
-            }
-            else if( ::strcmp( keyword, "htper2" ) == 0 ||              //    analogously for "pert2"....
-                     ::strcmp( keyword, "vtper2" ) == 0 )
-            {
-               if( fParam != 0.0f && AppendPert( wPert2 ) )
-               {
-                  k = (::strcmp( keyword, "htper2" ) == 0) ? PERT_ON_HWIN : PERT_ON_VWIN;
-                  SetPert( PertCount()-1, wPert2, fParam, j, iParam, k );
-               }
-            }
-         }
-         else if( ::strcmp( keyword, "SEGMENT" ) == 0 )                 //    marks start of next segment definition!
-         {
-            ++j;                                                        //    start next segment
-            break;                                                      //    do NOT go to next line in this case!
-         }
-
-         ++i;                                                           //    proceed to next line in string array
-      }                                                                 //    END: read seg hdr or tgt traj param
-
-   }                                                                    // END: parse individual segment definitions
-
-   if( bOk && (iStartSeg >= 0) )                                        // if record start seg was determined while
-   {                                                                    // processing segments, update trial hdr
-      GetHeader( hdr );
-      hdr.iStartSeg = iStartSeg;
-
-      BOOL bChanged;
-      SetHeader( hdr, bChanged );
-   }
-
-   if( !bOk ) Copy( &saveTrial );                                       // on error, restore original state
-   return( bOk );
-}
-
-
 
 
 //=====================================================================================================================
@@ -3307,7 +2743,6 @@ double CCxTrial::GetSegParam( int s, int t, ParamID p ) const
          if(isRV) d = cMath::abs(d) - 1;
          break;
 
-      case XYFRAMEPERIOD : d = double(GetXYFramePeriod( s ));     break;
       case RMVSYNCENA:     d = IsRMVSyncFlashOn(s) ? 0.0 : 1.0;   break;
       case FIXTARG1 :      d = double(GetFixTarg1Pos( s ) + 1);   break;   // -1 = NONE is always first choice
       case FIXTARG2 :      d = double(GetFixTarg2Pos( s ) + 1);   break;   // -1 = NONE is always first choice
@@ -3383,7 +2818,6 @@ VOID CCxTrial::GetSegParamLabel( ParamID p, CString& str ) const
    {
       case MINDURATION :   str = _T("Min Dur (ms)");              break;
       case MAXDURATION :   str = _T("Max Dur (ms)");              break;
-      case XYFRAMEPERIOD : str = _T("XY Frame (ms)");             break;
       case RMVSYNCENA:     str = _T("RMV Sync");                  break;
       case FIXTARG1 :      str = _T("Fix Tgt 1");                 break;
       case FIXTARG2 :      str = _T("Fix Tgt 2");                 break;
@@ -3518,11 +2952,6 @@ VOID CCxTrial::GetSegParamFormat( ParamID p, BOOL& bIsChoice, CStringArray& choi
          fmt.nLen = 4;
          fmt.nPre = 1;
          break;
-      case XYFRAMEPERIOD :
-         fmt.flags = NES_INTONLY | NES_NONNEG;
-         fmt.nLen = 3;
-         fmt.nPre = 1;
-         break;
       case FIXACCH :
       case FIXACCV :
          fmt.flags = NES_NONNEG;
@@ -3573,7 +3002,6 @@ BOOL CCxTrial::SetSegParam( int s, int t, ParamID p, double dVal, BOOL asRV)
          bUncorr = BOOL((p == MINDURATION) ? SetMinDuration( s, iVal ) : SetMaxDuration(s, iVal));     
          break;
 
-      case XYFRAMEPERIOD : bUncorr = SetXYFramePeriod( s, iVal );   break;
       case RMVSYNCENA:     bUncorr = SetRMVSyncFlashOn(s, bVal);    break;
       case FIXTARG1 :      bUncorr = SetFixTarg1Pos( s, iVal-1 );   break; // choice 0 = "NONE" ==> -1, etc.
       case FIXTARG2 :      bUncorr = SetFixTarg2Pos( s, iVal-1 );   break; // choice 0 = "NONE" ==> -1, etc.
@@ -4837,7 +4265,7 @@ void CCxTrial::Dump( CDumpContext& dc ) const
                m_hdr.iStartSeg, m_hdr.iFailsafeSeg, m_hdr.iSpecialSeg, m_hdr.iSpecialOp );
    dc << msg;
 
-   msg.Format( "\nSGM seg = %d; #XYIL = %d; Sacc Vt = %d deg/sec", m_hdr.iSGMSeg, m_hdr.nXYInterleave, m_hdr.iSaccVt );
+   msg.Format( "\nSGM seg = %d; Sacc Vt = %d deg/sec", m_hdr.iSGMSeg, m_hdr.iSaccVt );
    dc << msg;
    
    msg.Format("\nReward pulse 1: len = %d ms; WHVR = %d/%d. Reward pulse 2: len= %d ms; WHVR=%d/%d.", m_hdr.reward1[0],
@@ -4845,8 +4273,7 @@ void CCxTrial::Dump( CDumpContext& dc ) const
 
    msg.Format( "\nDisplay marker segments = %d, %d", m_hdr.iMarkSeg1, m_hdr.iMarkSeg2 );
    dc << msg;
-   msg.Format( "\nMid-trial reward intv, len (ms) = %d, %d; alternate XY dot seed = %d",
-               m_hdr.iMTRIntv, m_hdr.iMTRLen, m_hdr.iXYDotSeedAlt );
+   msg.Format( "\nMid-trial reward intv, len (ms) = %d, %d", m_hdr.iMTRIntv, m_hdr.iMTRLen);
    dc << msg;
    msg.Format( "\nChan cfg key = %d; stair strength = %.3f", m_hdr.wChanKey, m_hdr.fStairStrength );
    dc << msg;
@@ -4965,8 +4392,8 @@ VOID CCxTrial::AssignDefaultHeader()
    m_hdr.iMarkSeg2 = -1;
    m_hdr.iMTRIntv = TH_DEFREWINTV;                 // mid-trial reward intv and len set to default values
    m_hdr.iMTRLen = TH_DEFREWLEN;
-   m_hdr.iXYDotSeedAlt = -1;                       // alternate XY dot seed ignored; use video display settings
-   m_hdr.nXYInterleave = 0;                        // no XY scope target interleaving
+   m_hdr.iXYDotSeedAlt = -1;                       // [deprecated]
+   m_hdr.nXYInterleave = 0;                        // [deprecated]
    m_hdr.iSaccVt = 100;                            // default saccade threshold is 100 deg/sec
 
    // reward pulse length and WHVR set to default values

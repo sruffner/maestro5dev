@@ -1,29 +1,29 @@
 /**=====================================================================================================================
- cxdevicemgr.cpp : Implementation of class CCxDeviceMgr, MaestroRTSS's "device manager".
+ cxdevicemgr.cpp : Implementation of class CCxDeviceMgr, Maestro's "device manager".
 
  AUTHOR:  saruffner
 
  DESCRIPTION:
- The purpose of MaestroRTSS's abstract hardware interface framework is to allow an application to work with ANY device
+ The purpose of Maestro's abstract hardware interface framework is to allow an application to work with ANY device
  for which there exists a suitable interface implementation, without "having to know" which kind of device is installed 
  in the system. Then how does the app find and "attach" to the device? This task is handled by the device manager, 
  CCxDeviceMgr. This class is necessarily "aware" of the different abstract interfaces and the available realizations of 
- each interface. During startup, the device manager tries to find in the system a physical device  that implements one 
- (or more) of the desired hardware functions (AI, AO, DIO event-timer, RMVideo, and XYScope). Once found, the manager 
+ each interface. During startup, the device manager tries to find in the system a physical device that implements one 
+ (or more) of the desired hardware functions (AI, AO, DIO event-timer, and RMVideo). Once found, the manager 
  instantiates the device object for that particular board and attempts to "open" and initialize the device. The manager 
  maintains all acquired device objects and provides access to each via pointer -- cast to the abstract interface class 
  (CCxAnalogIn, etc). The application can then use the base interface pointer to access the hardware functionality 
  without knowing which supported device is being used.
 
- What if a supported device is NOT found in the system for a particular hardward function? Rather than returning a NULL
+ What if a supported device is NOT found in the system for a particular hardware function? Rather than returning a NULL
  pointer, CCxDeviceMgr returns a pointer to a "placeholder" implementation of the hardware interface. This placeholder 
  is a lightweight implementation of the interface representing the **absence** of that hardware function. Essentially, 
  calling any placeholder method will have no effect and, where appropriate, will return an error indication. Why do 
  this? So that we do not have to check for NULL pointers before calling interface methods.
 
  ==> Usage.
- Construct the CCxDeviceMgr object, then invoke Startup() to connect to all available MaestroRTSS hardware devices
- installed in the host machine. MaestroRTSS requires only once instance for each hardware device function, and 
+ Construct the CCxDeviceMgr object, then invoke Startup() to connect to all available Maestro-supported hardware devices
+ installed in the host machine. Maestro requires only one instance for each hardware device function, and 
  CCxDeviceMgr enforces this fact by preventing multiple attachments. If a device of a particular interface class is not 
  found, CCxDeviceMgr creates a suitable "no device found" placeholder object. To access a particular device object, use 
  the inline methods GetTimer(), GetAI(), etc. Finally, call Shutdown() to release all allocated device resources when 
@@ -31,20 +31,13 @@
 
  ==> Exception to the rule: CCxRMVideo.
  The OpenGL application RMVideo was developed to replace the antiquated VSG2/4 framebuffer video board. RMVideo runs on
- a separate Linux workstation and communicates with MaestroRTSS over a private, dedicated Ethernet link.  While it is
- treated as a "device" from MaestroRTSS's standpoint, there is only one realization. CCxRMVideo serves as the concrete 
+ a separate Linux workstation and communicates with Maestro over a private, dedicated Ethernet link.  While it is
+ treated as a "device" from Maestro's standpoint, there is only one realization. CCxRMVideo serves as the concrete 
  interface with RMVideo; there is no abstract interface.
 
  ==>Target devices supported.
- 1) CM62Timer -- DIO event timer realization on the TIC6x DSP-based M62 baseboard from Innovative Integration, Inc.
- 2) CLisTechTimer -- DIO event timer realization on Lisberger Technologies' ISA-based, 16-input timestamping board.
- 3) CPciMio16E1 -- AI realization on the PCI-MIO-16E1 16-channel, 12-bit MIO board from National Instruments.
- 4) CUeiPD2AO8 -- AO realization on the 8-channel, 16-bit PD2-AO-8/16 board from United Electronics Industries.
- 5) CNatlInstATAO10 -- AO realization on the 10-channel, 12-bit AT-AO-10 ISA board from National Instruments.
- 6) CXYDetroit -- XYScope device realization using the TIC6x-based "Detroit" DSP from SSP, Inc.
- 7) CXYDakar -- XYScope device realization using the TIC44-based "Dakar F5 Carrier" DSP from SSP, Inc.
- 8) CCxRMVideo -- handles communication with RMVideo over a private, dedicated Ethernet link using RTX TCP/IP.
- 9) CNI6363 -- The PCIe-6363 MIO board from National Instruments. Support introduced in Maestro 3; in fact, this board
+ 1) CCxRMVideo -- handles communication with RMVideo over a private, dedicated Ethernet link using RTX TCP/IP.
+ 2) CNI6363 -- The PCIe-6363 MIO board from National Instruments. Support introduced in Maestro 3; in fact, this board
  is intended to serve as 3 devices in one -- handling AI, AO, and the DIO event timer functions. This is possible 
  because the AI, AO and DIO subsystems on the PCIe-6363 can all work independently. CNI6363 implements CDevice for the 
  PCIe-6363; it is created to acquire and initialize the board. If successful, CNI6363 constructs and provides access to 
@@ -90,13 +83,14 @@
  support the XYScope display. However, we elected to leave all XYScope-related code in place, in case the platform is
  somehow revived in a future release. The AttachToXYScopeDev() method merely creates the placeholder null device and 
  reports that XYScope hardware support is not available.
+ 24sep2024-- Removing all XYScope related code as of Maestro 5.x. Updated comments to explicitly indicate that the only
+ supported hardware at this point is the PCIe-6363 multifunction DAQ board (for AI, AO, and DIO/Timer functionality all
+ on one device) and the CCXRMVideo interface for TCP-IP communications with RMVideo.
 ========================================================================================================================
 */
 
 // supported realizations of the various hardware device function interfaces
 #include <WinSock2.h>
-#include "devices\xydetroit.h"
-#include "devices\xydakar.h"
 #include "devices\ni6363.h" 
 
 #include "cxmasterio.h"                   // CCxMasterIO-- the MAESTRO interface object (for posting messages)
@@ -124,10 +118,9 @@ BOOL RTFCNDCL CCxDeviceMgr::Startup(CCxMasterIO* pIO)
 
    // we first try to find and acquire the NI PCIe-6363, which handles the AI, AO, and DIO timer functionality all on 
    // one board. NOTE that, as of Maestro 4.x, legacy alternatives for the AI, AO and DIO timer functions are 
-   // no longer supported
+   // no longer supported. And the XYScope device is no longer supported as well.
    BOOL bOk = AttachToNI6363MioDev(pIO);
    
-   if(bOk) bOk = AttachToXYScopeDev(pIO);
    if(bOk)
    {
       // initialize Winsock API prior to attaching to RMVideo. WSAStartup() should be called once and only once
@@ -156,12 +149,6 @@ BOOL RTFCNDCL CCxDeviceMgr::Startup(CCxMasterIO* pIO)
 */
 VOID RTFCNDCL CCxDeviceMgr::Shutdown()
 {
-   if( m_pScope != NULL )
-   {
-      m_pScope->Close();
-      delete m_pScope;
-      m_pScope = NULL;
-   }
    if( m_pRMVideo != NULL )
    {
       m_pRMVideo->Close();
@@ -218,63 +205,6 @@ BOOL RTFCNDCL CCxDeviceMgr::AttachToNI6363MioDev(CCxMasterIO* pIO)
    
    pIO->Message(strMsg);
    return(TRUE);
-}
-
-
-/**
- Create a "device object" for controlling a physical hardware device that implements the XYScope video controller 
- function, as encapsulated by the CCxScope interface. If no supported device is found, the method creates a placeholder 
- implementation that represents the absence of a device.
-
- Supported targets in order of preference:
- 1) CXYDetroit -- the "Detroit C6x" DSP board from Spectrum Signal Processing.
- 2) CXYDakar -- the "Dakar F5 Carrier" DSP board from SSP.
-
- IMPORTANT: As of Maestro 4.0 (summer/fall 2018), there is no hardware support for the XYScope display. This method 
- merely reports that fact and creates the placeholder device. We do it this way rather than removing XYScope-related 
- code in case we find a way to reimplement the XYScope platform in a future release.
-
- @param pIO Ptr to the Maestro communication interface, so we can post progress/error messages to Maestro.
- @return TRUE if successful (even if no device found); FALSE if unable to create a device object -- which is considered 
- a catastrophic error.
-*/
-BOOL RTFCNDCL CCxDeviceMgr::AttachToXYScopeDev( CCxMasterIO* pIO )
-{
-   // char strMsg[150];
-
-   // already attached to an XY scope device -- nothing to do!
-   if(m_pScope != NULL) return(TRUE);
-
-   /* Commented out. The Detroit and Dakar are no longer supported. 
-   for(int i = 0; i < 2; i++)
-   {
-      if(i == 0) m_pScope = (CCxScope*) new CXYDetroit(1);
-      else m_pScope = (CCxScope*) new CXYDakar(1);
-
-      if(m_pScope != NULL)
-      {
-         if(m_pScope->Open())
-         {
-            ::sprintf_s(strMsg, "%s installed as XY scope device", m_pScope->GetDeviceName());
-            pIO->Message(strMsg);
-            return(TRUE);
-         }
-         else
-         {
-            ::sprintf_s(strMsg, "%s : %s", m_pScope->GetDeviceName(), m_pScope->GetLastDeviceError());
-            pIO->Message(strMsg);
-            delete m_pScope;
-         }
-      }
-      else return(FALSE);
-   }
-   */
-
-   // if no XYScope device realization found, create the "no device" placeholder
-   // pIO->Message( "(!) No XY scope device installed" ); 
-   pIO->Message("NOTE: Due to lack of hardware support, the XY scope display is not available in Maestro 4.x.");
-   m_pScope = (CCxScope*) new CCxNullScope(NULLDEV, 1);
-   return( BOOL(m_pScope != NULL) );
 }
 
 

@@ -1,25 +1,25 @@
 //=====================================================================================================================
 //
-// cxtrialseq.cpp : Implementation of class CCxTrialSequencer, MAESTRO's trial sequencer.
+// cxtrialseq.cpp : Implementation of class CCxTrialSequencer, Maestro's trial sequencer.
 //
 // AUTHOR:  saruffner
 //
 // DESCRIPTION:
-// In TrialMode, MAESTRO "instructs" MAESTRODRIVER to present a sequence of trials drawn from a specified trial "set". 
+// In TrialMode, Maestro "instructs" CXDRIVER to present a sequence of trials drawn from a specified trial "set". 
 // The order in which trials are selected for presentation depend upon the current "sequencer mode". Eight distinct
 // sequencer modes are available: (1) repeated presentation of a currently selected trial; (2) presentation of each 
 // trial in the trial set in order of appearance within the set; (3) same as (2), except that a failed trial is
 // repeated until the subject successfully completes it; (4) a weighted, ordered presentation (using the trial 
 // weights to set how many reps of a given trial are presented relative to the other trials in the set); (5) a weighted,
 // randomized presentation of the trials; (6) a randomized presentation of trial "chains" (1-N consecutive reps of the 
-// same trial, where N is the trial weight); (7) same as (6), except athat a failed trial is repeated until the subject
+// same trial, where N is the trial weight); (7) same as (6), except that a failed trial is repeated until the subject
 // successfully completes it; and (8) a specialized "staircase" presentation to support psychophysical protocols. Most 
 // sequencer modes are available with or without fixation ("no fix") requirements enforced. While the trial selection 
 // algorithm is straightforward for the first five modes, the staircase mode is complex and requires a significant 
 // amount of additional overhead (both computation & data objects). CCxTrialSequencer encapsulates all of these trial 
 // selection algorithms.
 //
-// As of MAESTRO v3.1.2, CCxTrialSequencer supports two levels of sequencing. Trial sets can now contain individual
+// As of Maestro v3.1.2, CCxTrialSequencer supports two levels of sequencing. Trial sets can now contain individual
 // trials and/or trial subsets, which are simply collections of related trials. When a set contains at least one
 // non-empty subset, the sequencer supports 3 possible subset sequencing types: (1) SUBSETSEQ_OFF -- disabled; all 
 // trials in the set, including those in subsets, are treated as a single group; (2) SUBSETSEQ_ORDERED -- subsets are 
@@ -30,16 +30,16 @@
 // sequencing is engaged. Furthermore, when a trial set contains individual trials as immediate children as well as
 // trial subsets, each of those trials is treated as a separate subset containing just one trial.
 //
-// MAESTRODRIVER has no knowledge of MAESTRO data objects like CCxTrial and CCxTarget. Instead MAESTRO must convert 
-// such data objects into a form that MAESTRODRIVER "understands". Target definitions must be converted to the 
-// CXTARGET struct as defined in CXOBJ_IFC.H, while a trial is conveyed to MAESTRODRIVER as a sequence of trial codes, 
-// detailed in CXTRIALCODES.H. [The trial codes scheme was adopted from Cntrlx, the original incarnation of MAESTRO, 
+// CXDRIVER has no knowledge of Maestro data objects like CCxTrial and CCxTarget. Instead Maestro must convert 
+// such data objects into a form that CXDRIVER "understands". Target definitions must be converted to the 
+// CXTARGET struct as defined in CXOBJ_IFC.H, while a trial is conveyed to CXDRIVER as a sequence of trial codes, 
+// detailed in CXTRIALCODES.H. [The trial codes scheme was adopted from Cntrlx, the original incarnation of Maestro, 
 // in which the GUI ran on a UNIX machine and transmitted these trial codes (as well as other information and commands)
 // over the network to a Windows PC that controlled the hardware and executed all experimental protocols.] 
 // CCxTrialSequencer provides methods that handle these conversions.
 //
 // In short, CCxTrialSequencer is a "helper" class that relieves our TrialMode controller, CCxTrialMode, of the
-// nitty-gritty details behind the sequencing of MAESTRO trials.
+// nitty-gritty details behind the sequencing of Maestro trials.
 //
 // ==> Usage.
 //    Init() ==> Initialize the trial sequencer IAW specifed control parameters, as defined by the TRIALSEQCTRL struct.
@@ -50,29 +50,30 @@
 //       for a myriad of reasons -- in which case it posts an error message using CCntrlxApp::LogMessage().
 //    SelectNextTrial() ==> Selects the next trial in the currently defined sequence, based on results provided for the
 //       last trial presented.
-//    GetTargets() ==> Prepares an array of CXTARGET structs defining all MAESTRO targets in the "target list" for the
+//    GetTargets() ==> Prepares an array of CXTARGET structs defining all Maestro targets in the "target list" for the
 //       current trial set.
 //    GetChannels() ==> Get object key of the channel config (if any) associated with the currently selected trial.
 //    GetTrialInfo() ==>  Prepare an array of TRIALCODEs defining the currently selected trial, as well as the trial
-//       target map.  Participating targets are identified by their ordinal pos in this map which, in turn, points to
+//       target map. Participating targets are identified by their ordinal pos in this map which, in turn, points to
 //       the location of that target's definition in the target list prepared by GetTargets().
 //    IsNoFixMode() ==> Is the sequencer's current op mode one of the "no fix" modes?
 //    IsStaircaseMode() ==> Is the sequencer currently configured to run a staircase sequence?
 //
 // ==> Design considerations.
 // CCxTrialSequencer is designed as a "helper" class for the sole use of CCxTrialMode. Its design takes into account
-// a number of important assumptions about how TrialMode works in MAESTRO:
-//    1) While a trial sequence is actually running, the user cannot make any modifications to the MAESTRO document. If
+// a number of important assumptions about how TrialMode works in Maestro:
+//    1) While a trial sequence is actually running, the user cannot make any modifications to the Maestro document. If
 // this was not the case, the sequencer's selection algorithms will fail (they should ASSERT in the DEBUG release).
 //    2) The sequencer control parameters (TRIALSEQCTRL) provided in the call to Init() remain in effect until a
 // subsequent call to Init() is made. Thus, the user cannot modify these control parameters while a trial sequence is
 // running.
-//    3) [NO LONGER NECESSARY?:  RMVideo loads targets MUCH FASTER!] Before a trial sequence starts, MAESTRODRIVER's 
-// "target list" must be loaded with the definitions of all tgts that may be used by any trial in the trial set. We do 
-// this primarily because it is necessary to preload ALL framebuffer video targets participating in a trial sequence 
-// prior to starting that sequence. Certain framebuffer targets can take several seconds to load -- which would result 
-// in an unacceptably long intertrial interval in framebuffer trial sequences.
-//    4) We have elected for now to use large arrays in the MAESTRODRIVER IPC data structure to hold the entire
+//    3) Before a trial sequence starts, CXDRIVER's "target list" is loaded with the definitions of all tgts that may be
+// used by any trial in the trial set. We do this primarily because it was necessary to preload ALL VSG2/4 framebuffer 
+// video targets participating in a trial sequence prior to starting that sequence. Certain framebuffer targets could 
+// take several seconds to load -- which would result in an unacceptably long intertrial interval. **HOWEVER, RMVideo is 
+// MUCH FASTER than the old VSG 2/4 framebuffer, which is long obsolete. So, while we still continue to load all targets
+// in a trial set before starting the sequence, that may no longer be necessary!**
+//    4) We have elected for now to use large arrays in the CXDRIVER IPC data structure to hold the entire
 // target list for the current trial sequence, as well as the trial codes for the current trial. For efficiency's
 // sake, GetTargets() and GetTrialInfo() were designed to write directly into these arrays. CCxRuntime::StartTrial()
 // and CCxRuntime::LoadTargetList() invoke these methods on a CCxTrialSequencer object passed to them!
@@ -232,6 +233,8 @@
 // 03nov2022-- Updated to support new trial result flag CX_FT_EYELINKERR, indicating that trial aborted prematurely due
 // to an Eyelink tracker communication error. Like CX_FT_RMVDUPE, this is considered a non-fatal error that should not
 // terminate trial sequencing. 
+// 26sep2024-- Eliminating XYScope-specific code. The XYScope platform, unsupported since Maestro V4.0, has been
+// removed entirely in V5.0.
 //=====================================================================================================================
 
 
@@ -241,13 +244,13 @@
 #include "math.h"
 #include "cntrlx.h"                          // CCntrlxApp and resource defines
 
-#include "cxdoc.h"                           // CCxDoc -- the MAESTRO "experiment" document
-#include "cxchannel.h"                       // CCxChannel -- a MAESTRO channel configuration object
-#include "cxtarget.h"                        // CCxTarget -- a MAESTRO target object
-#include "cxtrial.h"                         // CCxTrial -- a MAESTRO trial object
-#include "cxrpdistro.h"                      // CCxRPDistro -- defines reward window for a "R/P Distro" trial
-#include "cxpert.h"                          // CCxPert -- a MAESTRO perturbation waveform object
-#include "cxsettings.h"                      // CCxSettings -- the MAESTRO application settings object
+#include "cxdoc.h"
+#include "cxchannel.h"
+#include "cxtarget.h"
+#include "cxtrial.h"
+#include "cxrpdistro.h"
+#include "cxpert.h"
+#include "cxsettings.h"
 
 #include "cxtrialseq.h"
 
@@ -629,7 +632,7 @@ BOOL CCxTrialSequencer::Init( const TRIALSEQCTRL& tsqc )
 //
 //    ARGS:       pN    -- [out] total # of targets used across all trials in set.
 //                nMax  -- [in] the max # of targets that can be stored in provided buffer.
-//                pTg   -- [out] buffer that will hold the target definitions in format compatible w/ MAESTRODRIVER.
+//                pTg   -- [out] buffer that will hold the target definitions in format compatible w/ CXDRIVER.
 //
 //    RETURNS:    TRUE if successful, FALSE otherwise (eg, buffer not large enough).
 //
@@ -930,47 +933,36 @@ WORD CCxTrialSequencer::GetChannels() const
 //    which is merely a list of indices pointing to the corresponding target's definition in the "loaded target list"
 //    that is prepared by GetTargets().
 //
-//    On "special" operations and XY scope target interleaving:  These two optional features of a Maestro trial have
-//    implementation constraints that cannot easily be enforced while the user is defining the trial.  Instead, we
-//    check & enforce the constraints here, returning FALSE if a constraint is violated.  Briefly, the limitations are:
+//    On "special" operations: Special trial options like "skipOnSaccade" have implementation constraints that cannot
+//    easily be enforced while the user is defining the trial. Instead, we check & enforce the constraints here, 
+//    returning FALSE if a constraint is violated.  Briefly, the limitations are:
 //       1) A trial involving a special operation OTHER THAN "R/P Distro" cannot use the turntable (CX_CHAIR); it is 
-//          not compatible with this feature.  The "R/P Distro" does NOT have this constraint because it does not 
+//          not compatible with this feature. The "R/P Distro" does NOT have this constraint because it does not 
 //          involve changing the trial's timeline at runtime.
 //       2) A "selectByFix" or "chooseFix" trial MUST specify fixation targets 1 & 2 during the designated special 
 //          segment. The same fixation targets must be specified for all remaining segments after the special segment.
 //       2a) A "searchTask" trial must have more than one participating target, must specify fixation target 1 during
 //          the special segment, and must specify a non-zero grace period for that segment that is strictly less than
 //          the segment's minimum duration.
-//       3) Let N = # of XY scope targets to be interleaved during trial, and segDT(m) be the XY scope frame period
-//          during segment m.  Then it must be true that:
-//          a) There are at least N XY scope targets participating in the trial, not including any of the type RECTDOT,
-//             which is exempt from interleaving.
-//          b) For all segments of the trial, segDT(m) % N == 0 and segDT(m)/N is a multiple of the minimum frame
-//             period SGH_MINXYFRAME.
 //
-//    Velocity stabilization (TARGET_VSTAB) can be engaged on a per-target, per-segment basis. Prior to V2.5.2, it was
-//    supported for all XY scope target types except FCDOTLIFE, FLOWFIELD, NOISYDIR and NOISYSPEED, and all RMVideo 
-//    target types except RMV_MOVIE. As of V2.5.2 (Jan 2010), these restrictions are removed, with some caveats:
-//       1) The finite dot-life targets (XYScope FCDOTLIFE, NOISYDIR and NOISYSPEED; RMVideo's Random-Dots Patch) 
-//    targets won't behave correctly when the finite dotlife is expressed in degrees travelled. 
-//       2) Only the target window position of the XYScope optical flow field target FLOWFIELD is adjusted for velocity 
-//    stabilization. The flow velocity will be unaffected.
-//       3) In RMVideo, target pattern motion is almost always WRT the target's center, not the screen center. So,
-//    velocity stabilization of these targets is achieved simply by adjusting the target's window motion. Users should
-//    be aware of this difference. There is one exception: the RMV_RANDOMDOTS target type with flag RMV_F_WRTSCREEN set.
-//    In this case, both pattern and window motion are WRT the screen center, and both are adjusted when velocity 
-//    stabilization is engaged.
+//    Velocity stabilization (TARGET_VSTAB) can be engaged on a per-target, per-segment basis, with some restrictions:
+//       1) The RMVideo RMV_RANDOMDOTS target won't behave correctly when it has a finite dotlife expressed in 
+//    degrees travelled. 
+//       2) In RMVideo, target pattern motion is almost always WRT the target's center, not the screen center. So,
+//    velocity stabilization of these targets is achieved simply by adjusting the target's window motion. There is one 
+//    exception: the RMV_RANDOMDOTS target type with flag RMV_F_WRTSCREEN set. In this case, both pattern and window 
+//    motion are WRT the screen center, and both are adjusted when velocity stabilization is engaged.
 //       4) Velocity stabilization of CHAIR makes no sense and is not allowed. In this case, this method will not
 //    generate the trial codes and will abort on an error.
 //
-//    Maximum trial duration check: Since v3.0, MAESTRODRIVER calculates trial trajectories on the fly, eliminating the
+//    Maximum trial duration check: Since v3.0, CXDRIVER calculates trial trajectories on the fly, eliminating the
 //    need for large buffers and making very long trials possible. However, one obstacle remains: the trial codes store
 //    elapsed trial times as short integers. Thus, we restrict trial length to a value, MAXTRIALDUR, less than the max
 //    value of a signed 16-bit integer.
 //
-//    BACKGROUND:  MAESTRODRIVER has no knowledge of Maestro data objects like CCxTrial and CCxTarget.  Instead Maestro 
-//    must convert those data objects into a form that MAESTRODRIVER "understands".  A Maestro trial object is conveyed 
-//    to MAESTRODRIVER as a sequence of trial codes, which are detailed in CXTRIALCODES.H.  This scheme was adopted 
+//    BACKGROUND: CXDRIVER has no knowledge of Maestro data objects like CCxTrial and CCxTarget. Instead Maestro 
+//    must convert those data objects into a form that CXDRIVER "understands". A Maestro trial object is conveyed 
+//    to CXDRIVER as a sequence of trial codes, which are detailed in CXTRIALCODES.H. This scheme was adopted 
 //    from the original incarnation of Maestro, in which the GUI ran on a UNIX workstation and transmitted these trial 
 //    codes (as well as other information and commands) over the network to a Windows PC that communicated with the 
 //    Maestro hardware and executed all experimental protocols.
@@ -1136,44 +1128,13 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
       }
    }
 
-   int nXYIL = pTrial->GetNumXYInterleave();                                  // if N>1 XY tgts will be interleaved...
-   if( nXYIL > 1 )
-   {
-      j = 0;                                                                  // count how many non-RECTDOT XY targets
-      for( i = 0; i < nTargs; i++ )                                           // are participating in trial
-      {
-         if( pTargs[i]->DataType() == CX_XYTARG && pTargs[i]->GetSubType() != RECTDOT )
-            ++j;
-      }
-
-      if( j < nXYIL )                                                         // there must be at least N non-RECTDOT
-      {                                                                       // XY targets participating in trial!
-         strErr.Format( "!! Trial _%s_: Not enough XY targets to interleave !!", pTrial->Name() );
-         pApp->LogMessage( strErr );
-         return( FALSE );
-      }
-
-      for( i = 0; i < pTrial->SegCount(); ++i )                               // across all segments...
-      {
-         int nXYFrame = pTrial->GetXYFramePeriod( i );
-         if( (nXYFrame % nXYIL != 0) ||                                       // XY frame per must be divisible by N,
-             (((nXYFrame/nXYIL) % SGH_MINXYFRAME) != 0)                       // and the interleave frame must be a
-            )                                                                 // multiple of the min frame period!
-         {
-            strErr.Format( "!! Trial _%s_: Defn not compatible w/ XY interleaving !!", pTrial->Name() );
-            pApp->LogMessage( strErr );
-            return( FALSE );
-         }
-      }
-   }
-
-   // if any tgt is to be subjected to velocity stablization at any point during the trial, make sure it is one of the
-   // supported types (XYScope or RMVideo)
+   // if any tgt is to be subjected to velocity stablization at any point during the trial, make sure it is an
+   // RMVideo target
    for( i=0; i<pTrial->TargCount(); i++ )  
    { 
       CCxTarget* pTgt = pTargs[i]; 
       WORD wType = pTgt->DataType(); 
-      BOOL bSupported = BOOL(wType == CX_XYTARG || wType == CX_RMVTARG);
+      BOOL bSupported = BOOL(wType == CX_RMVTARG);
       if(!bSupported) for(j=0; j<pTrial->SegCount(); j++) 
       {
          if(pTrial->GetTgtVStabMode(j,i) != SGTJ_VSTABOFF)
@@ -1230,23 +1191,6 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
    pCodes[n++].time = short( pSet->GetScaledRewardPulseLen(pTrial->GetMidTrialRewardLen()) );
 
 
-   int nXYUsed = 0;                                                           // total # of XY tgts participating
-   i = 0;
-   for( j = 0; j < nTargs; j++ ) if( pTargs[j]->DataType() == CX_XYTARG )     // XYTARGETUSED: send tgt# (pos trial tgt
-   {                                                                          // map) of each XY tgt participating
-      ++nXYUsed;
-      pCodes[n].code = XYTARGETUSED;
-      pCodes[n++].time = shFrame;
-      pCodes[n].code = j;
-      pCodes[n].time = 0;
-      if( (nXYIL>1) && (i<nXYIL) && (pTargs[j]->GetSubType() != RECTDOT) )    // if interleaving, first N non-RECTDOT
-      {                                                                       // XY tgts are marked by interleaving by
-         pCodes[n].time = (short) nXYIL;                                      // setting 'time' field to N, the # of
-         ++i;                                                                 // XY tgts to be interleaved.
-      }
-      ++n;
-   }
-
    SGMPARMS sgm;                                                              // trial's SGM parameter set
    pTrial->GetSgmParms( sgm );
 
@@ -1283,13 +1227,13 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
             return( FALSE );
          }
 
-         WORD wType = pTargs[j]->DataType();                                  //    target category (XY, RMVideo, etc)
+         WORD wType = pTargs[j]->DataType();                                  //    target category 
 
          // !!!IMPORTANT!!!  (effective 26apr2005) We ALWAYS send the TARGET_ON/OFF code for the first participating
-         // target to guarantee that at least one trial code is sent per trial segment.  Prior to this change, it was
+         // target to guarantee that at least one trial code is sent per trial segment. Prior to this change, it was
          // possible to construct a trial for which this was not the case (ie, if nothing changed from one segment to
-         // the next).  We do this so that MAESTRODRIVER and analysis code can reconstruct the trial segments by 
-         // examining trial codes.
+         // the next). We do this so that CXDRIVER and analysis code can reconstruct the trial segments by examining
+         // trial codes.
 
          BOOL bIsOn = pTrial->IsTgtOn(iSeg, j);                               //    is tgt on this seg?
          BOOL bWasOn = (iSeg>0) && pTrial->IsTgtOn(iSeg-1, j);                //    was tgt on last seg?
@@ -1302,13 +1246,12 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
 
          BOOL bSmall;
 
-         // INSIDE_***VEL: mark any change in target pattern velocity...
+         // INSIDE_***VEL: mark any change in target pattern velocity... only applies to RMVideo targets
          double dLastH = (iSeg>0) ? pTrial->GetCurrTgtTrajParam(iSeg-1, j, CCxTrial::PATHVEL) : 0.0;  
          double dLastV = (iSeg>0) ? pTrial->GetCurrTgtTrajParam(iSeg-1, j, CCxTrial::PATVVEL) : 0.0; 
          double dNowH  = pTrial->GetCurrTgtTrajParam(iSeg, j, CCxTrial::PATHVEL);
          double dNowV  = pTrial->GetCurrTgtTrajParam(iSeg, j, CCxTrial::PATVVEL);
-         if((wType==CX_XYTARG || wType==CX_RMVTARG) &&                        //    pattern velocity only applies to
-             (dLastH!=dNowH || dLastV!=dNowV))                                //    the XYScope & RMVideo tgts!
+         if((wType==CX_RMVTARG) && (dLastH!=dNowH || dLastV!=dNowV))
          {
             RotateAndScaleVector(dNowH, dNowV, FALSE, pTrial);                //    rot/scale vel vec IAW curr settings
 
@@ -1325,13 +1268,12 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
             pCodes[n++].time = (short) (dNowV * (bSmall ? d_TC_SLOSCALE1 : d_TC_STDSCALE));
          }
 
-         // INSIDE_***ACC: mark any change in target pattern acceleration...
+         // INSIDE_***ACC: mark any change in target pattern acceleration... only applies to RMVideo targets
          dLastH = (iSeg>0) ? pTrial->GetCurrTgtTrajParam(iSeg-1, j, CCxTrial::PATHACC) : 0.0;
          dLastV = (iSeg>0) ? pTrial->GetCurrTgtTrajParam(iSeg-1, j, CCxTrial::PATVACC) : 0.0;
          dNowH  = pTrial->GetCurrTgtTrajParam(iSeg, j, CCxTrial::PATHACC);
          dNowV  = pTrial->GetCurrTgtTrajParam(iSeg, j, CCxTrial::PATVACC);
-         if( (wType == CX_XYTARG || wType == CX_RMVTARG) &&                   //    pattern acceleration only applies to
-             (dLastH != dNowH || dLastV != dNowV) )                           //    the XYScope & RMVideo tgts!
+         if( (wType == CX_RMVTARG) && (dLastH != dNowH || dLastV != dNowV) )
          {
             RotateAndScaleVector( dNowH, dNowV, FALSE, pTrial );              //    rot/scale acc vec IAW curr settings
 
@@ -1365,14 +1307,13 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
             if( wType == CX_CHAIR ) dNowH = -dNowH;                           //    so chair rotates in the right dir!
 
             bSmall = BOOL((dNowH > -10.0) && (dNowH < 10.0) &&                //    small values encoded differently
-                          (wType == CX_XYTARG || wType == CX_RMVTARG));       //    for XYScope & RMVideo targets...
+                          (wType == CX_RMVTARG));                             //    for RMVideo targets...
             pCodes[n].code = bSmall ? TARGET_HSLOVEL : TARGET_HVEL;
             pCodes[n++].time = shFrame;
             pCodes[n].code = j;
             pCodes[n++].time = (short) (dNowH * (bSmall ? d_TC_SLOSCALE1 : d_TC_STDSCALE));
 
-            bSmall = BOOL((dNowV > -10.0) && (dNowV < 10.0) &&
-                          (wType == CX_XYTARG || wType == CX_RMVTARG));
+            bSmall = BOOL((dNowV > -10.0) && (dNowV < 10.0) && (wType == CX_RMVTARG));
             pCodes[n].code = bSmall ? TARGET_VSLOVEL : TARGET_VVEL;
             pCodes[n++].time = shFrame;
             pCodes[n].code = j;
@@ -1391,13 +1332,13 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
             if( wType == CX_CHAIR ) dNowH = -dNowH;                           //    so chair rotates in the right dir!
 
             bSmall = BOOL((dNowH > -100.0) && (dNowH < 100.0) &&              //    small values encoded differently
-                          (wType == CX_XYTARG || wType == CX_RMVTARG));       //    for XYScope & RMVideo targets...
+                          (wType == CX_RMVTARG));                             //    for RMVideo targets...
             pCodes[n].code = bSmall ? TARGET_HSLOACC : TARGET_HACC;
             pCodes[n++].time = shFrame;
             pCodes[n].code = j;
             pCodes[n++].time = (short) (dNowH * (bSmall ? d_TC_SLOSCALE2 : 1.0));
 
-            bSmall = BOOL((dNowV > -100.0) && (dNowV < 100.0) && (wType == CX_XYTARG || wType == CX_RMVTARG));
+            bSmall = BOOL((dNowV > -100.0) && (dNowV < 100.0) && (wType == CX_RMVTARG));
             pCodes[n].code = bSmall ? TARGET_VSLOACC : TARGET_VACC;
             pCodes[n++].time = shFrame;
             pCodes[n].code = j;
@@ -1534,13 +1475,6 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
          pCodes[n++].time = short( sgm.nTrains );                             //    stimulus.
       }
 
-      if( nXYUsed > 0 )                                                       // DELTAT:  if XY tgts in use, specify
-      {                                                                       // the XY frame period for this seg (ms).
-         pCodes[n].code = DELTAT;
-         pCodes[n++].time = shFrame;
-         pCodes[n++].code = pTrial->GetXYFramePeriod(iSeg);
-      }
-
       if( iSeg == pTrial->GetSaveSegPos() )                                   // ADCON:  record data from start of the
       {                                                                       // "save segment" to the end of trial
          pCodes[n].code = ADCON;
@@ -1669,11 +1603,6 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
          return(FALSE);
       }
 
-      if( nXYUsed > 0 )                                                       // if XY tgts in trial, we must ensure
-      {                                                                       // seg dur is an even multiple of the XY
-         shSegDur /= (short) pTrial->GetXYFramePeriod(iSeg);                  // frame period for this segment!
-         shSegDur *= (short) pTrial->GetXYFramePeriod(iSeg);
-      }
 
       // The FIXACCURACY trial code group  !!!!! IMPORTANT !!!!!
       // We MUST compute the segment duration before sending the FIXACCURACY code, as the processing of that trial code
@@ -1686,7 +1615,7 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
       //
       // If either "select by fixation" op is in effect during the current seg, normal fixation checking is disabled. 
       // The H,V fixation accuracy parameters, however, are used to specify the "selection window", so they must be 
-      // sent to MAESTRODRIVER -- even if we're running in one of the "nofix" modes. The grace time is ignored.
+      // sent to CXDRIVER -- even if we're running in one of the "nofix" modes. The grace time is ignored.
       //
       // For the "searchTask op, fixation checking is also disabled during the special segment. In this case, the
       // grace period is needed as well as the fixation accuracies, even in one of the "nofix" modes. For this op,

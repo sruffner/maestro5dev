@@ -8,7 +8,6 @@
 #include "devices\cxeventtimer.h"      // CCxEventTimer -- abstract interface for the DIO event timer device
 #include "devices\cxanalogin.h"        // CCxAnalogIn -- abstract interface for the analog input device
 #include "devices\cxanalogout.h"       // CCxAnalogOut -- abstract interface for the analog output device
-#include "devices\cxscope.h"           // CCxScope -- abstract interface for the XY scope video device
 #include "devices\cxrmvideo.h"         // CCxRMVideo -- concrete interface for the RMVideo framebuffer display device
 
 #include "devices\ni6363.h"            // CNI6363 -- Three subdevices are implemented on the NI PCIe-6363.
@@ -23,8 +22,7 @@ public:
    static const CDevice::DevInfo NULLDEV;
 
 private:
-   // device function objects currently attached to the device manager
-   CCxScope*      m_pScope;
+   // pseudo-device representing the point-to-point Ethernet link with RMVideo
    CCxRMVideo*    m_pRMVideo;
 
    // if the NI PCIe-6363 is found, this is the parent device object that acquires and releases the hardware. It
@@ -39,7 +37,6 @@ public:
    // constructor/destructor
    CCxDeviceMgr() 
    {
-      m_pScope = NULL;
       m_pRMVideo = NULL;
       m_pNI6363Dev = NULL;
    }
@@ -54,13 +51,11 @@ public:
    CCxEventTimer* GetTimer() { return(m_pNI6363Dev != NULL ? m_pNI6363Dev->GetEventTimerSubDevice() : NULL); }
    CCxAnalogIn* GetAI() { return(m_pNI6363Dev != NULL ? m_pNI6363Dev->GetAISubDevice() : NULL); }
    CCxAnalogOut* GetAO() { return(m_pNI6363Dev != NULL ? m_pNI6363Dev->GetAOSubDevice() : NULL); }
-   CCxScope* GetScope() { return(m_pScope); }
    CCxRMVideo* GetRMVideo() { return(m_pRMVideo); }
 
 private:
-   // helper methods invoked by Startup() to attache to the various supported hardware devices in the system
+   // helper methods invoked by Startup() to attach to the various supported hardware devices in the system
    BOOL RTFCNDCL AttachToNI6363MioDev(CCxMasterIO* pIO);
-   BOOL RTFCNDCL AttachToXYScopeDev(CCxMasterIO* pIO);
    BOOL RTFCNDCL AttachToRMVideo(CCxMasterIO* pIO);
 
 };

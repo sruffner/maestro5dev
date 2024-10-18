@@ -121,6 +121,7 @@
 // 21sep2011-- Removed support for the CX_FIBER* and CX_REDLED* target types, which are deprecated as of Maestro 3.0.
 // 01dec2014-- Mod to support trial "subset", a collection object (CX_TRIALSUBSET). Effec. v3.1.2.
 // 05sep2017-- Fix compiler issues while compiling for 64-bit Win 10 using VStudio 2017.
+// 27sep2024-- Removed support for the XYScope target type, CX_XYTARG. Unsupported since V4.0; removed a/o 5.0.
 //=====================================================================================================================
 
 
@@ -251,7 +252,8 @@ CTreeObj* CCxTreeMap::ConstructData( LPCTSTR name, const WORD type, const WORD f
 
       // one of the MAESTRO target object types. Details of object construction vary eith the particular target type.
       // NOTES: As of Maestro v1.5.0, CX_OKNDRUM no longer supported. As of v2.0, RMVideo replaced the old VSG video.
-      // As of v3.0, CX_FIBER* and CX_REDLED* no longer supported. We still allow the deprecated targets to be
+      // As of v3.0, CX_FIBER* and CX_REDLED* no longer supported. As of v4.0, the XYScope platform is no longer 
+      // supported, and as of v5.0, XYScope targets can no longer be defined. We still allow the deprecated targets to be
       // constructed so that deserialization of old experiment documents will still succeed. During migration, the
       // obsolete target objects are eventually removed.
       case CX_CHAIR : 
@@ -376,10 +378,9 @@ CTreeObj* CCxTreeMap::CopyData( const CTreeObj* pSrc )
          break;
 
       // one of the supported Maestro target object types. 
-      // NOTES: Only CX_XYTARG and CX_RMVTARG can really be copied, but we don't enforce that here. Also, 
-      // CX_OKNDRUM was dropped in v1.5, and CX_FIBER* and CX_REDLED* were dropped in v3.0.
+      // NOTES: Only CX_RMVTARG can really be copied, but we don't enforce that here. Also, CX_OKNDRUM was dropped in 
+      // v1.5, CX_FIBER* and CX_REDLED* were dropped in v3.0, and CX_XYTARG in v5.0.
       case CX_CHAIR : 
-      case CX_XYTARG :
       case CX_RMVTARG :                                        // RMVideo replaced old VSG FB video in v2.0
          pObj = (CTreeObj*) new CCxTarget;
          try

@@ -588,8 +588,6 @@ VOID CCxSpikeHistBar::PrepareForNextTrial( int nCodes, PTRIALCODE pCodes, int nS
          case TARGET_VACC : 
          case TARGET_VSLOACC :
          case TARGET_HOPEN : 
-         case XYTARGETUSED :
-         case DELTAT :
          case FIXEYE1 : 
          case FIXEYE2 : 
          case FIXACCURACY : 

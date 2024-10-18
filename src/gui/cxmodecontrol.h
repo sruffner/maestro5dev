@@ -84,7 +84,6 @@ public:
    BOOL IsAIAvailable();
    BOOL IsAOAvailable();
    BOOL IsTimerAvailable();
-   BOOL IsXYAvailable();
    BOOL IsRMVideoAvailable();
    int GetRMVideoScreenW(); 
    int GetRMVideoScreenH();

@@ -63,7 +63,6 @@ private:
    CStringArray   m_strStartupMsgs;          // array of messages posted prior to creation of main frame window
    CCxRuntime*    m_pRuntime;                // the CNTRLX runtime interface, incl all communications with CXDRIVER 
 
-   CString        m_strImportDir;            // full pathname to directory specified for the last File|Import command
    CString        m_strHomeDir;              // full pathname to Maestro installation directory (from reg key)
 
    // a registry entry that lists microsecond busy waits for issuing software-timed digital output commands
@@ -96,7 +95,6 @@ public:
 protected:
    afx_msg void OnFileNew();                             // response to standard cmd ID_FILE_NEW
    afx_msg void OnFileOpen();                            // response to standard cmd ID_FILE_OPEN
-   afx_msg void OnFileImport();                          // handles the "File|Import" menu item
    afx_msg void OnFileJMXImport();                       // handles the "File|Import JMX doc" menu item
    afx_msg void OnAppAbout();                            // throws up simple "About..." dialog
    afx_msg void OnOpenUserGuide();                       // tries to open online user's guide in default browser

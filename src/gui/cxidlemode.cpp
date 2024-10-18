@@ -41,10 +41,10 @@
 // CNTRLX op mode, not just IdleMode.  For details, see the files CXFIXREWDLG.*.  CCxIdleMode will install this dialog 
 // in the mode control panel ONLY if it is not already there (see InitDlgs()).
 //
-// ==> CCxVideoDspDlg, the "Video Display" dialog.
-// This dialog page is a window into the XY and FB video display parameters that are a subset of CNTRLX's application 
-// settings, also encapsulated by the CCxSettings object within the currently open CNTRLX doc.  Like CCxFixRewDlg, the 
-// CCxVideoDspDlg page may be used in more than one CNTRLX op mode.  For details, see files CXVIDEODSPDLG.*.  Again, 
+// ==> CCxVideoDspDlg, the "RMVideo Display" dialog.
+// This dialog page is a window into the RMVideo display parameters that are a subset of Maestro's application 
+// settings, also encapsulated by the CCxSettings object within the currently open Maestro doc.  Like CCxFixRewDlg, the 
+// CCxVideoDspDlg page may be used in more than one CNTRLX op mode.  For details, see files CXVIDEODSPDLG.*. Again, 
 // CCxIdleMode will install this dialog in the mode control panel ONLY if it is not already there.
 //
 // ==> CCxEyelinkDlg, the "Eyelink" dialog.
@@ -63,6 +63,8 @@
 // 31aug2015-- Added Eyelink dialog page, CCxEyelinkDlg.
 // 11oct2016-- Tab name for CCxRMVStoreDlg is now "RMVideo Media", reflecting the fact that RMVideo's "media store" can
 //             contain both video files for the RMV_MOVIE target and image files for the RMV_IMAGE target.
+// 26sep2024-- Tab name for CCxVideoDspDlg is now "RMVideo Display". A/o V5.0, the XYScope platform -- unsupported 
+// since V4.0 -- has been removed from Maestro.
 //===================================================================================================================== 
 
 
@@ -110,7 +112,7 @@ CCxIdleMode::CCxIdleMode( CCxControlPanel* pPanel ) : CCxModeControl( CCxRuntime
 
 //=== InitDlgs [CCxModeControl override] ============================================================================== 
 //
-//    Install, in the CNTRLX master mode control panel, those dialogs required for operator interactions in the CNTRLX 
+//    Install, in the Maestro master mode control panel, those dialogs required for operator interactions in the  
 //    operational mode represented by this mode controller.
 //
 //    Some of the dialogs available in IdleMode are also used in other op modes and may have already been installed by 
@@ -136,7 +138,7 @@ BOOL CCxIdleMode:: InitDlgs()
    m_pVideoDspDlg = (CCxVideoDspDlg*) m_pCtrlPanel->GetDlgByClass( RUNTIME_CLASS(CCxVideoDspDlg) );
    if( m_pVideoDspDlg == NULL )
    {
-      m_pVideoDspDlg = (CCxVideoDspDlg*) m_pCtrlPanel->AddDlg( _T("Video Display"), RUNTIME_CLASS(CCxVideoDspDlg) ); 
+      m_pVideoDspDlg = (CCxVideoDspDlg*) m_pCtrlPanel->AddDlg( _T("RMVideo Display"), RUNTIME_CLASS(CCxVideoDspDlg) ); 
       if( m_pVideoDspDlg == NULL ) return( FALSE );
    }
 

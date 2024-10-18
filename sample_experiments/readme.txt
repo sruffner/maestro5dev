@@ -11,4 +11,14 @@ alternative JSON experiment document format, which can be reviewed and edited
 in a simple text editor (the .cxe files are a binary format). They're here 
 primarily so we can verify future Maestro releases can still open them.
 
--- saruffner, 20sep2024
+testJMXV110.jmx contains trial sets using the XYScope and another using
+RMVideo. It was imported into Maestro 5.0, which removed all XYScope-related
+stuff, then saved as assessRF.cxe.
+
+testing411.cxe contains both XYScope and RMVideo targets and trial sets, as 
+well as stimulus runs using XYScope targets ("XYseq" stimulus). It was
+imported into Maestro 5.0, which removed all XYScope-related stuff, then
+saved as testing500.cxe.
+
+
+-- saruffner, 18oct2024

@@ -15,7 +15,6 @@
 #endif // _MSC_VER > 1000
 
 #include "cxobj_ifc.h"                       // MAESTRO object interface:  common constants and other defines 
-#include "util.h"                            // we use the CRand16 object to generate XY dot pattern seed values
 
 
 //===================================================================================================================== 
@@ -30,21 +29,17 @@ class CCxSettings : public CObject
 // CONSTANTS AND TYPEDEFS
 //===================================================================================================================== 
 private:
-   static const DWORD F_XYFIXSEED;        // seed generation for XY targets: if set, same fixed seed value is provided 
-                                          // on every request; else we randomly generate a new seed value each time.
-   static const DWORD F_TRIALREWOVR;      // if set, use reward pulse length settings here in place of similar settings 
-                                          // in the individual trial definitions
-   static const DWORD F_REWBEEPENA;       // bit set to enable reward indicator beep
+   // [deprecated] seed generation for XYScope targets. Definition kept to deal with versioning support in Serialize()
+   static const DWORD F_XYFIXSEED; 
+   // if set, use reward pulse length settings here in place of similar settings in the individual trial definitions
+   static const DWORD F_TRIALREWOVR;
+   // bit set to enable reward indicator beep
+   static const DWORD F_REWBEEPENA; 
 
    static const DWORD CURRVERSION;        // for versioning support in Serialize() [VERSIONABLE_SCHEMA not used]
 
    static const int MINDIM;               // allowed range for display geometry parameters (mm) 
    static const int MAXDIM;
-   static const int MINDELAY_XY;          // allowed range for XY scope draw-cycle timing parameters (100-ns ticks)
-   static const int MAXDELAY_XY;
-   static const int MINDUR_XY;
-   static const int MAXDUR_XY;
-   static const int MAXCYCLE_XY;          // (sum of delay + "ON" duration is the draw cycle period)
    static const int MINRGB_RMV;           // allowed range for RMVideo background color specification
    static const int MAXRGB_RMV;
 
@@ -76,19 +71,12 @@ private:
    // various disabled/enabled settings -- see F_* flag bits.
    DWORD m_dwFlags;
 
-                                          // XY scope display parameters:
-   int   m_iDistToEyeXY;                  //    distance from display screen to eye along normal LOS, in mm
-   int   m_iWidthXY;                      //    width of display screen, in mm
-   int   m_iHeightXY;                     //    height of display screen, in mm
-   int   m_iDrawDelay;                    //    dot draw cycle delay, in 100-ns ticks 
-   int   m_iDrawDur;                      //    dot draw cycle "ON" duration, in 100-ns ticks
-   DWORD m_dwDotSeed;                     //    fixed seed for generating random-dot patterns of XY scope targets
-                                          // RMVideo display parameters:
+   // RMVideo display parameters:
    int   m_iDistToEyeRMV;                 //    distance from display screen to eye along normal LOS, in mm
    int   m_iWidthRMV;                     //    width of display screen, in mm
    int   m_iHeightRMV;                    //    height of display screen, in mm
    int   m_iBkgColor[3];                  //    RGB triplet for background display color, w/ 8-bit res [0..255]
-                                          // fixation requirements and reward options:
+   // fixation requirements and reward options:
    int   m_iFixDur;                       //    fixation duration for ContMode & mid-trial rewards (ms)
    float m_fFixAccH;                      //    horizontal fixation accuracy (deg subtended at eye)
    float m_fFixAccV;                      //    vertical fixation accuracy (deg subtended at eye)
@@ -107,8 +95,6 @@ private:
 
    // length of sliding-average window for velocity stabilization feature in Trial Mode. Allowed range is [1..20].
    int m_iVStabWinLen;
-
-   CRand16 m_randNumGen;                  // used to generate seed values for XY target random-dot patterns
 
 
 //===================================================================================================================== 
@@ -131,16 +117,8 @@ public:
 // ATTRIBUTES 
 //===================================================================================================================== 
 public:
-   BOOL IsXYDotSeedFixed() const { return( BOOL(m_dwFlags & F_XYFIXSEED) ); }
    BOOL IsTrialRewLenOverride() const { return( BOOL(m_dwFlags & F_TRIALREWOVR) ); }
    BOOL IsRewardBeepEnabled() const { return( BOOL(m_dwFlags & F_REWBEEPENA) ); }
-
-   int GetXYDistToEye() const { return( m_iDistToEyeXY ); }
-   int GetXYWidth() const { return( m_iWidthXY ); }
-   int GetXYHeight() const { return( m_iHeightXY ); }
-   int GetXYDrawDelay() const { return( m_iDrawDelay ); }
-   int GetXYDrawDur() const { return( m_iDrawDur ); }
-   DWORD GetFixedXYDotSeedValue() const { return( m_dwDotSeed ); }
 
    int GetFBDistToEye() const { return( m_iDistToEyeRMV ); }
    int GetFBWidth() const { return( m_iWidthRMV ); }
@@ -174,16 +152,9 @@ public:
 public: 
    VOID Copy( const CCxSettings& src );                  // copy settings from another settings object
 
-   BOOL SetXYDotSeedFixed( BOOL bEna );                  // change individual settings, correcting or rejecting 
-   BOOL SetTrialRewLenOverride( BOOL bEna );             // out-of-range values as necessary...
+   // change individual settings, correcting or rejecting out-of-range values as necessary...
+   BOOL SetTrialRewLenOverride( BOOL bEna );
    BOOL SetRewardBeepEnabled( BOOL bEna );
-
-   int SetXYDistToEye( int i );
-   int SetXYWidth( int i );
-   int SetXYHeight( int i );
-   int SetXYDrawDelay( int i );
-   int SetXYDrawDur( int i );
-   DWORD SetFixedXYDotSeedValue( DWORD dwSeed );
 
    int SetFBDistToEye( int i );
    int SetFBWidth( int i );
@@ -209,8 +180,6 @@ public:
 
    // scales reward pulse length if the current multiplier exceeds 1
    int GetScaledRewardPulseLen(int len);
-
-   double ConvertXYPixToDeg(int iPix, BOOL bHor) const;  // converts XY scope pixels to deg subtended at eye
 
    VOID RestoreDefaultVideoSettings();                   // restore video display settings to default values 
    VOID RestoreDefaults();                               // restore all default settings

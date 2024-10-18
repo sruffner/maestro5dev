@@ -97,7 +97,6 @@ public:
    BOOL RTFCNDCL IsAIAvailable() { return( BOOL((GetHardwareStatus() & CX_F_AIAVAIL) != 0) ); }
    BOOL RTFCNDCL IsTMRAvailable() { return( BOOL((GetHardwareStatus() & CX_F_TMRAVAIL) != 0) ); }
    BOOL RTFCNDCL IsAOAvailable() { return( BOOL((GetHardwareStatus() & CX_F_AOAVAIL) != 0) ); }
-   BOOL RTFCNDCL IsXYAvailable() { return( BOOL((GetHardwareStatus() & CX_F_XYAVAIL) != 0) ); }
    BOOL RTFCNDCL IsRMVAvailable() { return( BOOL((GetHardwareStatus() & CX_F_RMVAVAIL) != 0) ); }
 
    int RTFCNDCL GetAIChannels() { return( (m_pvIPC != NULL) ? m_pvIPC->nAIChannels : 0 ); }
@@ -169,13 +168,12 @@ public:
    int RTFCNDCL MapTrialTargetIndex( int i );            // maps pos in trial tgt list to pos in current def'd tgt list
    BOOL RTFCNDCL GetTrialTarget( int i, CXTARGET& tgt ); // retrieve complete defn of specified trial target
    WORD RTFCNDCL GetTrialTargetType( int i );            // retrieve type of specified trial target
-   int RTFCNDCL GetTrialTargetSubtype( int i );          // retrieve subtype of specified XYScope or RMVideo trial tgt
+   int RTFCNDCL GetTrialTargetSubtype( int i );          // retrieve subtype of specified RMVideo trial tgt
    int RTFCNDCL GetNumTrialCodes();                      // # of codes defining the trial in IPC
    const TRIALCODE& GetTrialCode( const int i );         // retrieve a particular trial code from IPC
    int RTFCNDCL GetNumTaggedSections();                  // #of tagged sections defined on the trial in IPC
    BOOL RTFCNDCL GetTaggedSection( int i,                // retrieve definition of a particular tagged section
       TRIALSECT& sect );
-   int RTFCNDCL GetTrialAltXYDotSeed();                  // retrieve alternate XY dot seed value defined in IPC
    BOOL RTFCNDCL IsSavingTrialFile()                     // are we to save a trial data file for the current trial?
    {
       return( (GetMode() == CX_TRIALMODE) ? BOOL( m_pvIPC->strDataPath[0] != '\0' ) : FALSE );

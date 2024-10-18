@@ -118,7 +118,6 @@ public:
    VOID GetPertInfo( PERT& pert ) const;                 // retrieve perturbation defn in CXDRIVER-compatible format
    VOID SetPertInfo( const PERT& pert );                 // set perturbation defn as a unit, w/ auto-correct 
    void Serialize( CArchive& ar );                       // for reading/writing object from/to disk file
-   BOOL Import(CStringArray& strArDefn,CString& strMsg); // set pert obj IAW cntrlxUNIX-style, text-based definition
 
    int GetType() const { return( m_iType ); }            // access to common parameters by name...
    int GetDuration() const { return( m_iDur ); }

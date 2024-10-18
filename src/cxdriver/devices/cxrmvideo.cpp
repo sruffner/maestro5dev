@@ -40,11 +40,14 @@
 // RMV_CMD_SHUTTINGDN command, and then the socket connection is closed..
 //
 // ==> RMVideo targets
-// RMVideo was designed not only to replace the old Maestro framebuffer card, but also to serve as a substitute for the
-// XY scope (albeit at a slower and fixed frame rate). Thus, it is capable of animating any of the supported XY scope
-// targets in addition to most of the old framebuffer video targets.  It also supports Gaussian windowing of drifting
-// gratings, something which was not possible with the old framebuffer solution.  Here's the current list of supported
-// targets:
+// RMVideo originally introduced to replace the old VSG2/4 framebuffer card, but it has since replaced the XYScope 
+// platform (albeit at a slower and fixed frame rate), which is obsolete and no longer supported a/o Maestro 4.0. It is
+// capable of animating any of the XYScope targets in addition to most of the old framebuffer video targets. It also 
+// supports Gaussian windowing of drifting gratings, something which was not possible with the old framebuffer solution.
+// 
+// As of Maestro 4.0, it is really the only stimulus platform in use.
+// 
+// Here's the current list of supported targets:
 //
 //    RMV_POINT         A single square dot of a specified width in pixels (between 1 and 10).
 //    RMV_RANDOMDOTS    Random-dot pattern independent of target window aperture, with options for finite dotlife,

@@ -1,6 +1,6 @@
 //=====================================================================================================================
 //
-// cxipc.h : The shared memory interface for IPC between MAESTRO (Windows) and its hardware driver MAESTRODRIVER (RTX).
+// cxipc.h : The shared memory interface for IPC between MAESTRO (Windows) and its hardware driver CXDRIVER (RTSS).
 //
 // AUTHOR:  saruffner
 //
@@ -8,61 +8,61 @@
 // Maestro is really two processes that work together: a Windows-based GUI "master" and an RTX64-based "driver" for
 // hardware communication and "real-time" control of experimental protocols.
 //
-// "Maestro" refers to the Windows process that presents and manages the graphical user interface (GUI).  It is built
+// "Maestro" refers to the Windows process that presents and manages the graphical user interface (GUI). It is built
 // upon the document/view architecture with Microsoft Foundation Classes (MFC), and presents an elaborate set of views
-// for designing experiment protocols.  It also includes a number of different "output/display windows" for runtime
-// display of:  eye/fixation target position, actual acquired data traces, spike histograms, and error/information
-// messages.  Finally, two runtime control panels allow the user to start, stop, and sequence Maestro trials or
+// for designing experiment protocols. It also includes a number of different "output/display windows" for runtime
+// display of: eye/fixation target position, actual acquired data traces, spike histograms, and error/information
+// messages. Finally, two runtime control panels allow the user to start, stop, and sequence Maestro trials or
 // continuous-stimulus runs, and a third control panel handles test & calibration of selected Maestro hardware.
 //
-// "MaestroDRIVER" is the runtime engine of Maestro, a driver-like RTSS process existing within a Real-Time eXtension 
-// (RTX, from IntervalZero, Inc.) to Windows.  It communicates with all data acquisition and stimulus-control hardware
-// used by Maestro experimental protocols.  More importantly, it configures and controls this hardware to execute the 
+// "CXDRIVER" is the runtime engine of Maestro, a driver-like RTSS process existing within a Real-Time eXtension 
+// (RTX, from IntervalZero, Inc.) to Windows. It communicates with all data acquisition and stimulus-control hardware
+// used by Maestro experimental protocols. More importantly, it configures and controls this hardware to execute the 
 // protocols defined by the user on the GUI side.
 //
 // Naturally, these two processes must cooperate closely and share data between them.  We have elected to use a simple
-// shared memory interface to implement this "interprocess communication" (IPC).  That interface is represented by the
+// shared memory interface to implement this "interprocess communication" (IPC). That interface is represented by the
 // data structures and constants defined in this file.
 //
 // In addition to definitions directly related to IPC, the file also includes "cxobj_ifc.h", which provides constants
 // and data structures defining the various Maestro data objects, such as targets, trials, continuous stimuli, etc.
-// These are necessary so that Maestro can efficiently "download" object information to MAESTRODRIVER, which uses that 
+// These are necessary so that Maestro can efficiently "download" object information to CXDRIVER, which uses that 
 // info to execute experimental protocols.
 //
 // ==> Synchronizing access to shared memory.
 // Common practice in multithreading design is to use synchronization objects like semaphores, events, and mutexes to
-// avoid conflicts between threads and processes accessing a shared resource.  We decided early on to avoid the use
-// of these mechanisms for performance reasons -- they introduce significant overhead.  Instead, we rely on careful
-// application design to avoid conflicts.  One typical technique we employ is the use of "request" and "ack" flags w/in
-// the shared memory object to regulate access to other data structs within shared memory.  For example, consider the
-// mechanism for posting changes in eye and fixation target position.  The position data are "gated" by two flags:
+// avoid conflicts between threads and processes accessing a shared resource. We decided early on to avoid the use
+// of these mechanisms for performance reasons -- they introduce significant overhead. Instead, we rely on careful
+// application design to avoid conflicts. One typical technique we employ is the use of "request" and "ack" flags w/in
+// the shared memory object to regulate access to other data structs within shared memory. For example, consider the
+// mechanism for posting changes in eye and fixation target position. The position data are "gated" by two flags:
 // bReqPlot is "owned" by the driver and is read-only as far as the master is concerned; bAckPlot is owned by the
-// master and is read-only to the driver.  Here is how the flags are used to post an update to eye/target positions:
+// master and is read-only to the driver. Here is how the flags are used to post an update to eye/target positions:
 //
 // bReqPlot       bAckPlot             Action
 // --------       --------             ------------------------------------------------------------------------------
 //    F              F                 Idle.  Neither side is accessing position data.
-//    F              F                 MAESTRODRIVER fills in the position data in preparation for an update.
-//    T              F                 MAESTRODRIVER "posts" request for a plot update and continues w/ other work.
+//    F              F                 CXDRIVER fills in the position data in preparation for an update.
+//    T              F                 CXDRIVER "posts" request for a plot update and continues w/ other work.
 //    T              F                 Later, Maestro detects the request and begins accessing the new position data
-//                                     in order to process the request.  If MAESTRODRIVER needs to post another update
+//                                     in order to process the request. If CXDRIVER needs to post another update
 //                                     during this time, it detects that a previous update is still in progress -- so
 //                                     it MUST DROP the pending update.
 //    T              T                 Maestro sets the "ack" flag to indicate that it has finished processing request.
 //                                     Still, a new update cannot be posted, b/c the flags must be reset.
-//    F              T                 MAESTRODRIVER has detected that the previous update has been serviced.  It 
+//    F              T                 CXDRIVER has detected that the previous update has been serviced. It 
 //                                     resets the request flag to acknowledge this.
 //    F              F                 Once it detects the request flag reset, Maestro resets its ack flag.  We're now
-//                                     back to "idle", and MAESTRODRIVER is now free to post a new update.
+//                                     back to "idle", and CXDRIVER is now free to post a new update.
 //
-// ==> The MAESTRODRIVER "stop" mutex.
-// Maestro should be able to recover if MAESTRODRIVER should terminate unexpectedly, so it needs a means of detecting 
-// such an occurrence.  One way to do this is to create a monitoring thread which waits indefinitely on the process 
+// ==> The CXDRIVER "stop" mutex.
+// Maestro should be able to recover if CXDRIVER should terminate unexpectedly, so it needs a means of detecting 
+// such an occurrence. One way to do this is to create a monitoring thread which waits indefinitely on the process 
 // handle. When the process dies, the handle becomes "signaled", waking up this thread, which can then send a message 
-// to the Maestro app object. But, since MAESTRODRIVER is an RTSS process -- which may NOT serve as a synchronization
-// object -- we must employ a different approach:  MAESTRODRIVER immediately creates and claims a "driver-alive" mutex 
-// when it starts up, and does not release it until it exits.  Shortly after spawning MAESTRODRIVER via RTSSRUN, 
-// Maestro attempts to obtain a handle to that same mutex.  If successful, this mutex can serve the same purpose as the 
+// to the Maestro app object. But, since CXDRIVER is an RTSS process -- which may NOT serve as a synchronization
+// object -- we must employ a different approach: CXDRIVER immediately creates and claims a "driver-alive" mutex 
+// when it starts up, and does not release it until it exits. Shortly after spawning CXDRIVER via RTSSRUN, 
+// Maestro attempts to obtain a handle to that same mutex. If successful, this mutex can serve the same purpose as the 
 // process handle, as earlier described.
 //
 // ==> Two settings from the Maestro key in the Windows registry are passed via IPC (Sep 2019).
@@ -166,13 +166,14 @@
 // error getting the next Eyelink sample (eg, sample delay too long). This result is treated like an RMVideo dupe frame
 // error -- instead of aborting the trial sequence, the trial is repeated as appropriate to the sequencing mode. The
 // aborted trial's data is not saved.
+// 26sep2024-- A/o Maestro 5.0, XYScope functionality removed. Eliminated CXIPC.iXYDotSeedAlt.
 //=====================================================================================================================
 
 #if !defined(CXIPC_H__INCLUDED_)
 #define CXIPC_H__INCLUDED_
 
 #include "cxobj_ifc.h"                             // data structures & constants related to Maestro targets, etc.
-#include "cxtrialcodes.h"                          // MAESTRODRIVER trial codes.  Maestro trial definition is converted 
+#include "cxtrialcodes.h"                          // CXDRIVER trial codes.  Maestro trial definition is converted 
                                                    // to a sequence of these trial codes.
 
 #define CXIPC_SHM          "cx_ipc.sharedmem"      // unique name of the Maestro shared memory object
@@ -213,20 +214,20 @@
 #define CX_AIO_MAXN        16                      // **upper limit** on the #ch (each) of analog input/output
 #define CX_TMR_MAXN        32                      // **upper limit** on the #ch (each) of event timer dig input/output
 
-                                                   // the operational modes of Maestro/MAESTRODRIVER:
+                                                   // the operational modes of Maestro/CXDRIVER:
 #define CX_IDLEMODE        0                       //    idle
 #define CX_TESTMODE        1                       //    test & calibration
 #define CX_TRIALMODE       2                       //    trials
 #define CX_CONTMODE        3                       //    continuous
-#define CX_STARTING        -1                      //    transient start-up phase for MAESTRODRIVER
-#define CX_STOPPING        -2                      //    transient shut-down phase for MAESTRODRIVER
-#define CX_NOTRUNNING      -3                      //    pseudo op mode indicates that MAESTRODRIVER is not running
+#define CX_STARTING        -1                      //    transient start-up phase for CXDRIVER
+#define CX_STOPPING        -2                      //    transient shut-down phase for CXDRIVER
+#define CX_NOTRUNNING      -3                      //    pseudo op mode indicates that CXDRIVER is not running
 
-                                                   // hardware status flags from MAESTRODRIVER:
+                                                   // hardware status flags from CXDRIVER:
 #define CX_F_AIAVAIL       ((DWORD) (1<<0))        //    analog inputs available
 #define CX_F_TMRAVAIL      ((DWORD) (1<<1))        //    event timer (and dig I/O) available
 #define CX_F_AOAVAIL       ((DWORD) (1<<2))        //    analog outputs available
-#define CX_F_XYAVAIL       ((DWORD) (1<<3))        //    XY scope hardware available
+#define CX_F_XYAVAIL       ((DWORD) (1<<3))        //    [deprecated a/o Maestro 4.0] XY scope hardware available
 #define CX_F_RMVAVAIL      ((DWORD) (1<<4))        //    RMVideo framebuffer display available
 #define CX_F_AVAILMASK     (CX_F_AIAVAIL |   \
                             CX_F_TMRAVAIL |  \
@@ -274,23 +275,26 @@ const DWORD CX_FC_SAVING      = ((DWORD) (1<<20)); //    saving data after recor
 #define CX_ELSTAT_REC      2                       //   1KHz recording in progress;
 #define CX_ELSTAT_FAIL     3                       //   previous recording session aborted on error condition
 
-                                                   // Maestro->MAESTRODRIVER cmds; format described (I = IdleMode, T =
+                                                   // Maestro->CXDRIVER cmds; format described (I = IdleMode, T =
                                                    // TrialMode, C = ContMode, TE = TestMode, SLOW = long-latency cmd):
 #define CX_CMDLEN          100                     //    size of generic data buffers associated with commands
 #define CX_NULLCMD         ((DWORD) 0)             //    no command
-#define CX_DRVROFF         ((DWORD) 1)             //    response to command request when MAESTRODRIVER not running
+#define CX_DRVROFF         ((DWORD) 1)             //    response to command request when CXODRIVER not running
 #define CX_PENDINGCMD      ((DWORD) 2)             //    cannot send command b/c previous one is pending (by design,
                                                    //       this should NEVER happen!)
 #define CX_ILLEGALCMD      ((DWORD) 3)             //    illegal command parameters
 #define CX_TIMEDOUTCMD     ((DWORD) 4)             //    cmd/resp handshake not completed within ~300msec
-#define CX_UNRECOGCMD      ((DWORD) 5)             //    cmd not recognized by MAESTRODRIVER in current context
-#define CX_FAILEDCMD       ((DWORD) 6)             //    MAESTRODRIVER unable to process command in current context
+#define CX_UNRECOGCMD      ((DWORD) 5)             //    cmd not recognized by CXDRIVER in current context
+#define CX_FAILEDCMD       ((DWORD) 6)             //    CXDRIVER unable to process command in current context
 
 #define CX_SWITCHMODE      ((DWORD) 100)           //    [any mode] switch to mode X = iData[0].
 #define CX_INITTRACE       ((DWORD) 101)           //    [T,C,TE] initialize data trace facility.
 #define CX_SAVECHANS       ((DWORD) 102)           //    [any mode] update list of AI channels saved to file, where N =
                                                    //       iData[0] is the # of channels saved and iData[1..N] are the
                                                    //       actual channel#s in the order saved.
+                                                   // 
+// NOTE: a/o Maestro 5.0, XYScope-related elements are removed from the Maestro GUI. We elected not to change the format
+// of the CX_SETDISPLAY command, however. The first 7 integer parameters are always 0.
 #define CX_SETDISPLAY      ((DWORD) 103)           //    [I,T,C] set new XY & RMVideo display parameters and update
                                                    //       displays accordingly.  iData[0..6] are XY display params,
                                                    //       respectively:  dist to eye (mm), screen width (mm), screen
@@ -301,6 +305,7 @@ const DWORD CX_FC_SAVING      = ((DWORD) (1<<20)); //    saving data after recor
                                                    //       values (each in arbitrary units ranging 0-255); vsync spot
                                                    //       flash size in mm, flash dur in #frames.
                                                    //       NOTE: Restricted use in T,C modes.
+
 #define CX_FIXREWSETTINGS  ((DWORD) 104)           //    [I,T,C] update fixation/reward settings, where:
                                                    //          iData[0] = fixDur in in ms,
                                                    //          iData[1,2] = fixRewLen1,2 in ms,
@@ -372,7 +377,7 @@ const DWORD CX_FC_SAVING      = ((DWORD) (1<<20)); //    saving data after recor
 #define CX_TM_RESUMEAI     ((DWORD) 201)           //    [TE] resume DAQ of all AI channels
 #define CX_TM_SETAO        ((DWORD) 202)           //    [TE] set voltage on AO channel #N to X, where...
                                                    //       N = iData[0]; if -1, all channels are set to same value
-                                                   //       X = fData[0] (volts); MAESTRODRIVER sets fData[0] to 
+                                                   //       X = fData[0] (volts); CXDRIVER sets fData[0] to 
                                                    //       nearest reproducible value.
 #define CX_TM_AICAL        ((DWORD) 203)           //    [TE] perform internal calibration of AI board.
 #define CX_TM_GETAI        ((DWORD) 204)           //    [TE] get channel stats from AI board. Let N = # of AI channels
@@ -398,7 +403,7 @@ const DWORD CX_FC_SAVING      = ((DWORD) (1<<20)); //    saving data after recor
 #define CX_TR_START        ((DWORD) 301)           //    [T] start a trial.  trial & target info is preloaded into the
                                                    //       CXIPC (see below)
 #define CX_TR_ABORT        ((DWORD) 302)           //    [T] abort the currently running trial and discard any trial
-                                                   //       data.  This is the only command to which MAESTRODRIVER will
+                                                   //       data. This is the only command to which CXDRIVER will
                                                    //       respond while running a trial.
 
 #define CX_CM_FIXOFF       ((DWORD) 400)           //    [C] turn fixation checking OFF
@@ -430,27 +435,27 @@ const DWORD CX_FC_SAVING      = ((DWORD) (1<<20)); //    saving data after recor
 typedef struct tagCxIpc                            // encapsulation of Maestro IPC shared memory
 {
    //
-   // OPERATIONAL MODE.  By design, MAESTRODRIVER comes up in CX_IDLEMODE, after a transient CX_STARTING state during 
+   // OPERATIONAL MODE.  By design, CXDRIVER comes up in CX_IDLEMODE, after a transient CX_STARTING state during 
    // which hardware initializations take place.  Mode changes occur only when MAESTRO issues the CX_SWITCHMODE cmd. 
-   // While MAESTRODRIVER will respond immediately to CX_SWITCHMODE, it may take a little while to clean up before 
-   // actually entering the requested mode.  Thus, after sending CX_SWITCHMODE, Maestro should continue checking this 
+   // While CXDRIVER will respond immediately to CX_SWITCHMODE, it may take a little while to clean up before 
+   // actually entering the requested mode. Thus, after sending CX_SWITCHMODE, Maestro should continue checking this 
    // variable until it changes to the requested mode ID.
    //
-   int         iOpMode;                            //    fr driver: current operational mode of MAESTRODRIVER
+   int         iOpMode;                            //    fr driver: current operational mode of CXDRIVER
 
    //
-   // MESSAGE QUEUE.  As a "service" to MAESTRODRIVER, Maestro displays error/information messages posted to this 
-   // *circular* queue by MAESTRODRIVER.  The queue needs servicing whenever the index of the last msg posted does not 
-   // equal the index of the next msg to post.  MAESTRODRIVER stops posting when (iNext+1) % queueLength == iLast; the 
-   // new message is lost. Also, MAESTRODRIVER increments iNext *after* preparing the message.  These rules ensure that 
-   // Maestro never tries to read a message while MAESTRODRIVER is still writing it.
+   // MESSAGE QUEUE.  As a "service" to CXDRIVER, Maestro displays error/information messages posted to this 
+   // *circular* queue by CXDRIVER.  The queue needs servicing whenever the index of the last msg posted does not 
+   // equal the index of the next msg to post.  CXDRIVER stops posting when (iNext+1) % queueLength == iLast; the 
+   // new message is lost. Also, CXDRIVER increments iNext *after* preparing the message.  These rules ensure that 
+   // Maestro never tries to read a message while CXDRIVER is still writing it.
    //
    // REWARD INDICATOR BEEP. If the message posted == "beep", Maestro will play the "system default sound" as an 
    // indicator to the user that a reward was just delivered to the subject. Note that it is important for the user to 
    // configure the system to use a very short audio file for the system default sound, since rewards may be delivered
    // roughly 1-2 seconds apart in many experimental paradigms. The reward beep will be "late" if there's a backlog of
    // messages being posted, but that would be a rare scenario and likely means that an error has occurred.
-   // [Prior to Maestro4, MAESTRODRIVER played a beep on the onboard system speaker (IO port 0x61). However, this is a 
+   // [Prior to Maestro4, CXDRIVER played a beep on the onboard system speaker (IO port 0x61). However, this is a 
    // very antiquated device, and may cause AI ISR latency issues on some hardware; so a new solution was warranted.
    //
    char        szMsgQ[CXIPC_MSGQLEN][CXIPC_MSGSZ]; //    fr driver: the circular queue of messages
@@ -459,8 +464,8 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
 
    //
    // EYE/TARGET POSITION PLOT.  This is another "service" provided by Maestro.  Whenever it detects a "plot update"
-   // request from MAESTRODRIVER, it reads the positions stored here and updates the GUI's position plot accordingly.
-   // MAESTRODRIVER will drop any plot updates that occur while Maestro is still servicing a previous update.
+   // request from CXDRIVER, it reads the positions stored here and updates the GUI's position plot accordingly.
+   // CXDRIVER will drop any plot updates that occur while Maestro is still servicing a previous update.
    // ** all loci are reported in hundredth-degrees of visual field **
    //
    BOOL        bReqPlot;                           //    fr driver: update eye/tgt position plot
@@ -468,19 +473,19 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    POINT       ptLoci[CX_NLOCI];                   //    fr driver: new eye/tgt positions to be plotted
 
    //
-   // DATA TRACE DISPLAY.  Maestro displays acquired data that MAESTRODRIVER streams thru the data trace buffers here. 
+   // DATA TRACE DISPLAY.  Maestro displays acquired data that CXDRIVER streams thru the data trace buffers here. 
    // There are three kinds of acquired data:  analog input waveforms (CX_AITRACE), computed waveforms (CX_CPTRACE), 
    // and digital input pulse trains (CX_DITRACE).  All signals are sampled at a rate that depends on operational mode
    // (1ms for TrialMode, 2ms for TestMode and ContMode) -- hence the time period covered by the trace buffers varies.
    // For the analog input & computed waveforms, samples are stored as raw AI binary 2s complement values.  For the
    // pulse trains, a nonzero sample indicates that a digital input "event" occurred during that sample period.
    //
-   // Maestro sets the # of traces to display, their types & channel #s, then issues CX_INITTRACE. MAESTRODRIVER then
+   // Maestro sets the # of traces to display, their types & channel #s, then issues CX_INITTRACE. CXDRIVER then
    // begins streaming data into the buffers.  The buffers are treated like a circular queue.  Whenever iTraceEnd !=
    // iTraceDrawn, there is data available for display.  Maestro will typically wait for a "chunk" of data to be ready
-   // before performing an update; it will then advance iTraceDrawn by the # of samples processed.  MAESTRODRIVER must 
+   // before performing an update; it will then advance iTraceDrawn by the # of samples processed. CXDRIVER must 
    // stop streaming data when (iTraceEnd+1) % CX_TRBUFSZ == iTraceDrawn, as this indicates that the buffers are full. 
-   // In this case, MAESTRODRIVER sets the overflow error flag and streaming is halted.
+   // In this case, CXDRIVER sets the overflow error flag and streaming is halted.
    //
    // The data trace facility, as designed, can only work when a DAQ is running on the AI board, since the DAQ itself
    // establishes a real timeline for the data!
@@ -496,10 +501,10 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    //
    // EYELINK TRACKER DATA. A worker thread running in Maesstro polls the Ethernet link to an external Eyelink 1000+
    // eye tracker using SR Research's Eyelink SDK. The thread loops at least once per millisecond to get the next
-   // tracker sample and place it in the circular buffer here. MAESTRODRIVER, in turn, pulls the tracker samples out
-   // of the buffer. This is one example in which the data flow is from MAESTRO to MAESTRODRIVER! Samples are available 
-   // whenever iELNext != iELLast. MAESTRO sets the overflow flag and stops posting samples when (iELNext+1) % bufLen 
-   // == iELLast; additional samples are lost. Also, MAESTRO increments iELNext *after* preparing the next sample. The 
+   // tracker sample and place it in the circular buffer here. CXDRIVER, in turn, pulls the tracker samples out
+   // of the buffer. This is one example in which the data flow is from Maestro to CXDRIVER! Samples are available 
+   // whenever iELNext != iELLast. Maestro sets the overflow flag and stops posting samples when (iELNext+1) % bufLen 
+   // == iELLast; additional samples are lost. Also, Maestro increments iELNext *after* preparing the next sample. The 
    // buffer is large enough to hold a half-second worth of tracker samples, but we should never need that much.
    //
    // When an Eyelink recording session is in progress, there could occasionally be delays in the expected 1KHz sample
@@ -508,7 +513,7 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    // CX_ELSTAT_FAIL) if there is an inter-sample delay exceeding 50ms. 
    //
    // The five Eyelink params in iELParams[] are: 0,1=X,Y offset; 2,3=X,Y gain; 4=velocity smoothing filter window 
-   // width in ms. These are NOT used on the MAESTRODRIVER side; they're here so they can be included in data file.
+   // width in ms. These are NOT used on the CXDRIVER side; they're here so they can be included in data file.
    //
    int iELStatus;                                  // to driver: Eyelink tracker status (see CX_ELSTAT_*** constants)
    int iELRecType;                                 // to driver: record type - monocular L/R or binocular
@@ -518,14 +523,14 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    ELSAMP elSamples[CX_MAXEL];                     // to driver: the tracker sample buffer (circular)
 
    //
-   // DIGITAL EVENT DATA STREAM.  During presentation of a trial, MAESTRODRIVER streams digital event data (event mask 
+   // DIGITAL EVENT DATA STREAM.  During presentation of a trial, CXDRIVER streams digital event data (event mask 
    // and time to Maestro using the circular buffers defined here.  Maestro consumes the event data to build a spike 
    // time histogram for any "tagged sections" found in the trials presented.  These histograms continue to accumulate 
-   // event data until trial sequence stops.  The scheme for avoiding concurrent access by Maestro and MAESTRODRIVER 
+   // event data until trial sequence stops.  The scheme for avoiding concurrent access by Maestro and CXDRIVER 
    // mirrors that used for the data trace display buffers.  However, these buffers are used only during execution of 
    // a trial.
    //
-   // MAESTRODRIVER timestamps digital events at 10us resolution.  However, Maestro does not require this resolution to
+   // CXDRIVER timestamps digital events at 10us resolution.  However, Maestro does not require this resolution to
    // build the spike time histograms -- which are intended only to give the user 'rough-n-ready' feedback during
    // runtime.  The event timestamps reported here are trial times in milliseconds.
    //
@@ -540,9 +545,9 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    BOOL        bEventOverflow;                     //    fr driver: error -- event data buffers overflowed.
 
    //
-   // COMMAND/RESPONSE FACILITY.  Maestro issues a variety of commands to MAESTRODRIVER during runtime, using the 
+   // COMMAND/RESPONSE FACILITY.  Maestro issues a variety of commands to CXDRIVER during runtime, using the 
    // fields listed in this section.  The different commands, and their format, are described above.  Most supported 
-   // commands involve actions that MAESTRODRIVER can reliably perform quickly, with the complete command/response 
+   // commands involve actions that CXDRIVER can reliably perform quickly, with the complete command/response 
    // handshake taking no more than ~300ms.  For these commands, it is safe for Maestro to block awaiting completion of 
    // the command. For a few commands, the response time can be much longer -- such long-latency commands are 
    // highlighted in the command descriptions above.
@@ -566,9 +571,9 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    // used as fixation targets in ContMode, particularly during calibration of subject's eye position.  Their positions
    // and on/off states are controlled by the CX_CM_UPDACVTGT command.
    //
-   // The current target list is always read-only to MAESTRODRIVER.  Maestro "guarantees" that it will only modify the 
-   // list when no protocol is running on MAESTRODRIVER, and MAESTRODRIVER only accesses the list while executing a 
-   // protocol.  This should prevent any errors due to simultaneous access...
+   // The current target list is always read-only to CXDRIVER. Maestro "guarantees" that it will only modify the 
+   // list when no protocol is running on CXDRIVER, and CXDRIVER only accesses the list while executing a 
+   // protocol. This should prevent any errors due to simultaneous access...
    //
    int         nTgts;                              //    to driver: the # of targets in the "loaded" target list
    CXTARGET    targets[CX_MAXTGTS];                //    to driver: the "loaded" target list
@@ -576,14 +581,12 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    //
    // TRIALMODE-SPECIFIC DATA.  Defining information about a Maestro trial and participating targets.  Current usage:
    //
-   // 1) Current target list is filled before a trial sequence starts.  For efficiency's sake, it includes all targets
-   // used by ANY trial in the trial set from which the sequence is derived.  This is necessary to support framebuffer
-   // video targets, which may take a long time to preload onto the framebuffer hardware.  If we preloaded before every
-   // trial, the intertrial interval would be unacceptable.  After preparing the array, Maestro issues the command
-   // CX_TR_PRELOADFB, instructing MAESTRODRIVER to preload any framebuffer targets in the array.
+   // 1) Current target list is filled before a trial sequence starts. 
    // 
-   //    !!!NOTE:  CX_TR_PRELOADFB is no longer issued, now that RMVideo has replaced the slow VSG framebuffer.  We 
-   //    still fill the target list with all targets that participate in any trial within the set sequenced.
+   // [NOTE: With the old VSG framebuffer, the target list was prefilled with all targets used by ANY trial in the trial
+   // set sequenced, and CX_TR_PRELOADFB was issued to preload the targets onto the VSG2/4 hardware, which took a while.
+   // Now that RMVideo has replaced the VSG, preloading before the sequencing starts is no longer required. However, 
+   // Maestro still fills the target list with all all targets that participate in any trial within the set sequenced.]
    //
    // 2) Before each trial is started, Maestro prepares a list of codes (see CXTRIALCODES.H) that completely defines
    // the trial and an accompanying "trial target map".  Participating targets are identified by their position in this
@@ -595,18 +598,14 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    // CX_SAVECHANS is issued to identify which ADC channels should be saved during trial, followed by CX_TR_START to
    // start the trial.
    //
-   // 3) The field 'iXYDotSeedAlt' permits overriding the XY random dot seed control specified in the video display
-   // settings on a per-trial basis.  If negative, it is ignored.  If 0, the seed will be auto-generated.  If positive,
-   // then this value is used as the seed.  Applies only to the current trial.
-   //
-   // 4) Once MAESTRODRIVER starts running a trial, Maestro "guarantees" it will not change any of this info until the 
-   // trial is completed.  Likewise, MAESTRODRIVER only accesses the target & trial info while it is running a trial. 
+   // 3) Once CXDRIVER starts running a trial, Maestro "guarantees" it will not change any of this info until the 
+   // trial is completed. Likewise, CXDRIVER only accesses the target & trial info while it is running a trial. 
    // These "rules" ensure data integrity without the need for synch objects or handshake flags.
    //
-   // 5) The "trial result" is a bit-flags field (see "PROTOCOL INFO") set by MAESTRODRIVER upon completion (or 
-   // termination) of the trial.  The field is cleared (0) by MAESTRODRIVER in response to the CX_TR_START command and 
-   // remains so until the trial is over.  Thus, a nonzero flag field signals MAESTRO that the trial is over and 
-   // MAESTRODRIVER has returned to the intertrial "idle" state of TrialMode.
+   // 4) The "trial result" is a bit-flags field (see "PROTOCOL INFO") set by CXDRIVER upon completion (or 
+   // termination) of the trial. The field is cleared (0) by CXDRIVER in response to the CX_TR_START command and 
+   // remains so until the trial is over. Thus, a nonzero flag field signals Maestro that the trial is over and 
+   // CXDRIVER has returned to the intertrial "idle" state of TrialMode.
    //
    int         nTrialTgts;                         //    to driver: # of targets participating in trial
    int         iTgMap[MAX_TRIALTARGS];             //    to driver: pos of trial target's defn in the loaded tgt list
@@ -614,7 +613,6 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    TRIALCODE   trialCodes[CX_MAXTC];               //    to driver: the trial codes themselves
    int         nSections;                          //    to driver: # of tagged sections defined on current trial
    TRIALSECT   trialSections[MAX_SEGMENTS];        //    to driver: tagged section records
-   int         iXYDotSeedAlt;                      //    to driver: per-trial alternate XY dot seed
    char        strSet[CX_MAXOBJNAMELEN];           //    to driver: name of set to which trial belongs
    char        strSubset[CX_MAXOBJNAMELEN];        //    to driver: name of subset, if any, to which trial belongs
 
@@ -624,11 +622,11 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    CONTRUN     runDef;                             //    to driver: defn of the "current" stimulus run
 
    //
-   // PROTOCOL INFO/RESULTS.  Information to/from MAESTRODRIVER that's used in Trial and/or ContMode.
+   // PROTOCOL INFO/RESULTS.  Information to/from CXDRIVER that's used in Trial and/or ContMode.
    //
-   // The field 'dwResult' is used differently in Trial vs Cont mode.  In Trial mode, MAESTRODRIVER clears the field 
-   // when the trial begins, sets it when the trial is done, and leaves it alone otherwise.  The field is read-only to
-   // Maestro.  In Cont mode, MAESTRODRIVER uses the field to report state information on a continuing basis.  Maestro 
+   // The field 'dwResult' is used differently in Trial vs Cont mode. In Trial mode, CXDRIVER clears the field 
+   // when the trial begins, sets it when the trial is done, and leaves it alone otherwise. The field is read-only to
+   // Maestro. In Cont mode, CXDRIVER uses the field to report state information on a continuing basis. Maestro 
    // must watch this field for state changes (stimulus run started/stopped, recording on/off, etc) and update itself
    // accordingly.
    //
@@ -648,7 +646,7 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    BOOL        bTolRMVDuplFrame;                   //    to driver: if TRUE, tolerate up to 3 duplicate RMVideo frames
                                                    //       trial; if FALSE or more than 3 dupes, abort trial.
    float       fPosScale;                          //    to driver: factors used to translate & rotate the trajectories
-   float       fPosRotate;                         //       of targets during a trial.  these must be saved to the
+   float       fPosRotate;                         //       of targets during a trial. these must be saved to the
    float       fVelScale;                          //       trial data file along with trial codes to reconstruct what
    float       fVelRotate;                         //       happened during the trial
    float       fStartPosH;
@@ -670,7 +668,7 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    float       fDOBusyWaits[3];                    //    to driver: busy waits (us) for SetDO() [see file header]
 
    //
-   // HARDWARE STATUS INFO FROM MAESTRODRIVER
+   // HARDWARE STATUS INFO FROM CXDRIVER
    //
    DWORD       dwHWStatus;                         //    hardware status flags
    int         nAOChannels;                        //    # of AO channels available 
@@ -678,8 +676,8 @@ typedef struct tagCxIpc                            // encapsulation of Maestro I
    int         nTDOChannels;                       //    # of DO channels available on event timer device
    int         nTDIChannels;                       //    # of DI channels available on event timer device
 
-   // process ID assigned to the CXDRIVER RTSS process when it was spawned by MAESTRO. At startup, before it launches
-   // CXDRIVER, MAESTRO will check for an "orphaned" CXDRIVER process (this can happen if MAESTRO is terminated 
+   // process ID assigned to the CXDRIVER RTSS process when it was spawned by Maestro. At startup, before it launches
+   // CXDRIVER, Maestro will check for an "orphaned" CXDRIVER process (this can happen if Maestro is terminated 
    // unexpectedly) by looking for this shared IPC memory object CXIPC_SHM. If that object exists, it will try to 
    // access this process ID, obtain a handle to the orphaned process, and terminate it. NOTE that this ID is 
    // different from the notion of "RTSS process slot" that applied to 32-bit RTX.

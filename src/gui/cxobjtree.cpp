@@ -39,12 +39,10 @@
 //
 // The top-level main menu in Maestro (resource IDR_MAINFRAME) includes the dropdown submenu labeled "Object".  This
 // menu lists operations that may be performed on the Maestro object tree via CCxObjectTree:
-//    ID_OBJ_XYTGT ==> "New | XY Scope Target".  Insert a new Maestro "XY scope" target object.  If the tree item with
-//                     the current focus is on or inside a target set, the new target is placed within that set.
-//                     Otherwise, it is placed at the base of the "target" subtree (CX_TARGBASE).  If the focused tree
+//    ID_OBJ_FBTGT ==> "New | RMVideo Target".  Insert a new Maestro "RMVideo" framebuffer video target. If the tree 
+//                     item with the current focus is on or inside a target set, the new target is placed within that 
+//                     set. Else, it is placed at the base of the "target" subtree (CX_TARGBASE).  If the focused tree
 //                     item is a target object, the new target object is inserted before this object.  Always enabled.
-//    ID_OBJ_FBTGT ==> "New | RMVideo Target".  Insert a new Maestro "RMVideo" framebuffer video target.  Analogous to 
-//                     ID_OBJ_XYTGT.
 //    ID_OBJ_TRIAL ==> "New | Trial".  Insert a new Maestro trial object.  If tree item with the current focus is on or
 //                     inside a trial set or subset, new trial is placed in that set or subset.  Otherwise, operation 
 //                     will create a new trial set under the "trial" subtree, and then insert the new trial within that 
@@ -101,7 +99,7 @@
 //                !!!IMPORTANT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //                ! The menu-initiated (WM_COMMAND) object tree operations are identified by !
 //                ! resource ID.  Ensure that these IDs have consecutive values in the range !
-//                ! [ID_OBJ_XYTGT ... ID_OBJ_PROP]. This is required so that we can use the  !
+//                ! [ID_OBJ_FBTGT ... ID_OBJ_PROP]. This is required so that we can use the  !
 //                | ON_***_RANGE macros in the CCxObjectTree message map.                    !
 //                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //
@@ -284,6 +282,8 @@
 // the same icons for both trial sets and subsets. Subset are always children of sets. Sets can contain both subsets 
 // and individual trials, while subsets can only contain trials. Effective Maestro 3.1.2.
 // 05sep2017-- Fix compiler issues while compiling for 64-bit Win 10 using VStudio 2017.
+// 30sep2024-- Removed ID_OBJ_XYTGT command. The XYScope platform has not been supported since Maestro v4.0, and it is
+// removed entirely from the UI in v5.0.
 //=====================================================================================================================
 
 
@@ -306,10 +306,10 @@ static char THIS_FILE[] = __FILE__;
 IMPLEMENT_DYNCREATE( CCxObjectTree, CMultiDragTreeView )
 
 BEGIN_MESSAGE_MAP( CCxObjectTree, CMultiDragTreeView )
-   ON_COMMAND_RANGE( ID_OBJ_XYTGT, ID_OBJ_PROP, OnObjectOp )
+   ON_COMMAND_RANGE( ID_OBJ_FBTGT, ID_OBJ_PROP, OnObjectOp )
    ON_COMMAND( ID_FILE_COPYREMOTE, OnCopyRemote )
    ON_UPDATE_COMMAND_UI( ID_FILE_COPYREMOTE, OnUpdObjectOps )
-   ON_UPDATE_COMMAND_UI_RANGE( ID_OBJ_XYTGT, ID_OBJ_PROP, OnUpdObjectOps )
+   ON_UPDATE_COMMAND_UI_RANGE( ID_OBJ_FBTGT, ID_OBJ_PROP, OnUpdObjectOps )
 END_MESSAGE_MAP()
 
 
@@ -368,9 +368,8 @@ void CCxObjectTree::OnObjectOp( UINT cmdID )
    WORD wParentType, wBaseType;
    switch( cmdID )                                                // process requested operation:
    {
-      case ID_OBJ_XYTGT :                                         // insert a new XY scope or RMVideo target
-      case ID_OBJ_FBTGT :
-         wType = (cmdID==ID_OBJ_XYTGT) ? CX_XYTARG : CX_RMVTARG;  //    type of target to insert
+      case ID_OBJ_FBTGT :                                         // insert a new RMVideo target
+         wType = CX_RMVTARG;                                      //    type of target to insert
 
          htiParent = htiFocus;                                    //    determine if focus is within an existing
          while( htiParent != NULL )                               //    container for the new target object...
@@ -522,8 +521,7 @@ void CCxObjectTree::OnUpdObjectOps( CCmdUI* pCmdUI )
    UINT nSel = GetSelectedCount();
    if ( bEnable ) switch ( cmd )
    {
-      case ID_OBJ_XYTGT :                                         // these operations are always enabled...
-      case ID_OBJ_FBTGT :
+      case ID_OBJ_FBTGT :                                         // these operations are always enabled...
       case ID_OBJ_TRIAL :
       case ID_OBJ_RUN :
       case ID_OBJ_CHCFG :
@@ -1202,7 +1200,6 @@ VOID CCxObjectTree::GetBitmapIDs( const WORD objType, const BOOL bExpand, int* p
          break;
 
       case CX_CHAIR :
-      case CX_XYTARG :
       case CX_RMVTARG :
          *piImg = TG_NORMAL;
          *piSelImg = TG_SELECTED;

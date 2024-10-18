@@ -480,7 +480,7 @@ int CCxChannel::GetRecordedAIChannels( int* piChan ) const
 //
 //    RETURNS:    TRUE if successful, FALSE if specified channel pos does not exist. 
 //
-BOOL CCxChannel::GetChannel( const int iPos, ChInfo& chInfo )
+BOOL CCxChannel::GetChannel( const int iPos, ChInfo& chInfo ) const
 {
    if( !IsValid( iPos ) ) return( FALSE );
 
@@ -510,7 +510,7 @@ BOOL CCxChannel::GetChannel( const int iPos, ChInfo& chInfo )
 //
 //    RETURNS:    TRUE if another displayed channel was found; FALSE otherwise (end of enumeration). 
 //
-BOOL CCxChannel::GetNextDisplayed( int& iNext, ChInfo& chInfo )
+BOOL CCxChannel::GetNextDisplayed( int& iNext, ChInfo& chInfo ) const
 {
    if( !IsValid( iNext ) ) iNext = 0;                                      // start enumeration
    else ++iNext;                                                           // continue enumeration at next channel pos 
@@ -778,118 +778,6 @@ void CCxChannel::Serialize( CArchive& ar )
    }
 
    ASSERT_VALID( this );                                                         // check validity AFTER serializing
-}
-
-
-//=== Import ========================================================================================================== 
-//
-//    Reinitialize the channel configuration IAW a cntrlxUNIX-style, text-based definition.
-//
-//    CntrlxUNIX was the GUI side of CNTRLX's predecessor, a dual-platform application with the GUI running on a UNIX 
-//    workstation and the hardware controller hosted on a Windows PC.  To facilitate the move from cntrlxUNIX/PC to 
-//    CNTRLX, CNTRLX provides support for reading cntrlxUNIX object definition files.
-//
-//    In the case of channel configuration objects, multiple objects could be defined in a single definition file.  The 
-//    caller is responsible for reading and parsing this file into individual definitions, each stored in a separate 
-//    CStringArray.  This method redefines the CCxChannel object IAW the cntrlxUNIX-style definition.  It expects the 
-//    following format:
-//
-//       #CHANNELS <N>        where <N> is an integer indicating the # of channel definitions that follow
-//       <chan def 1>
-//       ...
-//       <chan def N>
-//
-//    Each channel definition is contained in a single line "<i> <type> <show?> <gain> <offset>", where:
-//
-//       <i> = Channel #.  For the AI channels, this is the actual channel # in [0..15].  For the computed channels, 
-//             this # will be in the range FIRSTCP + [0..NUMCP-1].  CntrlxUNIX did not include the digital channels in 
-//             the channel config definition.  All computed channels are included in the definition.  For the AI 
-//             channels, only those that are to be recorded are included in the definition; for all other AI channels, 
-//             we assume: rec OFF, disp OFF, gain = 0, offset = 0, and colorIndex = 0.  Computed channels are never 
-//             recorded, of course.
-//
-//       <type> = "SAMPLE" for AI channels, "COMPUTE" for computed channels.  We actually ignore this field, since the 
-//             channel type is determined solely by the channel#.
-//       <show?> = "DISPLAY" if channel should be displayed, "NODISPLAY" otherwise.
-//       <gain> = display gain, an integer.  Corresponding channel trace is multiplied by the factor 2^(gain).  Note 
-//             that CNTRLX restricts the range of allowed gains, while cntrlxUNIX did not.
-//       <offset> = display offset, an integer.  In cntrlxUNIX, the units were raw b2sAIvolts, while in CNTRLX we use 
-//             mV.  We perform the conversion here, assuming a 12-bit AI device.
-//
-//    CntrlxUNIX, unlike CNTRLX, did not provide support for different-colored traces.  Our approach, then, is to 
-//    assign a different color index to each channel that is to be displayed.  All AI and computed channels that are 
-//    not displayed are assigned the default color index of 0.  CntrlxUNIX also did not include configuration info for 
-//    the digital channels; we choose to leave their configuration attributes unchanged.  The same goes for the display 
-//    Y-axis range, which is also not specified in the cntrlxUNIX definition.
-//
-//    If the import fails b/c of a format error, the channel configuration is restored to its initial state.
-//
-//    ARGS:       strArDefn   -- [in] the cntrlxUNIX-style definition as a series of text strings.
-//                strMsg      -- [out] if there's an error, this should contain brief description of the error.
-//
-//    RETURNS:    TRUE if import successful; FALSE otherwise.
-//
-//    THROWS:     NONE.
-//
-BOOL CCxChannel::Import( CStringArray& strArDefn, CString& strMsg )
-{
-   int i;
-
-   CCxChannel saveChan;                                                 // save current state in case import fails
-   saveChan.Copy( this );
-
-   for( i = 0; i < FIRSTDI; i++ )                                       // clear attributes of all AI & computed ch's; 
-   {                                                                    // DI chan attributes are unaffected.
-      m_offset[i] = 0;                                                  //    offset = 0mV.
-      m_gain[i] = 0;                                                    //    gain = 1 (2^0).
-      m_color[i] = 0;                                                   //    color index = 0.
-      m_onoff[i] = 0;                                                   //    not recorded nor displayed.
-   }
-
-   int nCh;                                                             // # of channel definition strings 
-
-   BOOL bOk = (strArDefn.GetSize() > 0);                                // empty defn is not acceptable
-   if( bOk ) bOk = (1==::sscanf_s(strArDefn[0], "#CHANNELS %d", &nCh)); // parse first line to get #chan defn strings
-   if( bOk ) bOk = ((nCh > 0) && (nCh < NUMAI+NUMCP) &&                 // make sure defn is complete
-                       (strArDefn.GetSize() == nCh+1));
-
-   char type[10];                                                       // holds channel type "SAMPLE" or "COMPUTE"
-   char show[12];                                                       // holds display flag "DISPLAY" or "NODISPLAY" 
-   int iCh, iGain, iOffset;                                             // channel #, gain, and offset
-   int iColorIndex = 0;                                                 // for assigning colors to displayed channels 
-
-   for( i = 1; bOk && (i <= nCh); i++ )                                 // for each channel defn string...
-   {
-      // parse the channnel attributes
-      if(5 != ::sscanf_s( strArDefn[i], "%d %9s %11s %d %d", &iCh, type, 10, show, 12, &iGain, &iOffset))
-         bOk = FALSE; 
-      else if( iCh < 0 || iCh >= FIRSTDI )                              //    error: illegal channel #
-         bOk = FALSE;
-      else                                                              //    assign channel attributes to specified ch 
-      {
-         if( iCh >= 0 && iCh < NUMAI ) ToggleRecord( iCh );             //    if it's an AI channel, set record flag 
-         if( 0 == ::strcmp( show, "DISPLAY" ) )                         //    if channel is to be displayed,
-         {
-            ToggleDisplay( iCh );                                       //       set its display flag
-            SetColorIndex( iCh, iColorIndex++ );                        //       and assign a color index
-            if( iColorIndex == GetNumTraceColors() ) iColorIndex = 0;   //       wrap-around if out of trace colors 
-         }
-
-         SetGainIndex( iCh, iGain - CHANGAINMIN );                      //    set gain as zero-based index, w/auto-corr 
-
-         double d = iOffset;                                            //    set offset, converting from b2sAIvolts to 
-         d *= 20000.0/4096.0;                                           //    mV, assuming +/-10V range, 12bit res.
-         SetOffset( iCh, int(d) );
-      }
-   }
-
-   if( !bOk )                                                           // on format error, restore original state and 
-   {                                                                    // provide brief error description...
-      Copy( &saveChan );
-      strMsg = _T("Unrecognized format");
-   }
-
-   return( bOk );
 }
 
 

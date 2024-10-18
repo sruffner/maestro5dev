@@ -187,10 +187,10 @@
 // MAESTRO op mode, not just TrialMode.  For details, see the files CXFIXREWDLG.*.  CCxTrialMode will install this
 // dialog in the mode control panel ONLY if it is not already there (see InitDlgs()).
 //
-// ==> CCxVideoDspDlg, the "Video Display" dialog.
-// This dialog page is a window into the XY and FB video display parameters that are a subset of CNTRLX's application
-// settings, also encapsulated by the CCxSettings object within the currently open CNTRLX doc.  Like CCxFixRewDlgs, the
-// CCxVideoDspDlg page may be used in more than one MAESTRO op mode.  For details, see files CXVIDEODSPDLG.*.  Again,
+// ==> CCxVideoDspDlg, the "RMVideo Display" dialog.
+// This dialog page is a window into the RMVideo display parameters that are a subset of Maestro's application
+// settings, also encapsulated by the CCxSettings object within the currently open Maestro doc. Like CCxFixRewDlgs, the
+// CCxVideoDspDlg page may be used in more than one Maestro op mode. For details, see files CXVIDEODSPDLG.*. Again,
 // CCxTrialMode will install this dialog in the mode control panel ONLY if it is not already there.
 //
 // ==> CCxEyelinkDlg, the "Eyelink" dialog.
@@ -282,6 +282,8 @@
 // 21nov2016-- Increased max inter-trial delay from 2000 to 9999ms.
 // 14aug2019-- Updated CCxTrialParmsDlg to update application settings object CCxSettings whenever user changes the 
 // value of the VStab sliding window length. As of Maestro 4.1.1, that parameter is persisted as an app setting.
+// 26sep2024-- Tab name for CCxVideoDspDlg is now "RMVideo Display". A/o V5.0, the XYScope platform -- unsupported 
+// since V4.0 -- has been removed from Maestro.
 //=====================================================================================================================
 
 
@@ -1636,7 +1638,7 @@ BOOL CCxTrialMode:: InitDlgs()
    m_pVideoDspDlg = (CCxVideoDspDlg*) m_pCtrlPanel->GetDlgByClass( RUNTIME_CLASS(CCxVideoDspDlg) );
    if( m_pVideoDspDlg == NULL )
    {
-      m_pVideoDspDlg = (CCxVideoDspDlg*) m_pCtrlPanel->AddDlg( _T("Video Display"), RUNTIME_CLASS(CCxVideoDspDlg) );
+      m_pVideoDspDlg = (CCxVideoDspDlg*) m_pCtrlPanel->AddDlg( _T("RMVideo Display"), RUNTIME_CLASS(CCxVideoDspDlg) );
       if( m_pVideoDspDlg == NULL ) return( FALSE );
    }
 

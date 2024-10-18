@@ -278,7 +278,7 @@ private:
    CCxContProtoDlg*     m_pProtoDlg;            // the "Protocol" dlg page
    CCxContFixTgtsDlg*   m_pTgtsDlg;             // the "Active Targets" dlg page
    CCxFixRewDlg*        m_pFixRewDlg;           // the "Fix/Reward" dlg page
-   CCxVideoDspDlg*      m_pVideoDspDlg;         // the "Video Display" dlg page
+   CCxVideoDspDlg*      m_pVideoDspDlg;         // the "RMVideo Display" dlg page
    CCxEyelinkDlg*       m_pEyelinkDlg;          // the "Eyelink" dlg page
 
    DWORD                m_dwLastOpState;        // operational state of CXDRIVER the last time we checked

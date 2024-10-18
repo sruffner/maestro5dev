@@ -46,14 +46,13 @@
 //    dialogs currently accessible in the control panel, while Enter() invokes CCxControlPanel::ShowDlg() for each
 //    dialog that's relevant to the current operational mode.
 //
-// virtual BOOL CanUpdateVideoCfg():  Return TRUE when the current runtime state permits the update of the XYScope or 
-//    RMVideo framebuffer display configuration.  Generally we want to prevent such updates when an experimental 
-//    protocol is in progress.
+// virtual BOOL CanUpdateVideoCfg():  Return TRUE when the current runtime state permits the update of the RMVideo
+//    display configuration. Generally we want to prevent such updates when an experimental protocol is in progress.
 //
 // virtual BOOL CanUpdateFixRewSettings():  Return TRUE when the current runtime state permits changing the current
-//    fixation/reward settings.  Again, we usually want to prevent such changes while a protocol is running.
+//    fixation/reward settings. Again, we usually want to prevent such changes while a protocol is running.
 //
-// virtual LPCTSTR GetModeTitle():  A short string describing this operational mode.
+// virtual LPCTSTR GetModeTitle(): A short string describing this operational mode.
 //
 // ==> CCxNullMode.
 // CCxNullMode serves as a "placeholder" mode controller governing MAESTRO runtime operations when MAESTRODRIVER is not
@@ -74,6 +73,8 @@
 // 04sep2009-- Added wrappers to access RMVideo display mode, monitor gamma, and the "movie store".
 // 11oct2016-- Updated signatures of wrappers that access RMVideo "media store" -- formerly the "movie store" -- IAW
 //             same-dated changes in CCxRuntime.
+// 26sep2024-- Removed all references to the XYScope. No longer supported a/o Maestro V4.0, it was removed entirely
+//             for V5.0.
 //=====================================================================================================================
 
 
@@ -197,7 +198,6 @@ DWORD CCxModeControl::GetHWStatus() { return( (m_pRuntime != NULL) ? m_pRuntime-
 BOOL CCxModeControl::IsAIAvailable() { return( BOOL((GetHWStatus() & CX_F_AIAVAIL) != 0) ); }
 BOOL CCxModeControl::IsAOAvailable() { return( BOOL((GetHWStatus() & CX_F_AOAVAIL) != 0) ); }
 BOOL CCxModeControl::IsTimerAvailable() { return( BOOL((GetHWStatus() & CX_F_TMRAVAIL) != 0) ); }
-BOOL CCxModeControl::IsXYAvailable() { return( BOOL((GetHWStatus() & CX_F_XYAVAIL) != 0) ); }
 BOOL CCxModeControl::IsRMVideoAvailable() { return( BOOL((GetHWStatus() & CX_F_RMVAVAIL) != 0) ); }
 int CCxModeControl::GetRMVideoScreenW() { return( (m_pRuntime != NULL) ? m_pRuntime->GetRMVideoScreenW() : 0 ); } 
 int CCxModeControl::GetRMVideoScreenH() { return( (m_pRuntime != NULL) ? m_pRuntime->GetRMVideoScreenH() : 0 ); }

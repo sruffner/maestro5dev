@@ -128,10 +128,10 @@
 // page is designed for use in any CNTRLX op mode, not just ContMode.  For details, see the files CXFIXREWDLG.*.
 // CCxContMode will install this dialog in the mode control panel ONLY if it is not already there (see InitDlgs()).
 //
-// ==> CCxVideoDspDlg, the "Video Display" dialog.
-// This dialog page is a window into the XY and FB video display parameters that are a subset of CNTRLX's application
-// settings, also encapsulated by the CCxSettings object within the currently open CNTRLX doc.  Like CCxFixRewDlgs, the
-// CCxVideoDspDlg page may be used in more than one CNTRLX op mode.  For details, see files CXVIDEODSPDLG.*.  Again,
+// ==> CCxVideoDspDlg, the "RMVideo Display" dialog.
+// This dialog page is a window into the RMVideo display parameters that are a subset of Maestro's application 
+// settings, also encapsulated by the CCxSettings object within the currently open Maestro doc.  Like CCxFixRewDlg, the 
+// CCxVideoDspDlg page may be used in more than one CNTRLX op mode.  For details, see files CXVIDEODSPDLG.*. Again, 
 // CCxContMode will install this dialog in the mode control panel ONLY if it is not already there.
 //
 // ==> CCxEyelinkDlg, the "Eyelink" dialog.
@@ -180,6 +180,8 @@
 // 11dec2006-- Added HandleTrackingTargetPatternUpdate(), which supports keyboard shortcuts for incr/decrementing the 
 //             pattern speed or direction of the "Track" target in the active list, if one is designated.
 // 31aug2015-- Added Eyelink dialog page, CCxEyelinkDlg.
+// 26sep2024-- Tab name for CCxVideoDspDlg is now "RMVideo Display". A/o V5.0, the XYScope platform -- unsupported 
+// since V4.0 -- has been removed from Maestro.
 //=====================================================================================================================
 
 
@@ -188,7 +190,7 @@
 
 #include "cxdoc.h"                           // CCxDoc -- CNTRLX document class
 #include "cxfixrewdlg.h"                     // CCxFixRewDlg -- the "Fix/Reward" dialog page
-#include "cxvideodspdlg.h"                   // CCxVideoDspDlg -- the "Video Display" dialog page
+#include "cxvideodspdlg.h"                   // CCxVideoDspDlg -- the "RMVideo Display" dialog page
 #include "cxeyelinkdlg.h"                    // CCxEyelinkDlg -- the "Eyelink" dialog page
 #include "cxcontrolpanel.h"                  // CCxControlPanel -- the CNTRLX master mode control panel
 #include "cxruntime.h"                       // CCxRuntime -- the CNTRLX/CXDRIVER runtime interface
@@ -1556,7 +1558,7 @@ BOOL CCxContMode:: InitDlgs()
    m_pVideoDspDlg = (CCxVideoDspDlg*) m_pCtrlPanel->GetDlgByClass( RUNTIME_CLASS(CCxVideoDspDlg) );
    if( m_pVideoDspDlg == NULL )
    {
-      m_pVideoDspDlg = (CCxVideoDspDlg*) m_pCtrlPanel->AddDlg( _T("Video Display"), RUNTIME_CLASS(CCxVideoDspDlg) );
+      m_pVideoDspDlg = (CCxVideoDspDlg*) m_pCtrlPanel->AddDlg( _T("RMVideo Display"), RUNTIME_CLASS(CCxVideoDspDlg) );
       if( m_pVideoDspDlg == NULL ) return( FALSE );
    }
 

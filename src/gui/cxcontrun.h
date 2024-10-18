@@ -32,10 +32,8 @@ class CCxStimulus : public CObject
 //===================================================================================================================== 
 private:
    static const int NPARAMS[STIM_NTYPES][STIM_NMAXMODES];   // size of motion param list -- varies with type, mode
-   static LPCTSTR TYPESTRINGS[STIM_NTYPES];                 // human-readable names for supported stimulus chan types
    static LPCTSTR STDMODESTRINGS[STIM_NSTDMODES];           // human-readable names for supported motion modes
    static LPCTSTR PSGMMODESTRINGS[STIM_NPSGMMODES];
-   static LPCTSTR XYSEQMODESTRINGS[STIM_NXYSEQMODES];
    static LPCTSTR COMMONLBLSTRINGS[STIM_NCOMMON];           // labels for the common parameters
 
 
@@ -54,8 +52,10 @@ private:
                               // the "motion" parameter sets -- which set is used depends on stim type & motion mode
    SINESTIM    m_sine;        //    for sinusoidal motion mode
    PULSESTIM   m_pulse;       //    for trapezoidal pulse motion mode
-   XYSEQSTIM   m_xyseq;       //    for XYseq stim channel type
    SGMPARMS    m_sgm;         //    for PSGM stim channel type
+
+   // DEPRECATED -- but we maintain it to handle deserialization of pre-V5.0 experiment documents containin XYseq runs
+   XYSEQSTIM   m_xyseq;       //    for XYseq stim channel type
 
 
 //===================================================================================================================== 
@@ -240,9 +240,7 @@ public:
       else return( (const CCxStimulus*) RetrieveStimulus( i ) );
    }
 
-   VOID GetDependencies( CWordArray& wArKeys ) const;    // return list of CNTRLX objects currently ref'd by run
-   BOOL UsingXYseq() const;                              // TRUE if there is an active XYseq in stimulus channel list
-   BOOL IsUsingTarget( WORD wKey ) const;                // TRUE if specified target is in the XYseq target list
+   VOID GetDependencies( CWordArray& wArKeys ) const;    // return list of Maestro objects currently ref'd by run
 
 //===================================================================================================================== 
 // OPERATIONS -- GENERAL
@@ -259,14 +257,8 @@ public:
                          const CCxStimulus* pStim );     //
    VOID ClearStimuli();                                  // empty the stimulus channel list
 
-   int InsertXYseqTarget( int iPos, WORD wTargKey,       // insert an XY target into the run's XYseq target list 
-         double dCtrX = 0.0, double dCtrY = 0.0 );
-   BOOL RemoveXYseqTarget( int iPos );                   // remove a target from the XYseq target list 
-   VOID ClearXYseqTargets();                             // empty the XYseq target list
-
-   VOID Clear();                                         // destroy all stimuli & empty XYseq target list
+   VOID Clear();                                         // destroy all stimuli 
    void Serialize( CArchive& ar );                       // for reading/writing run object from/to disk file
-   BOOL Import(CStringArray& strArDefn,CString& strMsg); // set stim run IAW cntrlxUNIX-style, text-based definition
 
 
 //===================================================================================================================== 
@@ -298,46 +290,6 @@ public:
    VOID GetVOffset( CString& str ) { str.Format( "%.2f", m_fVOffset ); }
    VOID SetVOffset( double dVal ) { m_fVOffset = float( (dVal<-80.0) ? -80.0 : ((dVal>80.0) ? 80.0 : dVal) ); } 
 
-
-   WORD GetXYseqTarget( int i ) const;                   // access to parameters in the XYseq target list...
-   VOID GetXYseqTarget( int i, CString& str ) const;
-   BOOL SetXYseqTarget( int i, WORD wKey );
-
-   double GetHPosXYseqTarget( int i ) const
-   {
-      return( IsValidXYseqTarg( i ) ? RetrieveTarget( i )->fCtrX : 0 );
-   }
-   VOID GetHPosXYseqTarget( int i, CString& str ) const
-   {
-      str.Empty();
-      if( IsValidXYseqTarg( i ) ) str.Format( "%.2f", RetrieveTarget( i )->fCtrX );
-   }
-   VOID SetHPosXYseqTarget( int i, double x )
-   {
-      if( IsValidXYseqTarg( i ) ) 
-      {
-         float f = float( (x<-80.0) ? -80.0 : ((x>80.0) ? 80.0 : x) );
-         RetrieveTarget( i )->fCtrX = f;
-      }
-   }
-
-   double GetVPosXYseqTarget( int i ) const
-   {
-      return( IsValidXYseqTarg( i ) ? RetrieveTarget( i )->fCtrY : 0 );
-   }
-   VOID GetVPosXYseqTarget( int i, CString& str ) const
-   {
-      str.Empty();
-      if( IsValidXYseqTarg( i ) ) str.Format( "%.2f", RetrieveTarget( i )->fCtrY );
-   }
-   VOID SetVPosXYseqTarget( int i, double y )
-   {
-      if( IsValidXYseqTarg( i ) ) 
-      {
-         float f = float( (y<-80.0) ? -80.0 : ((y>80.0) ? 80.0 : y) );
-         RetrieveTarget( i )->fCtrY = f;
-      }
-   }
 
    BOOL IsValidStimParameter( int i, int j ) const       // access to parameters in a given stimulus channel...
    {
@@ -408,11 +360,7 @@ private:
       ASSERT( IsValidStimulus( i ) );
       return( m_Stimuli.GetAt( m_Stimuli.FindIndex( i ) ) );
    }
-   CXYseqTgt* RetrieveTarget( int i ) const              // retrieve ptr to a record in XYseq target list
-   {
-      ASSERT( IsValidXYseqTarg( i ) );
-      return( m_XYseqTgts.GetAt( m_XYseqTgts.FindIndex( i ) ) );
-   }
+
    VOID SetDefaults();                                   // init run's general parameters to default values 
    BOOL DeactivateAllOthers( CCxStimulus* pStim );       // turn off all other stim channels of the same type
 };
