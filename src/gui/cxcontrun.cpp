@@ -1546,6 +1546,11 @@ void CCxContRun::Serialize ( CArchive& ar )
    int i, nTgts;
    if(ar.IsStoring())
    {
+      // as of Maestro 5.0, XYScope is deprecated. But we must be able to handle both older and newer docs, and CCxContRun
+      // did not implement VERSIONABLE_SCHEMA. So whenever we save a doc, the # of XYseq targets in run is always 0 --
+      // so that deserialization of both pre-V5.0 and post-V5.0 docs will work
+      ar << 0;
+
       ar << m_iDutyPeriod << m_iDutyPulse << m_nAutoStop;   // the general run parameters...
       ar << m_fHOffset << m_fVOffset;
    }

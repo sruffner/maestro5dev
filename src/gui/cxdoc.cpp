@@ -206,6 +206,9 @@
 // display's TL corner. Also modified CCxTrial to include a per-segment flag that enables the time sync flash at the
 // start of the segment. Document version incr to 6, mainly to mark release of Maestro 4 for Win10 64-bit. No migration
 // changes needed.
+// 27sep2024-- Update for Maestro 5: Document version incr to 7. AFTER deserialization of a v<7 doc, all trials and
+// stimulus runs using XYScope targets are removed, then the XYScope targets themselves. See Serialize() and
+// MigrateToVersion7().
 //=====================================================================================================================
 
 
