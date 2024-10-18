@@ -20,6 +20,29 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
+## 18 Oct 2024: Removed the XYScope platform from Maestro 5.0.
+- The XYScope platform has been unsupported since **Maestro** 4 was released in Nov 2018. However, the XYScope platform was
+still visible in the GUI. **Maestro** 5 drops the XYScope entirely.
+- Removed all XYScope-related code and GUI elements from the `cxdriver` and `maestroGUI` projects. Certain XYScope-specific 
+constants and data structures remain in the code (in particular, see `cxobj_ifc.h` and `cxfilefmt.h`) to support reading in 
+pre-5.0 **Maestro** data files containing XYScope target definitions and so on. Also, we had to be careful with serialization and 
+deserialization code in `cxdoc.*`, `cxtarget.*`, `cxtrial.*`, and `cxcontrun.*` to handle reading pre-5.0 **Maestro** experiment
+documents containing XYScope-related information.
+- Removed the **File|Import** command, `cximporter.*`, and all code that supported loading the old **cntrlxUnix**-style text files
+that defined targets, trials, and the like. These have not been used for a very long time.
+- Updated `jmxdocimporter.*` to ignore XYScope display parameters, XYScope target definitions, and any trials or stimulus runs
+that employ those XYScope targets.
+- Successfully rebuilt Maestro 5.0 and completed initial testing.
+
+## 25 Sep 2024: Ported Maestro to Windows 11 and RTX64 4.5.
+- Only a few code changes were needed to address deprecated or modified RTX64 SDK functions: Updated dwProtect parameter in
+`RtCreateSharedMemory()`. Removed calls to `RtSleepFt/RtSleepFtEx()` in the `maestroGUI` project, as these are no longer supported
+in Windows. Replaced deprecated `RtAllocate/FreeLockedMemory()` calls with `RtAllocate/FreeLocalMemory()`. After making these 
+changes and fixing sundry warnings in VS2022, successfully built both `cxdriver.rtss` and `maestroGUI.exe`.
+- Replaced the old unsigned security catalog file for the PCIe6363 (`ni6363_rtx64.cat`) with a properly signed CAT file 
+provided by IntervalZero. This makes it much easier to transfer device ownership of the 6363 board from Windows to RTX64.
+- Successfully installed and ran Maestro 5.0 without any issues.
+
 ## 19 Sep 2024: Maestro 5 development started
 - Began the process of porting **Maestro** to run under Windows 11 and RTX64 4.5. Updated `cxdriver` and `maestroGUI` Visual
 Studio projects for VS 2022, newer Windows SDK and platform toolset, and RTX64 4.5 SDK. Moved local git repo to the new Win11
