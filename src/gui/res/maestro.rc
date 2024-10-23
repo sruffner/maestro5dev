@@ -321,7 +321,7 @@ BEGIN
     LTEXT           "Maestro",IDC_STATIC,44,18,26,8,SS_NOPREFIX
     LTEXT           "Copyright (C) 2000-2025",IDC_STATIC,44,38,77,8
     DEFPUSHBUTTON   "OK",IDOK,272,7,32,14,WS_GROUP
-    LTEXT           "Version 5.0.0 (TBD 2024)",IDC_STATIC,44,28,77,8
+    LTEXT           "Version 5.0.0 (Oct 2024)",IDC_STATIC,44,28,77,8
     LTEXT           "Inquiries:  Scott Ruffner (sruffner@srscicomp.com)",IDC_STATIC,20,74,172,8
     LTEXT           "Online User's Guide:  https://sites.google.com/a/srscicomp.com/maestro",IDC_STATIC,19,59,255,8
 END
@@ -609,15 +609,15 @@ IDD_RUNFORM DIALOGEX 0, 0, 500, 239
 STYLE DS_SETFONT | WS_CHILD
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
-    EDITTEXT        IDC_RF_DUTYPER,63,22,30,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_RF_AUTOSTOP,166,22,30,14,ES_AUTOHSCROLL
-    COMBOBOX        IDC_RF_DUTYPULSE,265,23,48,74,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_RF_DUTYPER,66,22,30,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_RF_AUTOSTOP,171,22,30,14,ES_AUTOHSCROLL
+    COMBOBOX        IDC_RF_DUTYPULSE,275,23,48,74,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     EDITTEXT        IDC_RF_HOFFSET,422,22,30,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_RF_VOFFSET,456,22,30,14,ES_AUTOHSCROLL
     CONTROL         "",IDC_RF_STIMULI,"MFCGridCtrl",WS_TABSTOP,7,56,486,176
-    LTEXT           "Duty Cycle (ms)",IDC_STATIC,14,25,50,8
-    LTEXT           "#Cycles to Auto-Stop",IDC_STATIC,100,25,68,8
-    LTEXT           "Duty Marker Pulse",IDC_STATIC,207,25,59,8
+    LTEXT           "Duty Cycle (ms)",IDC_STATIC,14,25,49,8
+    LTEXT           "#Cycles to Auto-Stop",IDC_STATIC,105,25,64,8
+    LTEXT           "Duty Marker Pulse",IDC_STATIC,215,25,57,8
     LTEXT           "Pos Offset H, V (deg):",IDC_STATIC,355,25,65,8
 END
 

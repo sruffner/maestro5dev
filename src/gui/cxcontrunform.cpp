@@ -769,9 +769,9 @@ void CCxContRunForm::OnInitialUpdate()
 
       m_stimChanGrid.SetGridLineColor( RGB(0,0,0) );                       //    use black grid lines 
 
-      m_stimChanGrid.SetColumnWidth( 0, 30 );                              //    all column widths are fixed!
+      m_stimChanGrid.SetColumnWidth( 0, 40 );                              //    all column widths are fixed!
       for( i = 1; i < nMaxCols; i++ )
-         m_stimChanGrid.SetColumnWidth( i, 50 );
+         m_stimChanGrid.SetColumnWidth( i, 75 );
 
       CRect rGrid;                                                         //    save grid's initial size, which is 
       m_stimChanGrid.GetWindowRect( rGrid );                               //    defined by dlg template, to ensure 

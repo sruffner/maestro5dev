@@ -108,6 +108,10 @@
 //             this close button very often caused Maestro to crash and would require a reboot before the app would
 //             startup normally.
 // 05sep2017-- Fix compiler issues while compiling for 64-bit Win 10 using VStudio 2017.
+// 23oct2024-- Minor change in OnModePanel(). Previously, on switching from another op mode to IdleMode, the mode
+// control panel was hidden -- which was kind of annoying since users will typically want to keep the panel visible.
+// Now, the control panel's visibility in IdleMode is toggled only if it was already in IdleMode; upon transition to
+// IdleMode, it stays up.
 //===================================================================================================================== 
 
 
@@ -403,9 +407,10 @@ void CCxMainFrame::OnUpdateOutputPanel( CCmdUI* pCmdUI )
 //    items.
 //
 //    The master mode control panel handles all the details of a mode switch, but the mainframe window must hide or 
-//    show the control panel, as appropriate.  Note that if the system is in IdleMode and the ID_MODE_IDLE command is 
-//    given, we merely toggle the show/hide state of the master mode control panel.  In all other op modes, the mode 
-//    control panel must be visible.
+//    show the control panel, as appropriate. Note that if the system is **already** in IdleMode and the ID_MODE_IDLE 
+//    command is given, we merely toggle the show/hide state of the master mode control panel. In all other op modes, 
+//    the mode control panel must be visible, and it remains visible after the transition from another op mode to
+//    Idle. 
 //
 //    An additional "Mode" menu command, ID_MODE_RESTART, allows the user to restart CXDRIVER at any time. 
 //
@@ -422,6 +427,8 @@ void CCxMainFrame::OnModePanel( UINT nID )
       return;
    }
 
+   BOOL wasIdle = (((CCntrlxApp*)AfxGetApp())->GetRuntime()->GetMode() == CCxRuntime::IdleMode);
+
    int iOpMode = -1;                                                       // switch the current runtime op mode
    switch( nID )
    {
@@ -432,10 +439,12 @@ void CCxMainFrame::OnModePanel( UINT nID )
       default :               TRACE0("\nUnrecognized op mode!"); return;   // should never get here!
    }
 
-   if( m_modePanel.SwitchMode( iOpMode ) )                                 // mode control panel handles mode switch; 
-   {                                                                       // if successful, we ensure the mode control 
-      if( nID == ID_MODE_IDLE )                                            // panel is visible -- but in IdleMode we 
-         ShowControlBar( &m_modePanel, !m_modePanel.IsVisible(), FALSE );  // always toggle the panel's visible state. 
+   // mode control panel handles mode switch; if successful, we ensure the mode control panel is visible. However, if we
+   // are **already** in IdleMode, we toggle the panel's visible state (the panel can only be hidden in IdleMode).
+   if( m_modePanel.SwitchMode( iOpMode ) )
+   { 
+      if( nID == ID_MODE_IDLE )
+         ShowControlBar( &m_modePanel, !(wasIdle && m_modePanel.IsVisible()), FALSE );  
       else if( !m_modePanel.IsVisible() )
          ShowControlBar( &m_modePanel, TRUE, FALSE );
 

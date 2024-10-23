@@ -20,6 +20,14 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
+## 23 Oct 2024: Minor tweaks.
+- Adjusted layout of widgets on the stimulus run editor form (`IDD_RUNFORM`). Also increased the (fixed) width of columns in the 
+stimulus channel grid, as some of the labels and values were getting cut off.
+- Previously, on switching from another op mode to IdleMode, the mode control panel was hidden -- which was kind of annoying 
+since users will typically want to keep the panel visible. Now, the control panel's visibility in IdleMode is toggled only if 
+it was already in IdleMode; upon transition to IdleMode, it stays up.
+- Initial release of Maestro 5.0.0.
+
 ## 18 Oct 2024: Removed the XYScope platform from Maestro 5.0.
 - The XYScope platform has been unsupported since **Maestro** 4 was released in Nov 2018. However, the XYScope platform was
 still visible in the GUI. **Maestro** 5 drops the XYScope entirely.
