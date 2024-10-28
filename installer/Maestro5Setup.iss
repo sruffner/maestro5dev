@@ -61,9 +61,9 @@ SetupLogging=yes
 Uninstallable=yes
 UninstallFilesDir={app}\misc
 
-AppCopyright=Copyright (C) 2003-2025 Duke University (Lisberger Lab)
-AppPublisher=Duke University(Lisberger Lab)
-AppPublisherURL=https://www.neuro.duke.edu/research/faculty-labs/lisberger-lab
+AppCopyright=Copyright (C) 2003-2025 Duke University (Lisberger Lab)/Scott Ruffner Scientific Computing
+AppPublisher=Scott Ruffner Scientific Computing
+AppPublisherURL=https://sites.google.com/a/srscicomp.com/maestro
 AppSupportURL=https://sites.google.com/a/srscicomp.com/maestro
 AppUpdatesURL=https://sites.google.com/a/srscicomp.com/maestro/downloads
 VersionInfoVersion=1.0
