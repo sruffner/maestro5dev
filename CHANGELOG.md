@@ -20,6 +20,16 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
+## 31 Oct 2024: An alternate implementation of CCxEventTimer, the DIO event timer interface.
+- The current event timer interface uses DO<15..0> to communicate with a number of latched external devices that are part
+of a relatively complex DIO interface panel in the experiment rig. If we dropped support for the PSGM device (designed but
+never built) and use software-timed pulses on dedicated DO channels for the variable length reward pulse and audio tone pulse,
+it is possible to get rid of that complex and expensive-to-build interface panel and just use 24 static DO channels on the
+PCIe-6363 to implement all of the remaining event timer functionality.
+- CCxEventTimerAlt is a proposed redesign of the event timer interface. IT IS NOT CURRENTLY INTEGRATED INTO MAESTRO, as it
+is not compatible with current Maestro experiment rigs. However, it could be integrated into the future -- but keep in mind
+that changes would be needed in CNI6363_DIO to conform to the specifications of CCxEventTimerAlt.
+
 ## 23 Oct 2024: Minor tweaks.
 - Adjusted layout of widgets on the stimulus run editor form (`IDD_RUNFORM`). Also increased the (fixed) width of columns in the 
 stimulus channel grid, as some of the labels and values were getting cut off.
