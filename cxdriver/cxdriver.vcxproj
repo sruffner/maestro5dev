@@ -33,6 +33,7 @@
   <!--                             -->
   <!-- **************************  -->
   <ItemGroup>
+    <ClCompile Include="..\src\cxdriver\devices\cxeventtimeralt.cpp" />
     <ClCompile Include="C:\maestro5dev\src\cxdriver\cxdevicemgr.cpp" />
     <ClCompile Include="C:\maestro5dev\src\cxdriver\cxdriver.cpp" />
     <ClCompile Include="C:\maestro5dev\src\cxdriver\cxfilewriter.cpp" />
@@ -48,6 +49,7 @@
     <ClCompile Include="C:\maestro5dev\src\gui\util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\cxdriver\devices\cxeventtimeralt.h" />
     <ClInclude Include="C:\maestro5dev\src\cxdriver\cxdevicemgr.h" />
     <ClInclude Include="C:\maestro5dev\src\cxdriver\cxdriver.h" />
     <ClInclude Include="C:\maestro5dev\src\cxdriver\cxfilefmt.h" />
