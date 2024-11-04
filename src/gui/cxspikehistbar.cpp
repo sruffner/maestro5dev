@@ -510,9 +510,9 @@ VOID CCxSpikeHistBar::Reset()
 //    This method examines the trial codes defining the next trial to be presented to determine the start and end times 
 //    of any tagged sections in the trial (we CANNOT rely on the CCxTrial definition because any given segment will 
 //    have a randomized duration if its min & max durations are not the same!).  Trial will be ignored by histogram 
-//    facility if it contains a special "skip on saccade" operation -- since the section start/end times are 
-//    indeterminate in that case.  The trial is also ignored if it contains no tagged sections, or if one of the 
-//    trial codes is unrecognized.
+//    facility if it contains a special "skip on saccade" OR "selDurByFix" operation -- since the section start/end 
+//    times are indeterminate in that case. The trial is also ignored if it contains no tagged sections, or if one of
+//    the trial codes is unrecognized.
 //
 //    ARGS:       nCodes      -- [in] #trial codes defining the next Maestro trial.
 //                pCodes      -- [in] trial code buffer.
@@ -554,9 +554,11 @@ VOID CCxSpikeHistBar::PrepareForNextTrial( int nCodes, PTRIALCODE pCodes, int nS
          switch( pCodes[i].code )                                             // trial "tick" 
       {
          case SPECIALOP :                                                     // if trial has a "skipOnSaccade" op, 
-            if( pCodes[i+1].code == SPECIAL_SKIP )                            // section start times and durations are  
-            {                                                                 // indeterminate -- so trial results are 
-               bSkip = TRUE;                                                  // ignored by this histogram facility 
+            // start times and durations of the special segment and subsequent segments may depend on subject behavior when
+            // the "skipOnSaccade" or "selDurByFix" operation is in effect -- so trial results are ignored
+            if((pCodes[i+1].code == SPECIAL_SKIP) || (pCodes[i+1].code == SPECIAL_SELDURBYFIX))
+            { 
+               bSkip = TRUE; 
             }
             i += 2;
             break;
@@ -601,6 +603,7 @@ VOID CCxSpikeHistBar::PrepareForNextTrial( int nCodes, PTRIALCODE pCodes, int nS
          case INSIDE_HSLOACC :
          case INSIDE_VSLOACC :
          case TARGET_VSTAB :
+         case SEGDURS :
             i += 2;
             break;
 

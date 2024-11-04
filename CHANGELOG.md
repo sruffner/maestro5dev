@@ -20,6 +20,17 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
+## 04 Nov 2024: New special feature "selDurByFix".
+-- A saccade-triggered special operation in a trial. Same requirements and same behavior as "selByFix", with one
+addition: Like the end-of-trial reward, the duration of the segment S immediately after the "special segment" depends on 
+which fixation target is selected during the special segment. If Fix1 is selected, then the specified minimum duration
+of S is used; if Fix2 is selected, then the max duration of S applies.
+-- Loosened restrictions on the trial segment definition to allow both the minimum and maximum segment duration be set
+independently to either a constant or a random variable. That way the minimum and maximum duration of the segment 
+following the special segment in a "selDurByFix" trial can be randomly chosen from a specified probability distribution.
+Users should take care to define their trial and RVs so that min segment duration is always <= max. Maestro will abort trial
+sequencing otherwise.
+
 ## 31 Oct 2024: An alternate implementation of CCxEventTimer, the DIO event timer interface.
 - The current event timer interface uses DO<15..0> to communicate with a number of latched external devices that are part
 of a relatively complex DIO interface panel in the experiment rig. If we dropped support for the PSGM device (designed but
@@ -27,7 +38,7 @@ never built) and use software-timed pulses on dedicated DO channels for the vari
 it is possible to get rid of that complex and expensive-to-build interface panel and just use 24 static DO channels on the
 PCIe-6363 to implement all of the remaining event timer functionality.
 - CCxEventTimerAlt is a proposed redesign of the event timer interface. IT IS NOT CURRENTLY INTEGRATED INTO MAESTRO, as it
-is not compatible with current Maestro experiment rigs. However, it could be integrated into the future -- but keep in mind
+is not compatible with current Maestro experiment rigs. However, it could be integrated in the future -- but keep in mind
 that changes would be needed in CNI6363_DIO to conform to the specifications of CCxEventTimerAlt.
 
 ## 23 Oct 2024: Minor tweaks.

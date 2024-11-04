@@ -2492,14 +2492,16 @@ VOID CCxTrialForm::StuffHdrPB( const TRLHDR& hdr, const UINT id /* = 0 */ )
    if ( (id == 0) || (id == IDC_TRH_SPECOP) )                        // PB label reflects special op that's in effect
    {
       str = _T("none");
-      if ( hdr.iSpecialOp == TH_SOP_SKIP ) str = _T("skipOnSacc");
-      else if ( hdr.iSpecialOp == TH_SOP_SELBYFIX ) str = _T("selByFix");
-      else if ( hdr.iSpecialOp == TH_SOP_SELBYFIX2 ) str = _T("selByFix2");
-      else if ( hdr.iSpecialOp == TH_SOP_SWITCHFIX ) str = _T("switchFix");
-      else if ( hdr.iSpecialOp == TH_SOP_RPDISTRO ) str = _T("R/P Distro");
-      else if ( hdr.iSpecialOp == TH_SOP_CHOOSEFIX1 ) str = _T("chooseFix1");
-      else if ( hdr.iSpecialOp == TH_SOP_CHOOSEFIX2 ) str = _T("chooseFix2");
-      else if ( hdr.iSpecialOp == TH_SOP_SEARCH ) str = _T("searchTask");
+      if(hdr.iSpecialOp == TH_SOP_SKIP) str = _T("skipOnSacc");
+      else if(hdr.iSpecialOp == TH_SOP_SELBYFIX) str = _T("selByFix");
+      else if(hdr.iSpecialOp == TH_SOP_SELBYFIX2) str = _T("selByFix2");
+      else if(hdr.iSpecialOp == TH_SOP_SWITCHFIX) str = _T("switchFix");
+      else if(hdr.iSpecialOp == TH_SOP_RPDISTRO) str = _T("R/P Distro");
+      else if(hdr.iSpecialOp == TH_SOP_CHOOSEFIX1) str = _T("chooseFix1");
+      else if(hdr.iSpecialOp == TH_SOP_CHOOSEFIX2) str = _T("chooseFix2");
+      else if(hdr.iSpecialOp == TH_SOP_SEARCH) str = _T("searchTask");
+      else if(hdr.iSpecialOp == TH_SOP_SELDUR) str = _T("selDurByFix");
+
       m_mainPage.SetDlgItemText( IDC_TRH_SPECOP, str );
    }
 

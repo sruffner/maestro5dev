@@ -1717,6 +1717,15 @@ VOID RTFCNDCL CCxDriver::RunTrialMode()
  have not been supported since the release of Maestro 4.0. Historical comments above relevant to XYScope may be ignored.
  Leaving XYScope-related typedefs, constants and flag bits alone to make sure we don't break code.
 
+ 13) (04nov2024) Added new special op "selDurByFix". Similar to "selByFix", except that the target selection during the
+ special segment determines the DURATION of the subsequent segment. For this special op only, Maestro delivers a new
+ trial code group, SEGDURS, only for the segment after the special segment. This code group specifies the minimum and 
+ maximum duration for the segment. The minimum duration will be used if the Fix1 target is selected, or the maximum
+ duration if Fix2 is selected. Maestro prepares all remaining trial codes UNDER THE ASSUMPTION that the maximum 
+ duration is used, so CXDRIVER must adjust the elapsed start times for all remaining segments if Fix1 gets selected!
+ If Fix2 is selected, then no adjustment is needed.
+
+
  @returns The trial result (some combination of IPC flag bits (CX_FT_DONE, etc.).
 ======================================================================================================================*/
 // The following flag bits are used only in this fcn!!!!
@@ -1729,7 +1738,6 @@ const DWORD T_CHECKSACC = ((DWORD) (1<<7));  // enables saccade checking during 
 const DWORD T_ISSKIP    = ((DWORD) (1<<8));  // the special operation in effect is "skipOnSaccade"
 const DWORD T_ISFIX1    = ((DWORD) (1<<9));  // the special operation in effect is "selectByFix"
 const DWORD T_ISFIX2    = ((DWORD) (1<<10)); // the special operation in effect is "selectByFix2"
-const DWORD T_ISFIX     = T_ISFIX1|T_ISFIX2; // mask for the two "selectByFix" special ops
 const DWORD T_SKIPPED   = ((DWORD) (1<<11)); // part of special segment was skipped b/c of "skipOnSaccade"
 const DWORD T_SELECTED  = ((DWORD) (1<<12)); // tgt selected during "selByFix" or "chooseFix" op
 const DWORD T_ENDSEL    = ((DWORD) (1<<13)); // set if tgt selection forced at end of special seg in "selByFix" ops
@@ -1747,6 +1755,8 @@ const DWORD T_ISRPDIST  = ((DWORD) (1<<23)); // special operation in effect is "
 const DWORD T_HASRPDWIN = ((DWORD) (1<<24)); // for "R/P Distro" operation, this flag set if reward window(s) defined
 const DWORD T_RPDPASS   = ((DWORD) (1<<25)); // for "R/P Distro": set flag if behav resp inside a reward window.
 const DWORD T_ST_2GOAL  = ((DWORD) (1<<26)); // "search task" op has 2 goal targets, Fix1 and Fix2.
+const DWORD T_ISSELDUR = ((DWORD)(1 << 27)); // the special op in effect is "selDurByFix".
+const DWORD T_ISFIX    = T_ISFIX1 | T_ISFIX2 | T_ISSELDUR; // mask for the "sel*ByFix*" variants
 
 DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
 {
@@ -1842,7 +1852,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
          ++nRMVTgts;
       }
 
-      pTraj->iILSlot = 0;
       pTraj->bIsOn = FALSE;
       pTraj->bIsMoving = FALSE;
    }
@@ -1914,6 +1923,10 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    int iBehavRespType = -1; 
    float fRPDWindow[4]; 
    for(i=0; i<4; i++) fRPDWindow[i] = 0.0f;  
+
+   // "selDurByFix" only: the min and maxx durations of the segment AFTER the special segment (SEGDURS trial code)
+   int selectSegDurMin = 0;
+   int selectSegDurMax = 0;
 
    // init reward pulse lengths; mid-trial reward pulse length and intv (intv<=0: deliver at END of each enabled seg).
    // NOTE: Reward pulse 1 or 2 may be zero-length -- indicating that reward is withheld even if fixation rqmts met.
@@ -2234,15 +2247,27 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                {
                   // RPDistro response type is in bits 15..8 of second trial code. Disable if resp type invalid.
                   dwFlags |= T_ISRPDIST;
-                  iBehavRespType = (int) (tc.code >> 8);
+                  iBehavRespType = (int)(tc.code >> 8);
                   if(iBehavRespType < 0 || iBehavRespType >= TH_RPD_NRESPTYPES) dwFlags &= ~T_ISRPDIST;
                }
                else if(i == SPECIAL_SEARCH) dwFlags |= T_ISSEARCH;
+               else if(i == SPECIAL_SELDURBYFIX) dwFlags |= T_ISSELDUR;
                
                // saccade threshold velocity in deg/sec. Use absolute value and convert to raw ADC code
                iSaccThresh = tc.time; 
                if(iSaccThresh < 0) iSaccThresh = -iSaccThresh; 
                iSaccThresh = (int) (VEL_TOAIRAW * ((float)iSaccThresh));
+               break;
+
+            // the two alternate durations assigned to the segment AFTER the special segment in "selDurByFix" op ONLY.
+            // THIS SHOULD ONLY BE SENT FOR a "selDurByFix" trial, and ONLY for the seg AFTER the special seg
+            case SEGDURS:
+               tc = m_masterIO.GetTrialCode(++iCode);
+               if(((dwFlags & T_ISSELDUR) != 0) && (iSaccSeg > -1) && (iCurrSeg == iSaccSeg + 1))
+               {
+                  selectSegDurMin = tc.code;  // min duration in ms - used if Fix1 selected during special segment
+                  selectSegDurMax = tc.time;  // max duration in ms - used if Fix2 selected during special segment
+               }
                break;
 
             // define reward windows for the R/P Distro special feature
@@ -2428,7 +2453,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    // expected chair position in deg; starts at 0 always; calculated by velocity integration
    float fExpectedChairPos = 0.0f;
 
-   // target not selected by a "selectByFix" op, or turned off by a "chooseFix" op
+   // target not selected by a "selByFix*" or "selDurByFix" op, or turned off by a "chooseFix" op
    int nUnselectedTgt = -1;
    
    // "switchFix" only: which fixation target must be fixated by trial's end; which is being fixated currently
@@ -2845,7 +2870,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
             // "searchTask" trial ALWAYS stops at the end of the special segment.
             if(dwFlags & T_ISSEARCH) 
                break; 
-            // for "selectByFix" op, select nearest target if no target has been selected yet.
+            // for "selByFix*/selDurByFix" ops, select nearest target if no target has been selected yet.
             else if((dwFlags & T_ISFIX) && !(dwFlags & T_SELECTED)) 
             { 
                // present marker pulse on DO<6>; set flag to indicate that selected occurred at segment's end
@@ -2901,6 +2926,19 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                      }
                   }
                }
+            }
+
+            // during a "selDurByFix" trial, if Fix1 was selected during the special segment, then the duration of the
+            // next segment will be the minimum duration rather than the max. Since Maestro prepares all subsequent
+            // trial codes on the assumption that the max duration was used, we must adjust (1) the overall trial
+            // length, and (2) the start times of any segments beyond (iSaccSeg + 1)
+            if((dwFlags & T_ISSELDUR) && (nUnselectedTgt == m_seg[iSaccSeg].iCurrFix2))
+            {
+               int delta = selectSegDurMax - selectSegDurMin;
+               nTrialLength -= delta;
+
+               for(int i = iSaccSeg + 2; i < nSegs; i++)
+                  m_seg[i].tStart -= delta;
             }
          }
 
@@ -3136,7 +3174,8 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
       // END: HANDLE RECORDED DATA
 
       // BEGIN: UPDATE TARGET MOTION/STATE ON HARDWARE
-      // if target was selected in a "selectByFix" or "chooseFix" op, turn OFF "unselected" for remainder of trial.
+      // if target was selected in a "selByFix", "selDurByFix" or "chooseFix" op, turn OFF "unselected" target
+      // for remainder of trial.
       if(dwFlags & T_SELECTED) 
       {
          pTraj = &(m_traj[nUnselectedTgt]);
@@ -3348,8 +3387,8 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
          }
       }
       
-      // if grace period not yet exceeded, or if no fix tgt #1 designated, or we're in the "selectByFix" segment,
-      // then fixation checking is disabled
+      // if grace period not yet exceeded, or if no fix tgt #1 designated, or we're in the "selByFix*/selDurByFix" 
+      // segment, then fixation checking is disabled
       else if((nTrialTime < pSeg->tGrace) || (pSeg->iCurrFix1 < 0) || ((dwFlags & T_ISFIX) && (iCurrSeg == iSaccSeg)))
          nBrokeFixTicks = 0;
       
@@ -3518,7 +3557,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
             }
          }
          
-         // "selectByFix*": Select target at "end" of saccade.
+         // "selByFix*" or "selDurByFix": Select target at "end" of saccade.
          else if(dwFlags & T_ISFIX) 
          {
             // detect start of saccade
@@ -3533,13 +3572,13 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                fPt1 = fix1PosCurr;
                fPt2 = fix2PosCurr;
 
-               // NOTE: In SelByFix2, we define a fix tgt's "ghost" pos as the pos where the tgt would be had no
-               // displacement occurred at the start of the special segment. Eye pos is compared to both the actual
-               // tgt pos and the ghost pos. In SelByFix1, the pos displacements posDelta*_SBF2 are always (0,0).
-               // This means that the calculations below are correct for both SelByFix operations; we just do a little
-               // unnecessary extra work for SelByFix1... The fixation accuracy is enforced as a rect window around
-               // the current eye pos. Thus, one tgt can be out of bounds yet still closer to the eye than the other
-               // tgt (think: ellipse inside a rectangle). We are careful here to avoid this mistake.
+               // NOTE: In SelByFix2, we define a fix tgt's "ghost" pos as the pos where the tgt would be had no 
+               // displacement occurred at the start of the special segment. Eye pos is compared to both the actual tgt
+               // pos and the ghost pos. In SelByFix1 and SelDurByFix, the pos displacements posDelta*_SBF2 are always 
+               // (0,0) -- so the calculations below are correct for all SelByFix variants. The fixation accuracy is 
+               // enforced as a rect window around the current eye pos. Thus, one tgt can be out of bounds yet still 
+               // closer to the eye than the other tgt (think: ellipse inside a rectangle). We are careful here to 
+               // avoid this mistake.
                //
                BOOL bFix1Ok = currEyePos.IsNear( fPt1, pSeg->fpFixAcc ) ||
                               currEyePos.IsNear( fPt1-posDelta1_SBF2,  pSeg->fpFixAcc );
@@ -3732,12 +3771,15 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    // final update of MaestroGUI's data trace display (via IPC)
    m_masterIO.UpdateTrace(m_pshLastScan, NULL, dwEventsThisTick);
 
-   // for successful "selectByFix*" trials, post message indicating which reward pulse was delivered
+   // for successful "selByFix*/selDurByFix" trials, post message indicating which reward pulse was delivered
    if((dwFlags & T_ISFIX) && !(dwTrialRes & (CX_FT_LOSTFIX|dwErrResFlags)))
    {
       if(nUnselectedTgt == pSeg->iCurrFix2) { i = 1; j = nRewPulse1; } 
       else { i = 2; j = nRewPulse2; }
-      ::sprintf_s(m_strMsg, "SelectByFix*: Fix Tgt #%d selected, rew len = %d ms.", i, j);
+      if(dwFlags & T_ISSELDUR)
+         ::sprintf_s(m_strMsg, "SelDurByFix: Fix Tgt #%d selected, rew len = %d ms.", i, j);
+      else
+         ::sprintf_s(m_strMsg, "SelByFix*: Fix Tgt #%d selected, rew len = %d ms.", i, j);
       m_masterIO.Message(m_strMsg);
    }
 
@@ -3822,7 +3864,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
          if(bRewardGiven) m_Header.flags |= CXHF_REWARDGIVEN;
       }
 
-      // result of selectByFix* ops
+      // result of selByFix*/selDurByFix variants
       if(dwFlags & T_ISFIX)
       {
          if(nUnselectedTgt == m_seg[iSaccSeg].iCurrFix2) m_Header.flags |= CXHF_FIX1SELECTED;

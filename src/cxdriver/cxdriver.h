@@ -112,7 +112,6 @@ private:
       float    remDotLife;                         //    dot life "remainder" for FCDOTLIFE tgt when dotlife units are
                                                    //       in 0.01deg travelled.  units = 0.01deg/tick.
       int      iUpdatePos;                         //    ordinal pos of this tgt in the set of tgts partic in trial
-      int      iILSlot;                            //    if interleaving, tgt is updated in this interleave slot #
       BOOL     bIsOn;                              //    if TRUE, target is currently turned ON
       BOOL     bIsMoving;                          //    if TRUE, then tgt window moves at some point during trial; for
                                                    //       RECTANNU & SURROUND, flag is set if dot pattern moves --

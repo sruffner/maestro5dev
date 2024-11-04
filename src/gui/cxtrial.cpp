@@ -166,8 +166,8 @@
 // have RV type RV_NOTUSED.
 //
 // To use an RV, it must be assigned to a parameter in the trial's segment table. An RV can govern segment duration
-// (both min and max duration are assigned to the same RV always) or any of the 10 floating-point target trajectory
-// parameters. See the relevant methods on how to assign a segment table parameter to an RV instead of a constant.
+// or any of the 10 floating-point target trajectory parameters. See the relevant methods on how to assign a segment 
+// table parameter to an RV instead of a constant.
 //
 // With RV-assignable parameters, we must be careful to use the correct methods when editing the parameter or when
 // getting its current value for a trial presentation. When such a parameter is not a constant but is assigned to an RV,
@@ -340,6 +340,11 @@
 // XYScope-specific parameters. However, we must still support deserialization of pre-V5.0 documents containing trials
 // that use XYScope targets. Such targets and trials are removed from the document AFTER deserialization! Segment
 // header parameter 'SEGHDR.iXYFrame' is no longer serialized (CCxSegment schema version 5).
+// 31oct2024-- Began implementation of new special feature "selDurByFix", in which target selection during the special
+// segment selects the duration of the subsequent segment -- either the min or max duration. So that the user can
+// specify DIFFERENT RVs to randomly choose the min and the max duration of that subsequent segment, CCxTrial no
+// longer forces the min/max duration params to be assigned to the same RV. Now each can be independently assigned to
+// a constant value or any RV. Of course, this usage only really makes sense for the "selDurByFix" feature.
 //=====================================================================================================================
 
 
@@ -609,15 +614,14 @@ BOOL CCxSegment::SetHeader( SEGHDR& hdr )
    if(hdr.iMinDur < 0)
    {
       if(hdr.iMinDur < -10) { hdr.iMinDur = -10; bOk = FALSE; }
-      if(hdr.iMaxDur != hdr.iMinDur) { hdr.iMaxDur = hdr.iMinDur; bOk = FALSE; }
    }
    if(hdr.iMaxDur < 0)
    {
       if(hdr.iMaxDur < -10) { hdr.iMaxDur = -10; bOk = FALSE; }
-      if(hdr.iMaxDur != hdr.iMinDur) { hdr.iMinDur = hdr.iMaxDur; bOk = FALSE; }
    }
 
-   if(hdr.iMinDur > hdr.iMaxDur)                          // min dur cannot exceed max dur
+   // if neither min nor max dur are assigned to an RV, then min dur cannot exceed max dur
+   if(hdr.iMinDur > -1 && hdr.iMaxDur > -1 && hdr.iMinDur > hdr.iMaxDur) 
    {
       hdr.iMaxDur = hdr.iMinDur;
       bOk = FALSE;
@@ -863,15 +867,20 @@ void CCxSegment::Serialize ( CArchive& ar )
 /**
  Set the minimum or maximum segment duration. 
 
- These parameters may be assigned to one of the trial's random variables. In this usage, both will always be assigned
- to the same RV, and it is the RV's value which sets the segment duration (since min and max will be the same!). There
- are 10 trial RVs available, with indices 0-9. To assign the RV with index N, call either method with iVal = -N-1; in
- this usage, iVal is restricted to [-10 .. -1].
+ These parameters may be assigned to one of the trial's random variables, or to an integer. There are 10 trial RVs 
+ available, with indices 0-9. To assign the RV with index N, call either method with iVal = -N-1; in this usage, iVal 
+ is restricted to [-10 .. -1].
 
  If iVal >= 0, then the minimum or maximum segment duration is set to the constant specified. In this usage, it is
- restricted to [0..32000]. In addition, if the change is such that minDur > maxDur, then the other endpoint is 
- auto-corrected to always ensure minDur <= maxDur. If an RV WAS assigned, but this call changes it back to a numeric
- constant, then both min and max duration are set to that same constant.
+ restricted to [0..32000]. In addition, if both minDur and maxDur are NOT assigned to RVs and the change is such that 
+ minDur > maxDur, then the other endpoint is auto-corrected to always ensure minDur <= maxDur.
+
+ NOTE: Prior to Maestro 5.0.1, these methods forced both min and max duration to be set to the same RV, and that RV
+ was used to randomly select the segment duration. However, in the "selDurByFix" special feature -- introduced in 
+ 5.0.1 -- the target selection during the special segment determines which of two possible durations to use for the
+ subsequent segment -- the min duration or the max duration. To allow for those two durations to be governed by
+ different distributions, we no longer require min/max duration to be assigned to the same RV. This also means that
+ one duration could be set to an integer while the other is set to  an RV!
 
  @param iVal The new minimum or maximum duration value. See notes above on limits and RVs.
  @return TRUE if change was accepted without auto-correction; else FALSE.
@@ -879,20 +888,24 @@ void CCxSegment::Serialize ( CArchive& ar )
 BOOL CCxSegment::SetMinDuration( int iVal )
 {
    BOOL bSideEffect = FALSE;
-   BOOL wasRV = BOOL(m_hdr.iMinDur < 0);
    m_hdr.iMinDur = (iVal < -10) ? -10 : (iVal > 32000 ? 32000 : iVal);
-   BOOL isRV = (m_hdr.iMinDur < 0);
-   if(isRV || wasRV != isRV || m_hdr.iMinDur > m_hdr.iMaxDur) { m_hdr.iMaxDur = m_hdr.iMinDur; bSideEffect = TRUE; }
+   if(m_hdr.iMinDur > -1 && m_hdr.iMaxDur > -1 && m_hdr.iMinDur > m_hdr.iMaxDur)
+   {
+      m_hdr.iMaxDur = m_hdr.iMinDur;
+      bSideEffect = TRUE;
+   }
    return(BOOL(m_hdr.iMinDur == iVal && !bSideEffect));
 }
 
 BOOL CCxSegment::SetMaxDuration( int iVal )
 {
    BOOL bSideEffect = FALSE;
-   BOOL wasRV = BOOL(m_hdr.iMaxDur < 0);
    m_hdr.iMaxDur = (iVal < -10) ? -10 : (iVal > 32000 ? 32000 : iVal);
-   BOOL isRV = (m_hdr.iMaxDur < 0);
-   if(isRV || wasRV != isRV || m_hdr.iMinDur > m_hdr.iMaxDur) { m_hdr.iMinDur = m_hdr.iMaxDur; bSideEffect = TRUE; }
+   if(m_hdr.iMinDur > -1 && m_hdr.iMaxDur > -1 && m_hdr.iMinDur > m_hdr.iMaxDur)
+   {
+      m_hdr.iMinDur = m_hdr.iMaxDur;
+      bSideEffect = TRUE;
+   }
    return(BOOL(m_hdr.iMaxDur == iVal && !bSideEffect));
 }
 
@@ -3038,8 +3051,7 @@ BOOL CCxTrial::SetSegParam( int s, int t, ParamID p, double dVal, BOOL asRV)
 
  When an RV is assigned to a parameter, that parameter takes on the RV's current value, which is updated on each trial
  presentation IAW the RV's definition. Currently, any floating-point target trajectory parameter can be assigned to an
- RV, as can the duration of any segment (in this last case, both min and max duration are set to the same RV, so the
- RV's value is the segment duration).
+ RV, as can the min or max duration of any segment.
 
  @param s Segment index.
  @param t Target index, if relevant.
@@ -3943,11 +3955,20 @@ BOOL CCxTrial::UpdateRVs(BOOL bInit, CString& errMsg)
    // final check: make sure that, for any segment table parameter assigned to an RV, that RV is in use. 
    for(int s=0; s<SegCount(); s++)
    {
+      if(IsRVAssignedToSegParam(s, -1, MINDURATION))
+      {
+         if(!IsRVInUse(GetSegParamAsInt(s, -1, MINDURATION)))
+         {
+            errMsg.Format(_T("Trial %s : Min duration of segment %d is governed by an undefined RV!"), Name(), s);
+            return(FALSE);
+         }
+      }
+
       if(IsRVAssignedToSegParam(s, -1, MAXDURATION))
       {
          if(!IsRVInUse(GetSegParamAsInt(s, -1, MAXDURATION)))
          {
-            errMsg.Format(_T("Trial %s : Duration of segment %d is governed by an undefined RV!"), Name(), s);
+            errMsg.Format(_T("Trial %s : Max duration of segment %d is governed by an undefined RV!"), Name(), s);
             return(FALSE);
          }
       }
@@ -4019,12 +4040,11 @@ int CCxTrial::GetCurrMaxDuration(int s) const
  Get the approximate worst-case duration for a trial segment.
 
  The segment duration will vary across repeated presentations of the same trial in two circumstances: (1) When minimum
- and maximum duration are set to constant values such that min < max; and (2) when the two parameters are governed by 
- a random variable (by design, if one is assigned an RV, the other is also assigned to that RV). When the parameters
- are constant values, the worst-case duration is simply the specified maximum duration. However, when assigned to an 
- RV, the worst-case duration depends on the RV's distribution. The method uses the distribution's max cutoff as the
- worst-case duration. If the RV is a function-type, it uses the max cutoffs for all RVs on which the function RV 
- depends -- which may not give a reasonable worst-case duration.
+ and maximum duration are set to constant values such that min < max; and (2) when either or both parameters are governed 
+ by a random variable. When the parameters are constant values, the worst-case duration is simply the specified maximum 
+ duration. However, when assigned to an RV, the worst-case duration depends on the RV's distribution. The method uses 
+ the distribution's max cutoff as the worst-case duration. If the RV is a function-type, it uses the max cutoffs for all 
+ RVs on which the function RV depends -- which may not give a reasonable worst-case duration.
 
  This method is provided because Maestro's spike histogram facility uses the worst-case duration for each segment to
  prepare its histogram bins before trial sequencing starts.

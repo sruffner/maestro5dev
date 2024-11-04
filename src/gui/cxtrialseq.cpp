@@ -939,9 +939,10 @@ WORD CCxTrialSequencer::GetChannels() const
 //       1) A trial involving a special operation OTHER THAN "R/P Distro" cannot use the turntable (CX_CHAIR); it is 
 //          not compatible with this feature. The "R/P Distro" does NOT have this constraint because it does not 
 //          involve changing the trial's timeline at runtime.
-//       2) A "selectByFix" or "chooseFix" trial MUST specify fixation targets 1 & 2 during the designated special 
-//          segment. The same fixation targets must be specified for all remaining segments after the special segment.
-//       2a) A "searchTask" trial must have more than one participating target, must specify fixation target 1 during
+//       2) A "selByFix*", "chooseFix*", and "selDurByFix" trial MUST specify fixation targets 1 & 2 during the 
+//          designated special segment. The same fixation targets must be specified for all remaining segments after 
+//          the special segment.
+//       3) A "searchTask" trial must have more than one participating target, must specify fixation target 1 during
 //          the special segment, and must specify a non-zero grace period for that segment that is strictly less than
 //          the segment's minimum duration.
 //
@@ -985,6 +986,11 @@ WORD CCxTrialSequencer::GetChannels() const
 //    NOTE: We implicitly assume for now that the timebase for the trial is 1msec.  Hence, the projected duration in
 //    msecs is the same as the duration in # of frames.
 //
+//    NOTE2: Maestro 5.0.1 introduces a special segment operation, "selDurByFix", in which target selection in the
+//    special segment determines whether the min or max duration of the following segment is chosen. Thus, the
+//    actual trial duration (if completed) will be one of two possibilities. The output argument piDur is set to
+//    the larger of the two.
+// 
 //    ARGS:       pNT      -- [out] the total # of targets participating in the trial.
 //                pTgMap   -- [out] the trial target map.  Caller is responsible for ensuring buffer is big enough.
 //                pN       -- [out] the total # of trial codes prepared.
@@ -995,7 +1001,8 @@ WORD CCxTrialSequencer::GetChannels() const
 //                pSections-- [out] the tagged section buffer.  Provided by caller.  Must be able to accommodate
 //                            as many as MAX_SEGMENTS section records.
 //                piDur    -- [out] projected duration of trial in millisecs (of course, trial may be cut short if
-//                            subject breaks fixation, a hardware error occurs, a "skipOnSaccade" occurs, etc.)
+//                            subject breaks fixation, a hardware error occurs, a "skipOnSaccade" occurs, etc. Also
+//                            see NOTE2)
 //                piT0,piT1-- [out] the trial time interval to be displayed in Maestro trace window, [t0..t1].
 //                            Normally, the entire trial is displayed, so t0=0 and t1=duration of trial.  However, if
 //                            the trial's display mark segments segA <= segB are both valid, then t0 and t1 are set so
@@ -1081,17 +1088,18 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
       }
 
       // for ops other than "skipOnSacc" and "searchTask"...
-      if( iSpecOp != TH_SOP_SKIP && iSpecOp != TH_SOP_SEARCH ) 
+      if(iSpecOp != TH_SOP_SKIP && iSpecOp != TH_SOP_SEARCH) 
       {
-         j = pTrial->GetSpecialSegPos();                                      // both fix tgts must be specified during
-         int iTg1 = pTrial->GetFixTarg1Pos( j );                              // the "special" segment, AND
+         // both fix targets must be specified during the "special segment", AND..
+         j = pTrial->GetSpecialSegPos(); 
+         int iTg1 = pTrial->GetFixTarg1Pos( j ); 
          int iTg2 = pTrial->GetFixTarg2Pos( j );
          BOOL bOk = BOOL( iTg1 >= 0 && iTg2 >= 0 );
 
-         while( bOk && (j < pTrial->SegCount()) )                             // the same fix tgts must be chosen for
-         {                                                                    // all remaining segments of the trial!
-            bOk = BOOL( pTrial->GetFixTarg1Pos( j ) == iTg1 &&
-                        pTrial->GetFixTarg2Pos( j ) == iTg2 );
+         // the same fix tgts must be chosen for all remaining segments of the trial
+         while(bOk && (j < pTrial->SegCount())) 
+         { 
+            bOk = BOOL(pTrial->GetFixTarg1Pos( j ) == iTg1 && pTrial->GetFixTarg2Pos( j ) == iTg2);
             ++j;
          }
 
@@ -1102,10 +1110,12 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
             return( FALSE );
          }
 
-         if( (iSpecOp == TH_SOP_SWITCHFIX) &&                                 // for "switchFix", there must be at least
-            pTrial->GetSpecialSegPos() >= pTrial->SegCount()-1 )              // one seg after the special seg
+         // for the "switchFix" and "selDurByFix" ops, there must be at least one seg after the special seg
+         if((iSpecOp == TH_SOP_SWITCHFIX || iSpecOp==TH_SOP_SELDUR) && 
+            (pTrial->GetSpecialSegPos() >= pTrial->SegCount()-1)) 
          {
-            strErr.Format( "!! Trial _%s_: 'switchFix' trial must have at least one seg after special seg!!",
+            strErr.Format( 
+               "!! Trial _%s_: 'switchFix' or 'selDurByFix' trial must have at least one seg after special seg!!",
                pTrial->Name() );
             pApp->LogMessage( strErr );
             return( FALSE );
@@ -1547,18 +1557,19 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
       {                                                                       // during one designated seg of trial.
          pCodes[n].code = SPECIALOP;
          pCodes[n++].time = shFrame;
-         if( iSpecOp == TH_SOP_SKIP )           pCodes[n].code = SPECIAL_SKIP;
-         else if( iSpecOp == TH_SOP_SELBYFIX )  pCodes[n].code = SPECIAL_FIX;
-         else if( iSpecOp == TH_SOP_SELBYFIX2 ) pCodes[n].code = SPECIAL_FIX2;
-         else if( iSpecOp == TH_SOP_SWITCHFIX ) pCodes[n].code = SPECIAL_SWITCHFIX;
-         else if( iSpecOp == TH_SOP_RPDISTRO )  
+         if(iSpecOp == TH_SOP_SKIP)           pCodes[n].code = SPECIAL_SKIP;
+         else if(iSpecOp == TH_SOP_SELBYFIX)  pCodes[n].code = SPECIAL_FIX;
+         else if(iSpecOp == TH_SOP_SELBYFIX2) pCodes[n].code = SPECIAL_FIX2;
+         else if(iSpecOp == TH_SOP_SWITCHFIX) pCodes[n].code = SPECIAL_SWITCHFIX;
+         else if(iSpecOp == TH_SOP_RPDISTRO)
          {
             // for RP Distro op, behav resp type is included in optype code, left-shifted 8 bits
             pCodes[n].code = SPECIAL_RPDISTRO | ((pTrial->GetRPDistro()->GetResponseType()) << 8);
          }
-         else if( iSpecOp == TH_SOP_CHOOSEFIX1) pCodes[n].code = SPECIAL_CHOOSEFIX1;
-         else if( iSpecOp == TH_SOP_CHOOSEFIX2) pCodes[n].code = SPECIAL_CHOOSEFIX2;
-         else                                   pCodes[n].code = SPECIAL_SEARCH;
+         else if(iSpecOp == TH_SOP_CHOOSEFIX1) pCodes[n].code = SPECIAL_CHOOSEFIX1;
+         else if(iSpecOp == TH_SOP_CHOOSEFIX2) pCodes[n].code = SPECIAL_CHOOSEFIX2;
+         else if(iSpecOp == TH_SOP_SEARCH)     pCodes[n].code = SPECIAL_SEARCH;
+         else                                  pCodes[n].code = SPECIAL_SELDURBYFIX;
          
          pCodes[n++].time = (short) pTrial->GetSaccadeThreshold();
 
@@ -1579,11 +1590,35 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
             }
          }
       }
-
-      // determine segment's duration, which may be (crudely) randomized over a range.
+      
+      // process segment duration:
+      // 1) FAIL if min duration > max duration.
+      // 2) IF the current segment is the one AFTER the special segment in a "selDurByFix" trial, the actual duration
+      // of that segment will be the min value if Fix1 was selected, else it will be the max value. IN THIS ONE 
+      // SCENARIO, we must send the two possible durations to CXDRIVER, and prepare the remaining trial codes UNDER THE
+      // ASSUMPTION THAT THE MAX DURATION WAS CHOSEN. CXDRIVER will make the necessary adjustments during trial runtime
+      // IF Fix1 was selected.
+      // 3) OTHERWISE, if max == min, then that is the segment duration. If max > min, we (crudely) select a random
+      // value within the range [min .. max].
       shSegDur = (short) pTrial->GetCurrMinDuration(iSeg); 
       short shMaxDur = (short) pTrial->GetCurrMaxDuration(iSeg);
-      if( shMaxDur > shSegDur )
+      if(shSegDur > shMaxDur)
+      {
+         *pN = 0;
+         strErr.Format("!! Trial _%s_: Segment %d has min duration > max !!", pTrial->Name(), iSeg);
+         pApp->LogMessage(strErr);
+         return(FALSE);
+      }
+
+      if((iSpecOp == TH_SOP_SELDUR) && (iSeg == pTrial->GetSpecialSegPos() + 1))
+      {
+         pCodes[n].code = SEGDURS; 
+         pCodes[n++].time = shFrame;
+         pCodes[n].code = shSegDur;
+         pCodes[n++].time = shMaxDur;
+         shSegDur = shMaxDur;
+      }
+      else if(shMaxDur > shSegDur)
       {
          i = rand() & 0x00ff;
          i *= (int) (shMaxDur-shSegDur);
@@ -1613,17 +1648,16 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
       // t = tSegStart + grace time!  If we sent another trial code after this one, the codes would no longer be in
       // chronological order!!!
       //
-      // If either "select by fixation" op is in effect during the current seg, normal fixation checking is disabled. 
-      // The H,V fixation accuracy parameters, however, are used to specify the "selection window", so they must be 
-      // sent to CXDRIVER -- even if we're running in one of the "nofix" modes. The grace time is ignored.
+      // If either "select by fixation" op or "selDurByFix" is in effect during the current seg, normal fixation 
+      // checking is disabled. The H,V fixation accuracy parameters, however, are used to specify the "selection 
+      // window", so they must be sent to CXDRIVER -- even if we're running in one of the "nofix" modes. The grace 
+      // time is ignored.
       //
       // For the "searchTask op, fixation checking is also disabled during the special segment. In this case, the
       // grace period is needed as well as the fixation accuracies, even in one of the "nofix" modes. For this op,
       // fixation accuracies define the "target is selected" window, and the grace period indicates how long the
       // subject must stay on the target to satisfy the task.
       // 
-      // For the "searchTask" op, we must send the H,V fixation accuracies and the grace period, even in a "nofix"
-      // mode. Fixation checking is entirely disabled during
       // The "choose fix tgt" ops are another special case. Here, the fixation window is used to determine if and 
       // when the eye is close enough to the correct target during the special segment. At that point, fixation 
       // checking is turned ON and the wrong target is turned off.  In "nofix" modes, we still send a very large 
@@ -1638,7 +1672,7 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
       BOOL bIsSearch = FALSE;
       if(iSeg == pTrial->GetSpecialSegPos())
       {
-         bIsSelByFix = BOOL(iSpecOp == TH_SOP_SELBYFIX || iSpecOp == TH_SOP_SELBYFIX2);
+         bIsSelByFix = BOOL(iSpecOp == TH_SOP_SELBYFIX || iSpecOp == TH_SOP_SELBYFIX2 || iSpecOp == TH_SOP_SELDUR);
          bIsChooseFix = BOOL(iSpecOp == TH_SOP_CHOOSEFIX1 || iSpecOp == TH_SOP_CHOOSEFIX2);
          bIsSearch = BOOL(iSpecOp == TH_SOP_SEARCH);
       }

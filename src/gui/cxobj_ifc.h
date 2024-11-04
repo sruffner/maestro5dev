@@ -478,7 +478,7 @@ const int   TH_MINREWINTV  = 100;         // min, default, and max mid-trial rew
 const int   TH_DEFREWINTV  = 1000;
 const int   TH_MAXREWINTV  = 9999;
 
-const int   TH_NUMSPECOPS     = 9;        // available special operations:
+const int   TH_NUMSPECOPS     = 10;        // available special operations:
 const int   TH_SOP_NONE       = 0;        //    no special operation in use
 const int   TH_SOP_SKIP       = 1;        //    skip to end of special segment if saccade detected
 const int   TH_SOP_SELBYFIX   = 2;        //    "select" 1 of 2 fix tgts by fixating on it during special segment
@@ -489,6 +489,7 @@ const int   TH_SOP_RPDISTRO   = 5;        //    "RP distro": subj rewarded/penal
 const int   TH_SOP_CHOOSEFIX1 = 6;        //    "choose fixation tgt #1: enforce fixation on fix #1 by end of spec seg
 const int   TH_SOP_CHOOSEFIX2 = 7;        //    "choose fixation tgt #2: enforce fixation on fix #2 by end of spec seg
 const int   TH_SOP_SEARCH     = 8;        //    "search": Search for a designated target among 1+ distractors.
+const int   TH_SOP_SELDUR     = 9;        //    like "selByFix", but selection determines dur of seg after special seg
 
 const int   TH_RPD_NRESPTYPES = 4;        // alternative response measures for the "RP distro" feature:
 const int   TH_RPD_EYEVEL     = 0;        //    eye velocity vector magnitude in deg/sec
@@ -585,6 +586,8 @@ typedef struct tagSegHeader   // the segment header parameters:
    // (as of v3.3.0) A negative value for duration indicates that a trial random variable x0..x9 has been assigned
    // to segment duration. Both min & max are ALWAYS set to the same RV -- so the value of the RV sets the segment 
    // duration. In this usage, allowed values are [-10 .. -1], and the index of the assigned RV is abs(dur) - 1.
+   // (as of v5.0.1) Min & max duration can now be separately assigned to an integer or an RV, and need not be
+   // assigned to the same RV. This change supports impl of the new "selDurByFix" special feature.
    int      iMinDur;
    int      iMaxDur;
 

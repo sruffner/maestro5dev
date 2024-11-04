@@ -85,9 +85,8 @@ public:
 // OPERATIONS -- INDIVIDUAL PARAMETER ACCESS
 //=====================================================================================================================
 public:
-   // NOTE: Min and max segment duration may be assigned to a trial RV, x0..x9. When this is the case, both are always
-   // assigned to the same RV, and Get***Duration() returns a negative integer N in [-10 .. -1], such that RV's index
-   // in [0..9] is given by I = abs(N)-1.
+   // NOTE: Min and max segment duration may be assigned to a trial RV, x0..x9. When this is the case, Get***Duration()
+   // returns a negative integer N in [-10 .. -1], such that RV's index in [0..9] is given by I = abs(N)-1.
    int GetMinDuration() const { return( m_hdr.iMinDur ); }
    BOOL SetMinDuration( int iVal );
 

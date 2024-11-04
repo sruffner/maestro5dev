@@ -1243,7 +1243,8 @@ WORD JMXDocImporter::ImportTrialSubset(CCxDoc* pDoc, WORD wSet, JSONObject* pJSO
  * 'failsafeseg': If trial cut short because subject broke fixation, data is still saved trial reached the start of
  *    this segment. Integer in [0..#segs], where 0 => trial must finish. Default = 0.
  * 'specialop': Special feature. Recognized values: 'none', 'skip', 'selbyfix', 'selbyfix2', 'switchfix', 'rpdistro', 
- *    'choosefix1', 'choosefix2', 'search'. See Maestro User's Guide for a full description. Default = 'none'. 
+ *    'choosefix1', 'choosefix2', 'search', 'selectDur'. See Maestro User's Guide for a full description. 
+ *    Default = 'none'. 
  * 'specialseg': Index of segment during which special feature operation occurs. Ignored if 'specialop'=='none'.
  *    Integer in [1..#segs]. Default = 1.
  * 'saccvt': Saccade threshold velocity in deg/sec for saccade-triggered special features. Integer range-restricted to 
@@ -2081,7 +2082,7 @@ LPCTSTR JMXDocImporter::STR_JMXTGTTYPES_RMV[] =
 /** Maps JMX trial special operation token to corresponding integer type (0-based index) as required by CCxTrial. */
 LPCTSTR JMXDocImporter::STR_JMXSPECIALOPS[] =
 {
-   "none", "skip", "selbyfix", "selbyfix2", "switchfix", "rpdistro", "choosefix1", "choosefix2", "search"
+   "none", "skip", "selbyfix", "selbyfix2", "switchfix", "rpdistro", "choosefix1", "choosefix2", "search", "selectDur"
 };
 
 /** Maps JMX trial perturbation component token to corresponding integer type (0-based index) required by CCxTrial. */
