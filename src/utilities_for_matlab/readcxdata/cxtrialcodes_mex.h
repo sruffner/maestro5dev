@@ -46,6 +46,7 @@
 // RMVideo "vertical sync" flash at the start of a trial segment
 // 13may2019-- Modified IAW change in CXTRIALCODES.h dtd 30apr2019 -- need to enclose definition of VSTAB_MASK in 
 // parentheses!
+// 05nov2024-- Modified IAW changes in CXTRIALCODES.h dtd 20may2019 - 04nov2024.
 //=====================================================================================================================
 
 #if !defined(CXTRIALCODES_MEX_H__INCLUDED_)
@@ -184,7 +185,10 @@ typedef struct tagTrialCode            // one trial code block contains:
 #define     SPECIAL_CHOOSEFIX1   6     //    [04jan2007] optype = "choose fixation tgt #1"
 #define     SPECIAL_CHOOSEFIX2   7     //    [04jan2007] optype = "choose fixation tgt #2"
 #define     SPECIAL_SEARCH       8     //    [01feb2011] optype = "search task"
+#define     SPECIAL_SELDURBYFIX  9     //    [31oct2024] optype = "selDurByFix"
 
+// [20may2019] Effective Maestro 4.1.0, reward pulse 1 or 2 may be randomly withheld. When a reward is to be
+// withheld, the pulse length is set to 0!
 #define     REWARDLEN            61    // reward pulse lengths; always sent at time0 = 0 (N=2)
                                        //    code1 = pulse length in msec; if SPECIAL_FIX trial, this pulse length
                                        //            applies when the subject "selects" the first fixation target. for
@@ -249,6 +253,17 @@ typedef struct tagTrialCode            // one trial code block contains:
 #define     VSTAB_H             (1<<2) //    enable (set) or disable (unset) stabilization of H component of motion
 #define     VSTAB_V             (1<<3) //    enable (set) or disable (unset) stabilization of V component of motion
 #define     VSTAB_MASK          (VSTAB_ON|VSTAB_SNAP|VSTAB_H|VSTAB_V)
+
+// the following trial code was introduced in Maestro 5.0.1 to handle a VERY narrow use case. For the SPECIAL_SELDURBYFIX
+// trial, it is sent for the segment immediately following the special segment. It communicates the min and max duration
+// for that segment. During trial code preparation, Maestro assumes the max duration is selected. During trial runtime,
+// if Fix1 is selected during the special segment, then the min duration should be used, and CXDRIVER makes the necessary
+// adjustments on the fly. If Fix2 gets selected, the the max duration should be used, and no adjustment is required.
+// ** The trial code is not sent for any other segment of a SPECIAL_SELDURBYFIX trial, nor for any trial that does not
+// employ that special feature.**
+#define     SEGDURS              69    // [31oct2024] min and maximum duration for seg  (N=2)
+                                       //     code1 = min duration in ms
+                                       //     time1 = max duration in ms
 
 #define     RANDOM_SEED          97    // specify seed for XY scope random # generator (N=2)
                                        //    code1 = HIWORD(randSeedLong); time1 = LOWORD(randSeedLong)

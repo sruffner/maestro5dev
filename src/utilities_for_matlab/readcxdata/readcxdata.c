@@ -3999,8 +3999,16 @@ BOOL shouldAdjustPatternMotionDuringVStab(int pos)
 //    target pattern velocity trajectory WRT the target window. As such these fields will not show the effects of 
 //    velocity stabilization.
 //
-//    As of 11may2021: Per-segment fixation target designations are culled from the FIXEYE1/2 trial codes and stored
+//    6) As of 11may2021: Per-segment fixation target designations are culled from the FIXEYE1/2 trial codes and stored
 //    in the internal buffer: cxData.fix1[] and cxData.fix2[].
+// 
+//    7) Maestro v5.0.1 (data file version = 24, unchanged) introduced a new special op, "selDurByFix", in which target
+//    selection during the special segment S determines the duration of segment S+1. The new SEGDURS trial code, sent 
+//    only for segment S+1, specifies the min and max segment duration. At runtime, the min duration is used for 
+//    seg S+1 if Fix1 is selected during the special seg, while the max duration is used if Fix2 is selected. The
+//    trial codes are prepared under the assumption that the max duration is used for seg S+1. So, if Fix1 is actually
+//    selected, we adjust the start times of segments S+2 onward, and the overall trial length, by subtracting
+//    (max dur - min dur).
 //
 //    LIMITATIONS:
 //    1) We make a concerted effort here to accurately calculate the "expected" trajectories of tgts participating in
@@ -4100,7 +4108,16 @@ BOOL processTrialCodes( mxArray* pOut )
 
    BOOL bEnaVStabComp;                       // flag unset if we encounter a prob and can't do VStab compensation
    BOOL bNoisyDotsEmuOn;                     // flag set if noisy-dots targets are to be emulated
-   
+
+   // for the "selDurByFix" special op: When Fix1 selected during special segment S, the duration of segment S+1
+   // is its specified min duration. But trial codes are prepared assuming the max duration, so we need to adjust
+   // start times for segments S+2 onward, and the overall trial length, by subtracting D=max dur - min dur. The
+   // two durations are delivered for segment S+1 via the SEGDURS trial code.
+   BOOL isSelDurByFixOp;                     // TRUE if trial uses "selDurByFix" special op
+   int iSpecialSeg;                          // index of special segment
+   BOOL wasFix1SelDurByFix;                  // TRUE if Fix1 selected during special segment
+   int tAdjSelDurByFix;                      // timeline adj if Fix1 selected
+
    resetPertManager( &G_pertMgr );                                      // reset perturbation manager
 
    prepareTgtIDs();                                                     // prepare list of old-style IDs for targets
@@ -4214,6 +4231,11 @@ BOOL processTrialCodes( mxArray* pOut )
    openFlags = 0;
    iCurrSeg = -1;
    iFix1 = -1;
+
+   isSelDurByFixOp = FALSE;
+   iSpecialSeg = -1;
+   wasFix1SelDurByFix = ((cxData.fileHdr.flags & CXHF_FIX1SELECTED) != 0);
+   tAdjSelDurByFix = 0;
 
    dLastEyePosH = dLastEyePosV = 0.0;
    dCurrEyePosH = dCurrEyePosV = 0.0;
@@ -4482,6 +4504,23 @@ BOOL processTrialCodes( mxArray* pOut )
                   printf( "All tgt trajectories will be incorrect after the skip!\n" );
                }
             }
+            else if((cxData.pCodes[i+1].code == SPECIAL_SELDURBYFIX) && wasFix1SelDurByFix)
+            {
+               isSelDurByFixOp = TRUE;
+               if(iVerbose)
+                  printf("WARNING: Fix1 selected during a 'selDurByFix' op. Target trajectories incorrect!\n");
+            }
+            iSpecialSeg = iCurrSeg;
+            i += 2;
+            break;
+
+         // [as of Maestro 5.0.1] trial code sent only for seg S+1 immediately after the special segment S during a
+         // "selDurByFix" special operation. Specifies min and max duration for seg S+1. If Fix1 was selected during
+         // S, the min dur is used for S+1 -- but original trial codes are prepared assuming the max dur -- hence the
+         // need for adjusting start times for seg S+2 onward by the diff (max - min).
+         case SEGDURS : 
+            if(isSelDurByFixOp && (iCurrSeg == iSpecialSeg + 1) && wasFix1SelDurByFix)
+               tAdjSelDurByFix = cxData.pCodes[i + 1].time - cxData.pCodes[i + 1].code;
             i += 2;
             break;
 
@@ -4502,7 +4541,7 @@ BOOL processTrialCodes( mxArray* pOut )
             cxData.fix1[iCurrSeg] = iFix1;                              //    fix1 tgt ID for vel stab. Note that 
             i += 2;                                                     //    Cntrlx issues FIXEYE1 AFTER TARGET_HOPEN!
             break;
-	case FIXEYE2 :
+	      case FIXEYE2 :
             cxData.fix2[iCurrSeg] = mapTargetID(cxData.pCodes[i+1].code);
             i += 2;
             break;
@@ -4845,7 +4884,15 @@ BOOL processTrialCodes( mxArray* pOut )
    cxData.tRecordStarted = iRecOnTick;                                  // at which recording began
    cxData.tTrialLen = iTick;
 
-   mxSetField( pMXTraj, 0, "nTrialLen", createInt32Scalar( iTick ) );   // store total trial length and time at which
+   // fix seg start times and trial length for "selDurByFix" op
+   if(tAdjSelDurByFix > 0)
+   {
+      cxData.tTrialLen -= tAdjSelDurByFix;
+      for(i = iSpecialSeg + 2; i < cxData.nSegments; i++)
+         cxData.segStart[i] -= tAdjSelDurByFix;
+   }
+
+   mxSetField( pMXTraj, 0, "nTrialLen", createInt32Scalar(cxData.tTrialLen));   // store total trial length and time at which
    mxSetField(pMXTraj, 0, "tRecordOn", createInt32Scalar(iRecOnTick));  // recording began
 
    // store target ON epochs in "targets.on". This field is a cell array of vectors. If a target is NEVER turned on

@@ -62,6 +62,7 @@
 // 13may2019-- Modified IAW changes in CXOBJ_IFC.H dtd 07may2019, for Maestro 4.1.0.  New version of RMVTGTDEF, included
 //             indirectly via rmvideo_common.h, which MEX can handle. Deprecated RMVTGTDEF is RMVTGTDEF_V22, applicable
 //             to data file versions 13-22.
+// 05nov2024-- Modified IAW changes in CXOBJ_IFC.H dtd 15may2019 - 31oct2024.
 //=====================================================================================================================
 
 
@@ -100,7 +101,7 @@
 #define        CX_REDLED1           0x0019            // [P,D] on-off, immovable spots projected on translucent
 #define        CX_REDLED2           0x001A            //    screen, using shuttered LEDs
 #define        CX_OKNDRUM           0x001B            // [P,D] NO LONGER SUPPORTED AS OF MAESTRO V1.5.0
-#define        CX_XYTARG            0x001C            // [U,D] an individual XY scope target
+#define        CX_XYTARG            0x001C            // [U,D] an individual XY scope target -- UNSUPPORTED a/o V4.0!
 #define        CX_FBTARG            0x001D            // [U,D] an individual FB video target -- OBSOLETE as of V2.0!
 #define        CX_RMVTARG           CX_FBTARG         // [U,D] an individual RMVideo target
 
@@ -142,6 +143,11 @@
 
 //=====================================================================================================================
 // Parameter set for XY scope targets, and related constants
+// 
+// DEPRECATED!  As of Maestro 4.0, the XYScope platform is no longer supported, and a/o V5.0, XYScope-specific code has
+// been mostly excised from Maestro and CXDRIVER. However, we must maintain these old definitions to support document 
+// schema migration and analysis programs which must read in both old and new Maestro data files.
+//
 //=====================================================================================================================
 #define NUMXYTYPES        11           // XY scope target types:
 #define RECTDOT            0           //    rectangular dot array
@@ -401,7 +407,7 @@ typedef union tagTgParms_v22
 #define     TH_DEFREWINTV        1000
 #define     TH_MAXREWINTV        9999
 
-#define     TH_NUMSPECOPS        9           // available special operations:
+#define     TH_NUMSPECOPS        10          // available special operations:
 #define     TH_SOP_NONE          0           //    no special operation in use
 #define     TH_SOP_SKIP          1           //    skip to end of special segment if saccade detected
 #define     TH_SOP_SELBYFIX      2           //    "select" 1 of 2 fix tgts by fixating on it during special segment
@@ -412,6 +418,7 @@ typedef union tagTgParms_v22
 #define     TH_SOP_CHOOSEFIX1    6           //    "choose fixation tgt #1: enforce fixation on fix #1 by end of spec seg
 #define     TH_SOP_CHOOSEFIX2    7           //    "choose fixation tgt #2: enforce fixation on fix #2 by end of spec seg
 #define     TH_SOP_SEARCH        8           //    "search": Search for a designated target among 1+ distractors.
+#define     TH_SOP_SELDUR        9           //    like "selByFix", but selection determines dur of seg after special seg
 
 #define     TH_RPD_NRESPTYPES    4           // alternative response measures for the "RP distro" feature:
 #define     TH_RPD_EYEVEL        0           //    eye velocity vector magnitude in deg/sec
@@ -479,8 +486,8 @@ typedef struct tagTrialHeader                // trial header contains general tr
                                              //    settings: -1 => use disp settings; 0 => auto-seed; >0 => fixed seed.
    int      nXYInterleave;                   //    # of XYscope tgts to interleave during trial (0,1 ==> no interleave)
    int      iSaccVt;                         //    saccade threshold velocity in deg/sec (for saccade-trig'd ops)
-   int      iRewPulse,                       //    reward pulse length in msecs
-            iRewPulse2;                      //    2nd reward pulse length applicable only to "select-by-fix" trials
+   int      reward1[3];                      //    reward pulse #1: [len in ms, WHVR numerator, WHVR denominator]
+   int      reward2[3];                      //    reward pulse #2: [len in ms, WHVR numerator, WHVR denominator]
    float    fStairStrength;                  //    staircase strength (unitless) -- used by staircase trial sequencer
    WORD     wChanKey;                        //    CNTRLX "channel config" obj atch'd to this trial; if CX_NULLOBJ_KEY,
                                              //    no data is saved or displayed
@@ -495,9 +502,11 @@ typedef struct tagTrialHeader                // trial header contains general tr
 #define     SGH_NOMARKER         0           // indicates no marker pulse should be delivered
 #define     SGH_MINMARKER        0           // the range of valid marker pulse values; identifies the DOUT line on
 #define     SGH_MAXMARKER        10          // which pulse is delivered.
-#define     SGH_MINXYFRAME       2           // XY frame interval range; also must be a multiple of minimum value!
-#define     SGH_MAXXYFRAME       256
 #define     SGH_MINFIXACC        0.1f
+
+// [DEPRECATED] The XYScope is unsupported a/o V4.0, and implementation removed a/o V5.0.
+#define     SGH_MINXYFRAME       2           // [deprecated] XY frame range; also must be a multiple of min value!
+#define     SGH_MAXXYFRAME       256
 
 typedef struct tagSegHeader                  // the segment header parameters:
 {
@@ -506,6 +515,8 @@ typedef struct tagSegHeader                  // the segment header parameters:
    // (as of v3.3.0) A negative value for duration indicates that a trial random variable x0..x9 has been assigned
    // to segment duration. Both min & max are ALWAYS set to the same RV -- so the value of the RV sets the segment 
    // duration. In this usage, allowed values are [-10 .. -1], and the index of the assigned RV is abs(dur) - 1.
+   // (as of v5.0.1) Min & max duration can now be separately assigned to an integer or an RV, and need not be
+   // assigned to the same RV. This change supports impl of the new "selDurByFix" special feature.
    int      iMinDur;
    int      iMaxDur;
 
@@ -514,7 +525,7 @@ typedef struct tagSegHeader                  // the segment header parameters:
    float    fFixAccH;         // required H,V fixation accuracies during segment (deg subtended at eye).
    float    fFixAccV;         //
    int      iGrace;           // grace period (after segment start) during which fixation is not checked (msec).
-   int      iXYFrame;         // update interval for XY scope targets participating in trial (msec).
+   int      iXYFrame;         // [DEPRECATED a/o V5.0] update interval for XY scope targets participating in trial (ms)
    int      iMarker;          // marker pulse delivered at start of segment (0 = no pulse)
    BOOL     bChkResp;         // if TRUE, check for correct response during this segment (staircase trials only)
    BOOL     bEnaRew;          // if TRUE, enable periodic "mid-trial" rewards during this segment (special feature)
@@ -606,6 +617,7 @@ typedef struct tagTrialSection               // a tagged section of contiguous s
 #define     STIM_ISFIBER1        1           //    fiber-optic target #1 (trial target CX_FIBER1)
 #define     STIM_ISFIBER2        2           //    fiber-optic target #2 (trial target CX_FIBER2)
 #define     STIM_ISPSGM          3           //    pulse stimlus generator module
+// [deprecated] specialized random-motion sequence on a set of XYScope targets
 #define     STIM_ISXYSEQ         4           //    specialized random-motion seq on a set of XY scope targets; only one
                                              //    instance of this stimulus type is allowed per continous-mode run!!
 
@@ -615,7 +627,7 @@ typedef struct tagTrialSection               // a tagged section of contiguous s
 
 #define     STIM_NPSGMMODES      SGM_NMODES-1   // (SGM_NOOP is not used in stimulus runs!)
 
-#define     STIM_NXYSEQMODES     4           // motion modes applicable to the XYSEQ stimulus type:
+#define     STIM_NXYSEQMODES     4           // [deprecated]motion modes applicable to the XYSEQ stimulus type:
 #define     MODE_ISSPARSEDIR     0           //    direction randomized.  one randomly chosen XY tgt moves each seg
 #define     MODE_ISDENSEDIR      1           //    all targets move, directions separately randomized each seg
 #define     MODE_ISSPARSEVEL     2           //    velocity randomized.  one randomly chose XY tgt moves each seg
@@ -623,7 +635,7 @@ typedef struct tagTrialSection               // a tagged section of contiguous s
 
 #define     STIM_NMAXMODES       5           // maximum # of motion modes for any type
 
-typedef struct tagXYseqMotion                // the motion parameters for an XYseq stimulus channel:
+typedef struct tagXYseqMotion                // [deprecated] the motion parameters for an XYseq stimulus channel:
 {
    int   iOpMode;                            //    motion mode -- MODE_ISSPARSEDIR, etc.
    int   iRefresh;                           //    XY scope refresh period, in millisecs

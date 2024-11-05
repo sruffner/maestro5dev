@@ -186,7 +186,7 @@ typedef struct tagCxDataFile
                                                 // this trial info is prepared by processTrialCodes():
    int nSegments;                               //    number of segments in trial
    int segStart[MAX_SEGMENTS];                  //    start time for each segment; units = trial ticks. 
-   int fix1[MAX_SEGMENTS];			//    0-based index of fix tgt #1 for each segment (-1 = "none")
+   int fix1[MAX_SEGMENTS];			               //    0-based index of fix tgt #1 for each segment (-1 = "none")
    int fix2[MAX_SEGMENTS];                      //    0-based index of fix tgt #2 for each segment (-1 = "none")
    int tRecordStarted;                          //    trial time at which recording started, in trial ticks.
    int tTrialLen;                               //    total trial length in ticks (NOT just recorded time!)

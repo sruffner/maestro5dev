@@ -1,15 +1,20 @@
 Procedures for building MEX functions READCXDATA/EDITCXDATA for various supported OS platforms
 
-Last Updated: 25jun2024
+Last Updated: 05nov2024
 
 Scott Ruffner
 
-NOTE: Much of the information here is out of date, but I'll leave it just in case. Basically, you want to build the
-MEX functions from the Matlab command line on the machine on which you'll run the MEX functions. The essential
-instructions are: (1) Start Matlab and make the READCXDATA source code directory the current directory. (2) Build the
-MEX functions with:
-   mex readcxdata.c pertmgr.c noisyem.c
-   mex editcxdata.c
+NOTE: Much of the information here is out of date, but I'll leave it just in case.
+
+I no longer provide MEX builds of READCXDATA/EDITCXDATA on Windows 64-bit or Linux 64-bit. Basically, you will
+need to build the MEX functions from the Matlab command line on the machine on which you'll run those functions. The 
+essential instructions are: 
+(1) Download and unzip the ZIP archive containing the source code files for the version of READCXDATA you need. 
+(2) Start Matlab and make the READCXDATA source code directory the current directory. 
+(3) Build the MEX functions with the following commands:
+      mex readcxdata.c pertmgr.c noisyem.c
+      mex editcxdata.c
+(4) Make sure the resulting MEX files are in the MATLAB command path.
 
 
 ********************** OLD ********************************

@@ -104,6 +104,9 @@
 // 04jun2021 -- Modifying JMWork and read/editcxdata to support up to 200 (instead of 50) sorted spike train channels.
 // This does NOT impact Maestro, as the sorted spike train records are added to the data file by the post-analysis
 // software. Merely added comments in this file to document the change.
+// 05nov2024 -- Update to sync with changes in CXFILEFMT.H for Maestro v4.2.0 (data file version = 24). Added header 
+// flag CXHF_ST_2GOAL. NOTE that the XYScope display was dropped entirely for Maestro 5.0 (Oct 2024), but there were
+// no changes to CXFILEFMT.H, and we left the data file version at 24.
 //=====================================================================================================================
 
 #if !defined(CXFILEFMT_MEX_H__INCLUDED_)
@@ -129,7 +132,7 @@
 #define CXH_NAME_SZ              40                   // max length of names in header, including terminating null char
 #define CXH_MAXAI                16                   // max # of AI channels that can be recorded
 #define CXH_EXTRAS               308                  // # of unused shorts in header record
-#define CXH_CURRENTVERSION       23                   // the current version # (as of Maestro version 4.1.0)
+#define CXH_CURRENTVERSION       24                   // the current version # (as of Maestro version 4.2.0)
 
 #define CXH_RMVDUPEVTSZ          6                    // [V>=22] array size for RMVideo duplicate frame event info
 
@@ -154,6 +157,7 @@
 #define CXHF_ST_DISTRACTED       ((DWORD) (1<<12))    //    distractor selected, or no tgt selected.
 #define CXHF_EYELINKUSED         ((DWORD) (1<<13))    //    [V>=20] if set, Eyelink tracker used to monitor eye traj
 #define CXHF_DUPFRAME            ((DWORD) (1<<14))    //    [V>=22] if set, RMVideo detected one or more repeat frames
+#define CXHF_ST_2GOAL            ((DWORD) (1<<15))    //    [V>=24] if set, trial performed 2-goal "searchTask" op.
 
 typedef struct tagCxFileHdr
 {
