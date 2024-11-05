@@ -59,6 +59,5 @@ versions of these program files to $INST_HOME\files. No need to copy files that 
 the [Code] section and, if needed, the "AppCopyright" parameter in the [Setup] section. Build the installer executable via 
 Build->Compile. This will create the installer at $INST_HOME\Maestro5Setup.exe.
 
-4) Compress Maestro5Setup.exe to ZIP file maestroV5xx.zip. Also compress the Maestro source code directories in
-C:\maestro5dev\src\cxdriver, \gui to srcV5xx.zip and put that file in the same folder. These ZIP files should be uploaded to 
-the Downloads page in Maestro's online user guide.
+4) Compress Maestro5Setup.exe to ZIP file maestroV5xx.zip and upload that to the Downloads page in Maestro's online user
+guide. No need to archive the source code, which is now maintained in the maestro5dev GitHub repository.
