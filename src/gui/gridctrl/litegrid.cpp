@@ -158,6 +158,9 @@
 // 03jan2007-- Modified OnEditCell() to do nothing if the grid cell identified by row and column arguments does not 
 //             exist. Prior to this change, if the grid had the keyboard focus but there was no focus cell yet, hitting 
 //             a key would lead to a downstream debug assertion.
+// 06nov2024-- Modified OnEditCell() to adjust the rectangle of the inplace combo control to accommodate the length of
+//             the longest string in the multi-choice list to be displayed in the control. The adjusted rectangle is
+//             centered over the edited cell if possible.
 //===================================================================================================================== 
 
 
@@ -551,6 +554,45 @@ void CLiteGrid::OnEditCell( int nRow, int nCol, CPoint point, UINT nChar )
             return;
          }
       }
+      
+      // adjust inplace ctrl rect to accommodate the extent of the longest string in the choice list, but keep it
+      // inside the grid rect
+      int maxLen = 0, choiceIdx = -1;
+      for(int i = 0; i < ei.strArChoices.GetSize(); i++)
+      {
+         int len = ei.strArChoices[i].GetLength();
+         if(len > maxLen)
+         {
+            maxLen = len;
+            choiceIdx = i;
+         }
+      }
+      CGridCellBase* pCell = GetDefaultCell(nRow < m_nFixedRows, nCol < m_nFixedCols);
+      if(pCell && (choiceIdx > -1))
+      {
+         int w = (int) MeasureTextExtent(ei.strArChoices[choiceIdx], pCell->GetFont());
+         if(w > rect.Width() - 10)
+         {
+            int delta = w + 12 - rect.Width();
+            rect.left -= delta / 2;
+            rect.right += delta / 2;
+
+            CRect rGrid; 
+            GetClientRect(rGrid);
+            if(rect.right > rGrid.right)
+            {
+               rect.right = rGrid.right;
+               rect.left = rect.right - (w + 12);
+               if(rect.left < rGrid.left) rect.left = rGrid.left;
+            }
+            else if(rect.left < rGrid.left)
+            {
+               rect.left = rGrid.left;
+               rect.right = rect.left + w + 12;
+               if(rect.right < rGrid.right) rect.right = rGrid.right;
+            }
+         }
+      }
 
       if( !m_pInPlaceCombo->BeginEdit( NULL, rect, FALSE, ei.strArChoices, ei.iCurrent ) )
          return;
@@ -788,4 +830,27 @@ BOOL CLiteGrid::ScrollObscuringParentForm( const CCellID& c )
    MapWindowPoints( pFormView, cellR ); 
    return( (cellR.left >= 0) && (cellR.right <= parentR.right) && 
            (cellR.top >= 0) && (cellR.bottom <= parentR.bottom) );
+}
+
+
+/**
+* Use a private display context to measure the width of the specified string in the specified font.
+* @param sText The string. If NULL, returns 0.
+* @param lpLogFont The font. If NULL, returns 0.
+*/
+int CLiteGrid::MeasureTextExtent(LPCTSTR sText, const LOGFONT* lpLogFont)
+{
+   if(sText == NULL || lpLogFont == NULL) return(0);
+
+   CClientDC dc(this);
+
+   CFont font;
+   font.CreateFontIndirect(lpLogFont);
+   dc.SelectObject(&font);
+
+   CSize size = dc.GetTextExtent(sText);
+
+   TEXTMETRIC tm;
+   dc.GetTextMetrics(&tm);
+   return((int)(size.cx + tm.tmOverhang));
 }

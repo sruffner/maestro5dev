@@ -177,6 +177,8 @@ protected:
    VOID NavigateGrid( CCellID& c, UINT nChar );          // move to a new cell in grid based on navigation key code 
    BOOL ScrollObscuringParentForm( const CCellID& c );   // if grid on a form view, this will try to scroll the form if 
                                                          // it is obscuring the specified grid cell
+
+   int MeasureTextExtent(LPCTSTR sText, const LOGFONT* lpLogFont);
 };
  
 

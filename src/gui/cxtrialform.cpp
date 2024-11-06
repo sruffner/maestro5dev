@@ -473,6 +473,7 @@
 // reward pulses 1 and 2: IDC_TRH_WHVR1NUM .. IDC_TRH_WHVR2DEN.
 // 17oct2024-- XYScope-specific parameters removed from CCXTrialForm for Maestro v5.0 (XYScope support was dropped in
 // v4.0): #XYscope interleaved targets, alternate random dot seed, and the per-segment XY frame period.
+// 06nov2024-- Increased the fixed column width in segment table from 50 to 60 (SEGCOL_W).
 //=====================================================================================================================
 
 
@@ -838,7 +839,7 @@ const COLORREF CCxTrialForm::clrBlue               = RGB(122,150,223);
 const COLORREF CCxTrialForm::clrWhite              = RGB(255,255,255);
 const COLORREF CCxTrialForm::clrMedGray            = RGB(160,160,160);
 const COLORREF CCxTrialForm::clrRed                = RGB(255,  0,  0);
-const int CCxTrialForm::SEGCOL_W                   = 50;
+const int CCxTrialForm::SEGCOL_W                   = 60;
 const UINT CCxTrialForm::SECTCREATE_TIMEOUT        = 5000;
 
 LPCTSTR CCxTrialForm::strRVTypeLabels[] = {
