@@ -21,17 +21,17 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 This file documents changes in the codebase since the repo was created in June 2024.
  
 ## 05 Nov 2024: V5.0.1 - New special feature "selDurByFix".
--- A saccade-triggered special operation in a trial. Same requirements and same behavior as "selByFix", with one
+- A saccade-triggered special operation in a trial. Same requirements and same behavior as "selByFix", with one
 addition: Like the end-of-trial reward, the duration of the segment S immediately after the "special segment" depends on 
 which fixation target is selected during the special segment. If Fix1 is selected, then the specified minimum duration
 of S is used; if Fix2 is selected, then the max duration of S applies.
--- Loosened restrictions on the trial segment definition to allow both the minimum and maximum segment duration be set
+- Loosened restrictions on the trial segment definition to allow both the minimum and maximum segment duration be set
 independently to either a constant or a random variable. That way the minimum and maximum duration of the segment 
 following the special segment in a "selDurByFix" trial can be randomly chosen from a specified probability distribution.
 Users should take care to define their trial and RVs so that min segment duration is always <= max. Maestro will abort trial
 sequencing otherwise.
--- Updated READCXDATA to handle new trial code SEGDURS that is specific to the "selDurByFix" feature.
--- Released Maestro 5.0.1.
+- Updated READCXDATA to handle new trial code SEGDURS that is specific to the "selDurByFix" feature.
+- Released Maestro 5.0.1.
 
 ## 31 Oct 2024: An alternate implementation of CCxEventTimer, the DIO event timer interface.
 - The current event timer interface uses DO<15..0> to communicate with a number of latched external devices that are part
