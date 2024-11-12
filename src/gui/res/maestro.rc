@@ -321,7 +321,7 @@ BEGIN
     LTEXT           "Maestro",IDC_STATIC,44,18,26,8,SS_NOPREFIX
     LTEXT           "Copyright (C) 2000-2025",IDC_STATIC,44,38,77,8
     DEFPUSHBUTTON   "OK",IDOK,272,7,32,14,WS_GROUP
-    LTEXT           "Version 5.0.1 (Nov 2024)",IDC_STATIC,44,28,77,8
+    LTEXT           "Version 5.0.2 (Nov 2024)",IDC_STATIC,44,28,77,8
     LTEXT           "Inquiries:  Scott Ruffner (sruffner@srscicomp.com)",IDC_STATIC,20,74,172,8
     LTEXT           "Online User's Guide:  https://sites.google.com/a/srscicomp.com/maestro",IDC_STATIC,19,59,255,8
 END
@@ -878,8 +878,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 5,0,1,0
- PRODUCTVERSION 5,0,1,0
+ FILEVERSION 5,0,2,0
+ PRODUCTVERSION 5,0,2,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -897,12 +897,12 @@ BEGIN
             VALUE "Comments", "This program interacts with several specific hardware devices through a partner process that runs in the 64-bit Real Time Extension (RTX64) to Windows 11 from IntervalZero, Inc."
             VALUE "CompanyName", "Duke University/Lisberger Lab and Scott Ruffner Scientific Computing"
             VALUE "FileDescription", "Maestro"
-            VALUE "FileVersion", "5.0.1.0"
+            VALUE "FileVersion", "5.0.2.0"
             VALUE "InternalName", "maestro"
             VALUE "LegalCopyright", "Copyright (C) 2000-2025"
             VALUE "OriginalFilename", "maestro.exe"
             VALUE "ProductName", "Maestro -- Stimulus Control & Data Acquisition for Experiments in Visual Neuroscience"
-            VALUE "ProductVersion", "5.0.1.0"
+            VALUE "ProductVersion", "5.0.2.0"
         END
     END
     BLOCK "VarFileInfo"

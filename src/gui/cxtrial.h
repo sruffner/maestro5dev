@@ -561,6 +561,7 @@ private:
 public:
    BOOL IsRVInUse(int idx) const { return(idx>=0 && idx<MAX_TRIALRVS && m_Vars[idx].iType != RV_NOTUSED); }
    BOOL GetRV(int idx, CRVEntry& rv) const;
+   BOOL SetRV(int idx, const CRVEntry& rv, BOOL bLast);
    BOOL SetRVParam(int idx, int id, const CRVEntry& rv, BOOL& bSideEffect);
 
    // initialize or update runtime state of any defined RVs before trial sequencing begins

@@ -3688,6 +3688,83 @@ BOOL CCxTrial::GetRV(int idx, CRVEntry& rv) const
 }
 
 /**
+ Set the definition of one of the trial's 10 random variables.
+
+ @param idx Zero-based index of the random variable. Must lie in [0..MAX_TRIALRVS-1].
+ @param rv The new definition for the RV. Must be valid as is. Note that a function RV can never depend on itself.
+ @param bLast TRUE if this is the last RV updated. When TRUE, the method verifies that no defined function RV depends on
+ another function RV or an unused RV. If any such function RVs are found, the function formula is set to "1" to ensure 
+ the RV table is valid.
+ @return TRUE if successful, FALSE if RV index or definition is invalid. Also returns FALSE if bLast==TRUE and an
+ inspection of the current defined RVs finds one or more function RVs that depend on another function RV or an 
+ unused RV.
+*/
+BOOL CCxTrial::SetRV(int idx, const CRVEntry& rv, BOOL bLast)
+{
+   if(idx < 0 || idx >= MAX_TRIALRVS) return(FALSE);
+   
+   CFunctionParser fp("");
+
+   BOOL bOk = FALSE;
+   switch(rv.iType)
+   {
+   case RV_NOTUSED:
+      bOk = TRUE;
+      break;
+   case RV_UNIFORM:
+      bOk = (rv.iSeed >= 0) && (rv.dParams[0] < rv.dParams[1]);
+      break;
+   case RV_NORMAL:
+      bOk = (rv.iSeed >= 0) && (rv.dParams[1] > 0) && (rv.dParams[2] >= 3.0 * rv.dParams[1]);
+      break;
+   case RV_EXPON:
+      bOk = (rv.iSeed >= 0) && (rv.dParams[0] > 0) && (rv.dParams[1] >= 3.0 / rv.dParams[0]);
+      break;
+   case RV_GAMMA:
+      bOk = (rv.iSeed >= 0) && (rv.dParams[0] > 0) && (rv.dParams[1] > 0) &&
+         (rv.dParams[2] >= rv.dParams[1] * (rv.dParams[0] + 3.0 * ::sqrt(rv.dParams[0])));
+      break;
+   case RV_FUNCTION:
+   {
+      fp.SetDefinition(rv.strFunc);
+      bOk = fp.IsValid() && !fp.HasVariableX(idx);
+   }
+      break;
+   default:
+      break;
+   }
+
+   // if the RV definition is valid, store it at the specified index in the trial's interval RV list.
+   if(bOk)
+   {
+      m_Vars[idx].iType = rv.iType;
+      m_Vars[idx].iSeed = rv.iSeed;
+      for(int i = 0; i < 3; i++) m_Vars[idx].dParams[i] = rv.dParams[i];
+      m_Vars[idx].strFunc = (rv.iType == RV_FUNCTION) ? rv.strFunc : _T("");
+   }
+
+   // if this is the last RV to be updated, check that no defined function RVs depend on another function RV or an unused RV
+   if(bOk && bLast)
+   {
+      for(int i = 0; i < MAX_TRIALRVS; i++) if(m_Vars[i].iType == RV_FUNCTION)
+      {
+         fp.SetDefinition(m_Vars[i].strFunc);
+         for(int j=0; (i != j) && (j < MAX_TRIALRVS); j++) if(fp.HasVariableX(i))
+         {
+            if(m_Vars[j].iType == RV_NOTUSED || m_Vars[j].iType == RV_FUNCTION)
+            {
+               m_Vars[i].strFunc = _T("1");
+               bOk = FALSE;
+               break;
+            }
+         }
+      }
+   }
+
+   return(bOk);
+}
+
+/**
  Update a defining parameter for one of the trial's random variables.
 
  If the supplied parameter value is invalid, the change is rejected. Otherwise, if the change has a side effect on
