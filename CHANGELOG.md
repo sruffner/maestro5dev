@@ -20,6 +20,11 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
+## 13 Nov 2024: Cosmetic changes.
+- On the **Random Variables** tab of the **Trial Editor**, the parameter labels in the grid's header row are updated
+IAW the type of RV in the current focus row. This works better than the original solution, which briefly displayed the
+parameter label in a tooltip whenever the user clicked on a cell containing a parameter.
+
 ## 12 Nov 2024: Mods to support new fields in JMX document introduced in `maestrodoc()` v1.2.2
 - As of v1.2.2, the Matlab utility `maestrodoc()` supports defining and using random variables in a trial. Two new fields
 were added to the JSON object `T` defining a Maestro trial: `T.rvs` contains the random variable defines, while `T.rvuse`
@@ -28,7 +33,7 @@ applies the RVs to segment table parameters. `JMXDocImporter` was updated to han
 target no longer has the `isxy` field. `JMXDocImporter::ImportTargetSets()` updated to treat that field as optional so 
 that Maestro can properly import both pre-v1.2.2 and post-v1.2.2 JMX documents.
 
-## 06 Nov 2024: V5.0.1 - New special feature "selDurByFix".
+## 06 Nov 2024: Release 5.0.1 - New special feature "selDurByFix".
 - A saccade-triggered special operation in a trial. Same requirements and same behavior as "selByFix", with one
 addition: Like the end-of-trial reward, the duration of the segment S immediately after the "special segment" depends on 
 which fixation target is selected during the special segment. If Fix1 is selected, then the specified minimum duration
@@ -56,13 +61,12 @@ PCIe-6363 to implement all of the remaining event timer functionality.
 is not compatible with current Maestro experiment rigs. However, it could be integrated in the future -- but keep in mind
 that changes would be needed in CNI6363_DIO to conform to the specifications of CCxEventTimerAlt.
 
-## 23 Oct 2024: Minor tweaks.
+## 23 Oct 2024: Initial release of Maestro 5.0.0.
 - Adjusted layout of widgets on the stimulus run editor form (`IDD_RUNFORM`). Also increased the (fixed) width of columns in the 
 stimulus channel grid, as some of the labels and values were getting cut off.
 - Previously, on switching from another op mode to IdleMode, the mode control panel was hidden -- which was kind of annoying 
 since users will typically want to keep the panel visible. Now, the control panel's visibility in IdleMode is toggled only if 
 it was already in IdleMode; upon transition to IdleMode, it stays up.
-- Initial release of Maestro 5.0.0.
 
 ## 18 Oct 2024: Removed the XYScope platform from Maestro 5.0.
 - The XYScope platform has been unsupported since **Maestro** 4 was released in Nov 2018. However, the XYScope platform was

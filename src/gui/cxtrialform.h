@@ -115,6 +115,12 @@ public:
 protected:
    DECLARE_MESSAGE_MAP()
 
+   // when focus cell changes on RV grid, redraw the header row so column labels are updated
+   afx_msg void OnSelChanged(NMHDR* pNMHDR, LRESULT* pResult)
+   {
+      m_rvGrid.RedrawRow(0);
+   }
+
 private:
    VOID SetParentForm(CCxTrialForm* pFm) { m_pTrialForm = pFm; }
 public:
@@ -313,6 +319,7 @@ protected:
    afx_msg void OnTimer( UINT_PTR nEventID );            // timeout for the tagged section-create gesture
    afx_msg void OnGridOps( UINT cmdID );                 // handle user-initiated operations on one of the grids
    afx_msg void OnUpdGridOps( CCmdUI* pCmdUI );          // dynamically disable/enable grid operations dep on context
+
 
    DECLARE_MESSAGE_MAP()
 

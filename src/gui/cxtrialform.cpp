@@ -474,6 +474,8 @@
 // 17oct2024-- XYScope-specific parameters removed from CCXTrialForm for Maestro v5.0 (XYScope support was dropped in
 // v4.0): #XYscope interleaved targets, alternate random dot seed, and the per-segment XY frame period.
 // 06nov2024-- Increased the fixed column width in segment table from 50 to 60 (SEGCOL_W).
+// 13nov2024-- Modified CCxRandVarsPage and RVGridDispCB so that the column labels in the RV grid's header row are
+// redrawn whenever the focus cell changes and reflect the labels applicable to the type of RV in the focus row.
 //=====================================================================================================================
 
 
@@ -595,6 +597,7 @@ BOOL CCxMainPage::PreTranslateMessage(MSG* pMsg)
 IMPLEMENT_DYNCREATE( CCxRandVarsPage, CPropertyPage )
 
 BEGIN_MESSAGE_MAP( CCxRandVarsPage, CPropertyPage )
+   ON_NOTIFY(GVN_SELCHANGED, IDC_TRV_GRID, OnSelChanged)
 END_MESSAGE_MAP()
 
 
@@ -774,7 +777,7 @@ BOOL CCxPertsPage::PreTranslateMessage(MSG* pMsg)
 IMPLEMENT_DYNCREATE( CCxTrialForm, TVTabPane )
 
 
-BEGIN_MESSAGE_MAP( CCxTrialForm, TVTabPane )
+BEGIN_MESSAGE_MAP(CCxTrialForm, TVTabPane)
    ON_WM_VSCROLL()
    ON_WM_TIMER()
    ON_COMMAND_RANGE(ID_GRID_INSERTTARG, ID_PERT_CLEAR, OnGridOps)
@@ -4531,17 +4534,12 @@ BOOL CALLBACK CCxTrialForm::RVGridDispCB(GV_DISPINFO *pDispInfo, LPARAM lParam)
    // ignore when there's no grid or cell is not valid; or while we're changing the trial that's loaded on form
    if(pGrid->GetSafeHwnd() == NULL || (!pGrid->IsValid(c)) || pThis->m_bLoading) return(FALSE);
 
-   // special case: no trial loaded on form. Show labels in row and column headers, but everything else blank.
+   // special case: no trial loaded on form. Show labels in row and column headers, but everything else blank. Note
+   // that column 1 always displays the RV type; the other columns vary with the RV type, so they're blank.
    if(pTrial==NULL)
    {
       if(c.col==0 && c.row>0) pDispInfo->item.strText.Format("x%d", c.row-1);
-      else if(c.col>0 && c.row==0)
-      {
-         if(c.col==1) pDispInfo->item.strText = _T("Type"); 
-         else if(c.col==2) pDispInfo->item.strText = _T("Seed");
-         else if(c.col>=3 && c.col<=5) pDispInfo->item.strText.Format("param%d", c.col-2);
-         else if(c.col==6) pDispInfo->item.strText = _T("Formula");
-      }
+      else if(c.col==1 && c.row==0) pDispInfo->item.strText = _T("Type");  
       else pDispInfo->item.strText = _T("");
 
       CGridCellBase* pFixed = pGrid->GetDefaultCell( TRUE, TRUE );
@@ -4557,32 +4555,33 @@ BOOL CALLBACK CCxTrialForm::RVGridDispCB(GV_DISPINFO *pDispInfo, LPARAM lParam)
       if(!pTrial->GetRV(idx, rv)) return(FALSE);
    }
 
-   // we use label tips only for the 2-3 defining parameters of a distributed RV
+   // we're not using label tips
    if(pDispInfo->item.nState & GVIS_VIRTUALLABELTIP) 
-   {
-      if(idx < 0)
-         pDispInfo->item.nState &= ~GVIS_VIRTUALLABELTIP;
-      else if(rv.iType == RV_UNIFORM && (c.col == 3 || c.col == 4))
-         pDispInfo->item.strText = _T((c.col==3) ? "Lower Bound" : "Upper Bound");
-      else if(rv.iType == RV_NORMAL && (c.col >= 3 && c.col <= 5))
-         pDispInfo->item.strText = _T((c.col==3) ? "Mean" : (c.col==4 ? "Standard Deviation" : "+/- Max Spread"));
-      else if(rv.iType == RV_EXPON && (c.col == 3 || c.col == 4))
-         pDispInfo->item.strText = _T((c.col==3) ? "Rate (lambda)" : "Max Cutoff");
-      else if(rv.iType == RV_GAMMA && (c.col >= 3 && c.col <= 5))
-         pDispInfo->item.strText = _T((c.col==3) ? "Shape (kappa)" : (c.col==4 ? "Scale (theta)" : "Max Cutoff"));
-      else
-         pDispInfo->item.nState &= ~GVIS_VIRTUALLABELTIP;
-   }
+      pDispInfo->item.nState &= ~GVIS_VIRTUALLABELTIP;
    else if(idx < 0)
    {
-      // static labels appear in the column header
-      switch(c.col)
+      // column labels in the header row reflect the type of RV in the focus row -- but col 1 is always the RV type.
+      CCellID focus = pGrid->GetFocusCell();
+      pDispInfo->item.strText = _T("");
+      if(c.col == 1)
+         pDispInfo->item.strText = _T("Type");
+      else if(focus.IsValid() && (focus.row - 1 >= 0) && (focus.row - 1 < MAX_TRIALRVS) && (c.col > 1) && (c.col <= 6))
       {
-      case 1 : pDispInfo->item.strText = _T("Type"); break;
-      case 2 : pDispInfo->item.strText = _T("Seed"); break;
-      case 3: case 4: case 5: pDispInfo->item.strText.Format("param%d", c.col-2); break;
-      case 6 : pDispInfo->item.strText = _T("Formula"); break;
-      default :  pDispInfo->item.strText = _T(""); break;
+         CCxTrial::CRVEntry rv2;
+         if(!pTrial->GetRV(focus.row - 1, rv2))
+            rv2.iType = RV_NOTUSED;
+         if(c.col == 2 && rv2.iType != RV_NOTUSED && rv2.iType != RV_FUNCTION)
+            pDispInfo->item.strText = _T("Seed");
+         else if(rv2.iType == RV_UNIFORM && (c.col == 3 || c.col == 4))
+            pDispInfo->item.strText = _T((c.col == 3) ? "Min" : "Max");
+         else if(rv2.iType == RV_NORMAL && c.col >= 3 && c.col <= 5)
+            pDispInfo->item.strText = _T((c.col == 3) ? "Mean" : (c.col == 4 ? "Std" : "Spread"));
+         else if(rv2.iType == RV_EXPON && (c.col == 3 || c.col == 4))
+            pDispInfo->item.strText = _T((c.col == 3) ? "Rate" : "Spread");
+         else if(rv2.iType == RV_GAMMA && (c.col >= 3 && c.col <= 5))
+            pDispInfo->item.strText = _T((c.col == 3) ? "Shape (K)" : (c.col == 4 ? "Scale (T)" : "Spread"));
+         else if(c.col == 6 && rv2.iType == RV_FUNCTION)
+            pDispInfo->item.strText = _T("Formula");
       }
    }
    else 

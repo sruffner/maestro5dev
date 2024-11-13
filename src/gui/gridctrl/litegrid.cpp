@@ -401,7 +401,7 @@ BOOL CLiteGrid::OnRightClick( NMHDR* pNMHDR, LRESULT* pResult )
 //    ARGS:       pNMHDR   -- [in] ptr to an NM_GRIDVIEW struct, case as a generic WM_NOTIFY header. 
 //                pResult  -- [out] return code.  ignored for GVN_SELCHANGED.
 //
-//    RETURNS:    TRUE to allow parent window to handle notification; FALSE to prevent.
+//    RETURNS:    FALSE to allow parent window to handle notification; TRUE to prevent.
 //
 BOOL CLiteGrid::OnSelChanged( NMHDR* pNMHDR, LRESULT* pResult )
 {
@@ -412,7 +412,7 @@ BOOL CLiteGrid::OnSelChanged( NMHDR* pNMHDR, LRESULT* pResult )
 
    if( (!GetVirtualMode()) ||                                     // label tip feature available only in virtual mode
        (!IsValid( iRow, iCol )) )                                 // must be a valid cell to have a label tip!
-      return( TRUE );
+      return( FALSE );
 
    GV_DISPINFO gvdi;                                              // prepare display request for label text 
    gvdi.item.row = iRow;
@@ -446,7 +446,7 @@ BOOL CLiteGrid::OnSelChanged( NMHDR* pNMHDR, LRESULT* pResult )
       }
    }
 
-   return( TRUE );
+   return( FALSE );
 }
 
 
