@@ -43,6 +43,7 @@ private:
    CCxTrialForm* m_pTrialForm;
 
    CCxObjCombo m_cbSelChan;                     // combo box used to select channel config assoc. w/ trial
+   CComboBox m_cbSpecOp;                        // combo box used to select special operation in effect (if any)
                                                 // spin controls paired with read-only "auto buddy" edit controls:
    CSpinButtonCtrl   m_spinWeight;              //    relative trial weight
    CSpinButtonCtrl   m_spinSave;                //    "first save" segment
@@ -81,6 +82,7 @@ protected:
    afx_msg void OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pWnd);
    afx_msg void OnChange(UINT id);
    afx_msg void OnChanCfgSelect();
+   afx_msg void OnSpecOpSelect();
 
 private:
    VOID SetParentForm(CCxTrialForm* pFm) { m_pTrialForm = pFm; }
@@ -119,6 +121,11 @@ protected:
    afx_msg void OnSelChanged(NMHDR* pNMHDR, LRESULT* pResult)
    {
       m_rvGrid.RedrawRow(0);
+   }
+   // stop propagation of mousewheel event to parent CCxTrialForm -- it was likely intended for the RV grid!
+   afx_msg BOOL OnMouseWheel(UINT, short, CPoint)
+   {
+      return(TRUE);
    }
 
 private:
@@ -168,6 +175,12 @@ protected:
    afx_msg void OnChange(UINT id);
    afx_msg void OnSelectSGMOp();
    afx_msg void OnNMRClick(UINT id, NMHDR* pNMHDR, LRESULT* pResult);
+
+   // stop propagation of mousewheel event to parent CCxTrialForm -- it was likely intended for the perts grid!
+   afx_msg BOOL OnMouseWheel(UINT, short, CPoint)
+   {
+      return(TRUE);
+   }
 
 private:
    VOID SetParentForm(CCxTrialForm* pFm) { m_pTrialForm = pFm; }
@@ -319,7 +332,6 @@ protected:
    afx_msg void OnTimer( UINT_PTR nEventID );            // timeout for the tagged section-create gesture
    afx_msg void OnGridOps( UINT cmdID );                 // handle user-initiated operations on one of the grids
    afx_msg void OnUpdGridOps( CCmdUI* pCmdUI );          // dynamically disable/enable grid operations dep on context
-
 
    DECLARE_MESSAGE_MAP()
 

@@ -20,10 +20,22 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
-## 13 Nov 2024: Cosmetic changes.
+## 13-14 Nov 2024: Cosmetic changes.
 - On the **Random Variables** tab of the **Trial Editor**, the parameter labels in the grid's header row are updated
 IAW the type of RV in the current focus row. This works better than the original solution, which briefly displayed the
 parameter label in a tooltip whenever the user clicked on a cell containing a parameter.
+- Using bold font for fixed header row and/or fixed header column in the trial segment table, the perturbations table,
+and the random variable table on the **Trial Editor**. Adjusted column widths in perturbations table.
+- Using bold font for fixed header row and/or fixed header column in the **Channel Configuration Editor**.
+- For the grid of perturbation objects in the **Perturbation Editor**, the parameter labels in the grid's header row are
+updated IAW the type of perturbation in the current focus row. As with the other grids, the fixed header row and column
+are now displayed in a bold font.
+- BUG fix: When a perturbation object was deleted in the object tree, the grid in the **Perturbation Editor** was not
+updated correctly to reflect that deletion.
+- On the **Trial Editor** ("Main" tab page), the special operation in effect is set by a combo box/dropdown control rather
+than a pushbutton. 
+- BUG fix: When mousewheeling over the random variables table in the **Trial Editor** ("Random Variables" tab page), both
+the RV table and the entire editor form would scroll, which was annoying.
 
 ## 12 Nov 2024: Mods to support new fields in JMX document introduced in `maestrodoc()` v1.2.2
 - As of v1.2.2, the Matlab utility `maestrodoc()` supports defining and using random variables in a trial. Two new fields

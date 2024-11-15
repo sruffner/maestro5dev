@@ -140,12 +140,12 @@
 #define IDC_TRH_SGMSEG                  1327
 #define IDC_TRH_CHCFG                   1340
 #define IDC_TRH_SGMOP                   1341
+#define IDC_TRH_SPECOP                  1342
 #define IDC_TRH_SEGTABLE                1350
 #define IDC_TRH_PARTITIONS              1351
 #define IDC_TRH_PERTS                   1352
 #define IDC_TRV_GRID                    1353
 #define IDC_TRH_KEEP                    1380
-#define IDC_TRH_SPECOP                  1381
 #define IDC_TRH_TRITYP                  1382
 #define IDC_TRH_STAIRRESP               1383
 #define IDC_TRH_MTRMODE                 1384

@@ -65,6 +65,12 @@ protected:
    afx_msg void OnSize( UINT nType, int cx, int cy );    // resize perturbation table if user resizes form 
    afx_msg void OnUpdateEditCommand( CCmdUI* pCmdUI );   // update enable state of standard "Edit" menu cmds 
    afx_msg void OnEditCommand( UINT nID );               // perform selected standard "Edit" menu cmds 
+   
+   // when focus cell changes on perturbations table, redraw the header row so column labels are updated
+   afx_msg void OnSelChanged(NMHDR* pNMHDR, LRESULT* pResult)
+   {
+      m_grid.RedrawRow(0);
+   }
 
    DECLARE_MESSAGE_MAP()
 
@@ -104,7 +110,6 @@ private:
 
    VOID Load();                                          // load entire perturbation table
    int FindPerturbationRow( WORD wKey );                 // map perturbation object key to row in pert table
-   VOID DeletePerturbationRow( WORD wKey );              // delete row corresponding to specified pert obj key
    CCxPert* GetPertObjByRow( int iRow );                 // retrieve perturbation obj represented by row of pert table
    BOOL IsGridCellReadOnly( CCellID c );                 // is specified cell in perturbation table read-only?
    VOID InformModify( int iPertRow );                    // inform doc/view framework that perturb obj was modified 

@@ -404,6 +404,10 @@ void CCxChannelForm::OnInitialUpdate()
       pCell = m_grid.GetDefaultCell( FALSE, FALSE );           //    default for cell on a normal row & col
       pCell->SetFormat( dwFormat );
 
+      // use a bold font for the fixed row and column, which serve as table headers
+      m_grid.GetDefaultCell(FALSE, TRUE)->GetFont()->lfWeight = FW_BOLD;
+      m_grid.GetDefaultCell(TRUE, FALSE)->GetFont()->lfWeight = FW_BOLD;
+
       m_grid.SetGridLineColor(::GetSysColor(COLOR_3DSHADOW));  // grid line color
 
       m_grid.AutoSize( GVS_BOTH );

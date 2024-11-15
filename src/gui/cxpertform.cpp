@@ -124,6 +124,7 @@ BEGIN_MESSAGE_MAP( CCxPertForm, TVTabPane )
    ON_WM_SIZE()
    ON_UPDATE_COMMAND_UI_RANGE( ID_EDIT_CLEAR, ID_EDIT_REDO, OnUpdateEditCommand )
    ON_COMMAND_RANGE( ID_EDIT_CLEAR, ID_EDIT_REDO, OnEditCommand )
+   ON_NOTIFY(GVN_SELCHANGED, IDC_PERT_GRID, OnSelChanged)
 END_MESSAGE_MAP()
 
 
@@ -356,6 +357,10 @@ void CCxPertForm::OnInitialUpdate()
       pCell = m_grid.GetDefaultCell( FALSE, FALSE );           //    default for cell on a normal row & col
       pCell->SetFormat( dwFormat );
 
+      // use a bold font for the fixed row and column, which serve as table headers
+      m_grid.GetDefaultCell(FALSE, TRUE)->GetFont()->lfWeight = FW_BOLD;
+      m_grid.GetDefaultCell(TRUE, FALSE)->GetFont()->lfWeight = FW_BOLD;
+
       m_grid.SetGridLineColor(::GetSysColor(COLOR_3DSHADOW));  // grid line color
 
 //      m_grid.AutoSize( GVS_BOTH );                           // autosize grid based on col header labels, 
@@ -440,6 +445,7 @@ void CCxPertForm::OnUpdate( CView* pSender, LPARAM lHint, CObject* pHint )
       case CXVH_MODOBJ :                                       // if a perturbation object was modified outside this 
          if( pVuHint->m_type == CX_PERTURB && iRow >= 0 )      // view, then refresh corres. row in perturbation table 
             m_grid.RedrawRow( iRow );
+         m_grid.RedrawRow(0);                                  // refresh header in case pert type of focus row changed
          break;
 
       case CXVH_NAMOBJ :                                       // if a pert obj name was changed, refresh corres cell
@@ -447,12 +453,8 @@ void CCxPertForm::OnUpdate( CView* pSender, LPARAM lHint, CObject* pHint )
             m_grid.RedrawCell( iRow, 0 );
          break;
 
-      case CXVH_DELOBJ :                                       // one or more CNTRLX data objects deleted...
-         if( pVuHint->m_key != CX_NULLOBJ_KEY &&               //    if a single pert obj deleted, delete corres row 
-             pVuHint->m_type == CX_PERTURB )                   //    in the perturbation table
-            DeletePerturbationRow( pVuHint->m_key );
-         else if( pVuHint->m_key == CX_NULLOBJ_KEY )           //    if mult objs deleted, we don't know which ones -- 
-            Load();                                            //    so we reload entire pert table to be safe
+      case CXVH_DELOBJ :                                       // one or more CNTRLX data objects deleted... reload
+         Load();                                               // entire pert table to be safe.
          break;
 
       case CXVH_CLRUSR :                                       // all user-defined CNTRLX objects removed: we reload 
@@ -589,25 +591,6 @@ int CCxPertForm::FindPerturbationRow( WORD wKey )
 }
 
 
-//=== DeletePerturbationRow =========================================================================================== 
-//
-//    Delete row in perturbation table that corresponds to specified object key.
-//
-//    ARGS:       wKey  -- [in] key of perturbation object whose definition is to be removed from form. 
-// 
-//    RETURNS:    NONE.
-//
-VOID CCxPertForm::DeletePerturbationRow( WORD wKey )
-{
-   int iRow = FindPerturbationRow( wKey );
-   if( iRow > 0 )                                  // if specified pert obj is currently displayed:
-   {
-      m_wArPertKeys.RemoveAt( iRow );              //    remove its key from the internal key array
-      m_grid.DeleteRow( iRow );                    //    remove corres row from pert table
-   }
-}
-
-
 //=== GetPertObjByRow ================================================================================================= 
 //
 //    Retrieve the CNTRLX perturbation object represented by specified row of the perturbation table.
@@ -671,8 +654,9 @@ VOID CCxPertForm::InformModify( int iPertRow )
 //    Callback function queried by the embedded grid control to obtain the contents of each cell in the grid.
 //
 //    Here we provide the string contents for each cell in the perturbation table:
-//       1) Cell in the fixed row 0 ==> Label of attribute displayed in that column.  This is left blank for the cols 
-//          that display type-specific perturbation parameters.
+//       1) Cell in the fixed row 0 ==> Label of attribute displayed in that column. The labels for attributes shared
+//          by all perturbation types do not change. For the rest, the label displayed depends on the type of
+//          perturbation in the current focus row.
 //       2) Cell in row N>0, col 0  ==> Name of Nth perturbation object displayed in table.
 //       3) Cell in row N>0, cols 1..M ==> Value of the Mth common parameter for perturbation object N.
 //       4) Cell in row N>0, cols M+1..M+P ==> Value of the Pth type-specific parameter for perturbation object N.
@@ -681,12 +665,10 @@ VOID CCxPertForm::InformModify( int iPertRow )
 //    supported perturbation types, followed by P type-specific parameters.  CCxPert provides methods for accessing 
 //    all perturbation parameters by a zero-based index in the range [0..M+P-1].
 //
-//    The number and identities of the type-specific parameters, of course, will vary with the perturbation type.  This 
-//    introduces a problem:  We cannot use column header labels for the type-specific parameter columns in the table. 
-//    Our solution:  Use CLiteGrid's "label tip" feature.  When the grid's focus cell changes, CLiteGrid will query 
-//    this callback method for label tip text.  If text is provided, CLiteGrid will show the label as a titletip just 
-//    above the focus cell.  This usage of the callback can be distinguished from the normal usage by checking for the 
-//    GVIS_VIRTUALLABELTIP state flag.  See CLiteGrid for details.
+//    The number and identities of the type-specific parameters, of course, will vary with the perturbation type.
+//    The column labels in the first row reflect the parameters for the perturbation in the current focus row (though
+//    some column labels never change bc they represent parameters common to all perturbation types). Whenever the
+//    focus cell changes (GVN_SELCHANGED notification), the header row is redrawn so that the columns are updated.
 //
 //    NOTE:  Callback functions must be implemented as static.  Since it is a static class method, it does not have 
 //    access to instance fields and methods and it does not get the implied argument THIS.  To circumvent this problem, 
@@ -710,18 +692,21 @@ BOOL CALLBACK CCxPertForm::GridDispCB( GV_DISPINFO *pDispInfo, LPARAM lParam )
    CCxPert* pPert = pThisView->GetPertObjByRow( c.row );                   // retrieve relevant pert obj, if any
    int iParam = c.col - 1;                                                 // zero-based index identifying parameter
 
-   if( pDispInfo->item.nState & GVIS_VIRTUALLABELTIP )                     // if grid requesting text for a label tip, 
-   {                                                                       // provide it ONLY for type-specific params; 
-      if( c.row > 0 && iParam >= CCxPert::NumberOfCommonParameters() )     // prevent label tip display for all others. 
-         pPert->GetParameterLabel( iParam, pDispInfo->item.strText );
-      else
-         pDispInfo->item.nState &= ~GVIS_VIRTUALLABELTIP; 
-   }
-   else if( c.row == 0 )                                                   // column header labels in first row -- note 
-   {                                                                       // that we do not display header labels for 
-      if( c.col == 0 ) pDispInfo->item.strText = _T("Object Name");        // columns holding type-specific params!
-      else if( iParam < CCxPert::NumberOfCommonParameters() ) 
+   if( pDispInfo->item.nState & GVIS_VIRTUALLABELTIP )                     // not using label tips
+      pDispInfo->item.nState &= ~GVIS_VIRTUALLABELTIP; 
+   else if(c.row == 0)                                                     // header row: column labels reflect the
+   {                                                                       // set of parameters for the pertubation 
+      // header row: column labels reflect the set of parameters for the pertubation type currently occupying the
+      // focus row. For columns corresponding to parameter shared by all perturbations, the label does not change
+      CCellID focus = pGrid->GetFocusCell();
+      CCxPert* pFocusPert = NULL;
+      if(focus.IsValid() && focus.row > 0) pFocusPert = pThisView->GetPertObjByRow(focus.row);
+ 
+      pDispInfo->item.strText = _T("");
+      if(iParam >= 0 && iParam < CCxPert::NumberOfCommonParameters())
          pDispInfo->item.strText = CCxPert::GetCommonParamLabel( iParam );
+      else if(pFocusPert != NULL && iParam < pFocusPert->NumberOfParameters())
+         pFocusPert->GetParameterLabel(iParam, pDispInfo->item.strText);
    }
    else if( pPert == NULL )                                                // no pert obj found -- this might happen 
       return( FALSE );                                                     //    when opening a different document
@@ -863,6 +848,10 @@ BOOL CALLBACK CCxPertForm::GridEndEditCB( ENDEDITINFO *pEEI, LPARAM lParam )
          pGrid->RedrawRow( c.row );                                        //    need not redraw the param cell!
          pEEI->bNoRedraw = TRUE;
       }
+
+      // if pert type changed, we redraw header row so column labels reflect the params for the selected type
+      if(iParam == 0) pGrid->RedrawRow(0);
+
       pThisView->InformModify( c.row );                                    //    inform doc/view framework
    }
 

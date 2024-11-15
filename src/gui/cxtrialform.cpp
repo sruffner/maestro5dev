@@ -35,19 +35,19 @@
 // NOTE:  The integer resource IDs below must represent a contiguous range of values.
 //    1) IDC_TRH_WTSPIN...IDC_TRH_SGMSEGSPIN ==> The spin controls for relative weight, first save seg, failsafe seg,
 //       special operation seg, display marker segments, and the SGM op mode. 
-//    2) IDC_TRH_KEEP...IDC_TRH_IGNVELROT ==> The PB controls for keep/toss flag, sacc-trig'd op selection, staircase
+//    2) IDC_TRH_KEEP...IDC_TRH_IGNVELROT ==> The PB controls for keep/toss flag, staircase
 //       trial designation ("normal", or a member of one of 5 staircases), staircase response input selection, and
 //       mid-trial reward mode ("periodic" or "segEnd") -- plus checkbox control for selecting whether or not an SGM
 //       stimulus is externally triggered, and for selectively ignoring the global scale/rotate transforms for target 
-//       position and velocity vectors.  The PB controls IDC_TRH_KEEP...IDC_TRH_MTRMODE must be a contiguous subset
+//       position and velocity vectors. The PB controls IDC_TRH_KEEP...IDC_TRH_MTRMODE must be a contiguous subset
 //       of this range.
 //    3) IDC_TRH_SACCVT...IDC_TRH_WHVR2DEN ==> Edit ctrls for saccade threshold velocity, staircase strength, pulse
 //       length and WHVR numerator/denominator for reward pulses 1 and 2, mid-trial reward interval and pulse length, 
 //       and trial weight. These all appear on the "Main" page of the form.
 //    3a) IDC_TRH_SGMPA1...IDC_TRH_SGMNT ==> Edit controls for selected PSGM parameters appearing on the 
 //       "Perturbations/PSGM" page of the form.
-//    4) IDC_TRH_CHCFG...IDC_TRH_SGMOP ==> Combo box controls specifying the channel config associated with trial and
-//       the SGM operational mode.
+//    4) IDC_TRH_CHCFG...IDC_TRH_SPECOP ==> Combo box controls specifying the channel config associated with trial,
+//       the special operation in effect (if any), and the SGM operational mode.
 //    5) ID_GRID_INSERTTARG...ID_PERT_CLEAR ==> Command IDs for items in the context menus associated with the segment
 //       table, partitions grid, and perturbation list grid.
 //    6) IDC_TRH_SEGTABLE...IDC_TRV_GRID ==> Control IDs for the four grid controls on the form.
@@ -476,6 +476,11 @@
 // 06nov2024-- Increased the fixed column width in segment table from 50 to 60 (SEGCOL_W).
 // 13nov2024-- Modified CCxRandVarsPage and RVGridDispCB so that the column labels in the RV grid's header row are
 // redrawn whenever the focus cell changes and reflect the labels applicable to the type of RV in the focus row.
+// 14nov2024-- Replaced push button control IDC_TRH_SPECOP=1381 selecting special operation with a combo box control
+// IDC_TRH_SPECOP=1342.
+// 14nov2024-- CCxRandVarsPage and CCxPertsPage intercept WM_MOUSEWHEEL, preventing it from being propagated up to
+// the CCxTrialForm parent, where it causes that form to scroll. Don't want, eg., both the RV table and the entire
+// trial form to both scroll in response to the mousewheel events.
 //=====================================================================================================================
 
 
@@ -519,6 +524,7 @@ BEGIN_MESSAGE_MAP( CCxMainPage, CPropertyPage )
    ON_CONTROL_RANGE( BN_CLICKED, IDC_TRH_IGNPOSSCALE, IDC_TRH_IGNVELROT, OnChange )
    ON_CONTROL_RANGE( EN_KILLFOCUS, IDC_TRH_SACCVT, IDC_TRH_WHVR2DEN, OnChange )
    ON_CONTROL( CBN_SELCHANGE, IDC_TRH_CHCFG, OnChanCfgSelect )
+   ON_CONTROL( CBN_SELCHANGE, IDC_TRH_SPECOP, OnSpecOpSelect )
 END_MESSAGE_MAP()
 
 
@@ -529,6 +535,7 @@ void CCxMainPage::OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pWnd )
 }
 void CCxMainPage::OnChange(UINT id) { if(m_pTrialForm != NULL) m_pTrialForm->OnChange(id); }
 void CCxMainPage::OnChanCfgSelect() { if(m_pTrialForm != NULL) m_pTrialForm->OnComboSelChange(IDC_TRH_CHCFG); }
+void CCxMainPage::OnSpecOpSelect() { if(m_pTrialForm != NULL) m_pTrialForm->OnComboSelChange(IDC_TRH_SPECOP); }
 
 BOOL CCxMainPage::OnInitDialog()
 {
@@ -552,6 +559,7 @@ BOOL CCxMainPage::OnInitDialog()
    bOk = bOk && m_edMTRLen.SubclassDlgItem( IDC_TRH_MTRLEN, this );
    bOk = bOk && m_edWeight.SubclassDlgItem( IDC_TRH_WEIGHT, this );
    bOk = bOk && m_cbSelChan.SubclassDlgItem( IDC_TRH_CHCFG, this );
+   bOk = bOk && m_cbSpecOp.SubclassDlgItem(IDC_TRH_SPECOP, this);
 
    if( !bOk ) AfxThrowNotSupportedException(); 
 
@@ -568,6 +576,18 @@ BOOL CCxMainPage::OnInitDialog()
    m_edWeight.SetFormat( TRUE, TRUE, 3, 1 );
 
    m_spinWeight.SetRange( 0, 255 );
+
+   // stuff SGM op mode combo box with strings describing modes available -- order is important here!
+   m_cbSpecOp.AddString(_T("NONE"));
+   m_cbSpecOp.AddString(_T("skipOnSacc"));
+   m_cbSpecOp.AddString(_T("selByFix"));
+   m_cbSpecOp.AddString(_T("selByFix2"));
+   m_cbSpecOp.AddString(_T("switchFix"));
+   m_cbSpecOp.AddString(_T("R/P Distro"));
+   m_cbSpecOp.AddString(_T("chooseFix1"));
+   m_cbSpecOp.AddString(_T("chooseFix2"));
+   m_cbSpecOp.AddString(_T("searchTask"));
+   m_cbSpecOp.AddString(_T("selDurByFix"));
 
    return(TRUE);
 }
@@ -598,6 +618,7 @@ IMPLEMENT_DYNCREATE( CCxRandVarsPage, CPropertyPage )
 
 BEGIN_MESSAGE_MAP( CCxRandVarsPage, CPropertyPage )
    ON_NOTIFY(GVN_SELCHANGED, IDC_TRV_GRID, OnSelChanged)
+   ON_WM_MOUSEWHEEL()
 END_MESSAGE_MAP()
 
 
@@ -629,6 +650,10 @@ BOOL CCxRandVarsPage::OnInitDialog()
    m_rvGrid.GetDefaultCell(TRUE, FALSE)->SetFormat(DT_CENTER | DT_SINGLELINE);
    m_rvGrid.GetDefaultCell(FALSE, TRUE)->SetFormat(DT_CENTER | DT_SINGLELINE);
    m_rvGrid.GetDefaultCell(FALSE, FALSE)->SetFormat(DT_CENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+   // use a bold font for the fixed header row (displaying param labels) and fixed header column ("x0", etc)
+   m_rvGrid.GetDefaultCell(TRUE, FALSE)->GetFont()->lfWeight = FW_BOLD;
+   m_rvGrid.GetDefaultCell(FALSE, TRUE)->GetFont()->lfWeight = FW_BOLD;
 
    // set fixed column widths
    m_rvGrid.SetColumnWidth( 0, 30 ); 
@@ -671,6 +696,7 @@ BEGIN_MESSAGE_MAP( CCxPertsPage, CPropertyPage )
    ON_CONTROL_RANGE( EN_KILLFOCUS, IDC_TRH_SGMPA1, IDC_TRH_SGMNT, OnChange )
    ON_CONTROL( CBN_SELCHANGE, IDC_TRH_SGMOP, OnSelectSGMOp )
    ON_NOTIFY_RANGE(NM_RCLICK, IDC_TRH_PERTS, IDC_TRH_PERTS, OnNMRClick)
+   ON_WM_MOUSEWHEEL()
 END_MESSAGE_MAP()
 
 
@@ -742,12 +768,15 @@ BOOL CCxPertsPage::OnInitDialog()
    m_pertGrid.GetDefaultCell( FALSE, TRUE )->SetFormat( DT_RIGHT | DT_SINGLELINE | DT_PATH_ELLIPSIS );
    m_pertGrid.GetDefaultCell( FALSE,FALSE )->SetFormat( DT_CENTER | DT_SINGLELINE | DT_END_ELLIPSIS );
 
+   // use a bold font for the fixed header row (displaying column labels)
+   m_pertGrid.GetDefaultCell(TRUE, FALSE)->GetFont()->lfWeight = FW_BOLD;
+
    // set fixed column widths
    m_pertGrid.SetColumnWidth( 0, 120 ); 
    m_pertGrid.SetColumnWidth( 1, 60 );
-   m_pertGrid.SetColumnWidth( 2, 30 );
+   m_pertGrid.SetColumnWidth( 2, 60 );
    m_pertGrid.SetColumnWidth( 3, 100 );
-   m_pertGrid.SetColumnWidth( 4, 60 );
+   m_pertGrid.SetColumnWidth( 4, 80 );
 
    return(TRUE);
 }
@@ -994,11 +1023,6 @@ void CCxTrialForm::OnChange(UINT id)
       case IDC_TRH_STAIRRESP :                                 //    toggle the 2-state staircase response chan flag
          hdr.dwFlags ^= THF_STAIRRESP;
          break;
-      case IDC_TRH_SPECOP :                                    //    increment special operation ID, with wrap-around
-         ++hdr.iSpecialOp;
-         if(hdr.iSpecialOp >= TH_NUMSPECOPS)
-            hdr.iSpecialOp = TH_SOP_NONE;
-         break;
       case IDC_TRH_MTRMODE :                                   //    toggle state of the mid-trial reward mode flag
          hdr.dwFlags ^= THF_MTRMODE;
          break;
@@ -1124,10 +1148,12 @@ void CCxTrialForm::OnChange(UINT id)
 
 //=== OnComboSelChange ================================================================================================
 //
-//    Response to the CBN_SELCHANGE notification from the channel configuration combo box IDC_TRH_CHCFG or the SGM op
-//    mode combo box IDC_TRH_SGMOP.  Whenever the selected channel config changes, we update the trial's header and
-//    list of object dependencies accordingly.  When the SGM op mode changes, we update the header and the enable state
-//    of the SGM parameter controls.
+//    Response to the CBN_SELCHANGE notification from the channel configuration combo box IDC_TRH_CHCFG, the SGM op
+//    mode combo box IDC_TRH_SGMOP, or the special operation combo box IDC_TRH_SPECOP. 
+// 
+//    Whenever the selected channel config changes, we update the trial's header and list of object dependencies 
+//    accordingly. When the SGM op mode changes, we update the header and the enable state of the SGM parameter 
+//    controls. Similarly when the special operation is changed.
 //
 //    ARGS:       id -- [in] resource ID of the child control that sent the notification.
 //
@@ -1161,6 +1187,13 @@ void CCxTrialForm::OnComboSelChange( UINT id )
       hdr.sgm.iOpMode = m_pertsPage.m_cbSgmOp.GetCurSel();              //    update trial header
       if( !m_pTrial->SetHeader( hdr, bChanged ) ) StuffHdrControls();   //    restuff all ctrls if any auto-corrections
       EnableHdrControls();                                              //    adjust enable state of SGM controls
+   }
+   else if((id == IDC_TRH_SPECOP) &&                                    // similarly if special op changed...
+      (hdr.iSpecialOp != m_mainPage.m_cbSpecOp.GetCurSel()))
+   {
+      hdr.iSpecialOp = m_mainPage.m_cbSpecOp.GetCurSel();
+      if(!m_pTrial->SetHeader(hdr, bChanged)) StuffHdrControls();
+      EnableHdrControls();
    }
 
    if( bChanged )                                                       // if a change was actually made...
@@ -1911,9 +1944,12 @@ void CCxTrialForm::OnUpdGridOps( CCmdUI* pCmdUI )
 //    parent page's OnInitDialog() call. Subclassing serves to simplify communication with all the various controls
 //    and to take advantage of specialized functionality:
 //       3) The combo box IDC_TRH_CHCFG is subclassed to CCxObjCombo, which selects among the CNTRLX child objects
-//          under a specified parent.  We use it to select the channel configuration associated with the current trial.
-//       4) The combo box IDC_TRH_SGMOP is subclassed to CComboBox.  We stuff the combo box with strings describing
+//          under a specified parent. We use it to select the channel configuration associated with the current trial.
+//          The combo box IDC_TRH_SPECOP is subclassed to CCxComboBox, which is populated with strings describing
+//          the available special operations (including "none"). See CCxMainPage::OnInitDialog().
+//       4) The combo box IDC_TRH_SGMOP is subclassed to CComboBox. We stuff the combo box with strings describing
 //          the available operational modes for the pulse stimulus generator module, and set the initial selection.
+//          See CCxPertsPage::OnInitDialog().
 //       5) Certain edit controls on the property pages are subclassed to CNumEdit objects in order to restrict the 
 //          input to them. The format traits of these numeric edit controls are also set.
 //       6) The spin controls are subclassed to CSpinButtonCtrl objects.
@@ -1992,6 +2028,10 @@ void CCxTrialForm::OnInitialUpdate()
       m_segGrid.GetDefaultCell( FALSE, TRUE )->SetFormat( DT_RIGHT | DT_SINGLELINE | DT_PATH_ELLIPSIS );
       m_segGrid.GetDefaultCell( FALSE,FALSE )->SetFormat( DT_CENTER | DT_SINGLELINE | DT_END_ELLIPSIS );
 
+      // use a bold font for the fixed header column 
+      m_segGrid.GetDefaultCell(FALSE, TRUE)->GetFont()->lfWeight = FW_BOLD;
+      m_segGrid.GetDefaultCell(TRUE, TRUE)->GetFont()->lfWeight = FW_BOLD;
+
       m_segGrid.AutoSize();
 
       // save segment grid's initial size, defined in dlg template, to ensure grid is not made smaller than this
@@ -2024,6 +2064,9 @@ void CCxTrialForm::OnInitialUpdate()
 
       m_partitionGrid.GetDefaultCell( FALSE, TRUE )->SetFormat( DT_CENTER | DT_SINGLELINE );
       m_partitionGrid.GetDefaultCell( FALSE,FALSE )->SetFormat( DT_CENTER | DT_SINGLELINE | DT_END_ELLIPSIS ); 
+
+      // use a bold font for the single row table
+      m_partitionGrid.GetDefaultCell(FALSE, FALSE)->GetFont()->lfWeight = FW_BOLD;
 
       // so that partitions grid "lines up" with the segment table grid...
       m_partitionGrid.SetColumnWidth(0, m_segGrid.GetColumnWidth(0) );
@@ -2407,6 +2450,9 @@ VOID CCxTrialForm::StuffHdrControls()
    // stuff labels for all PBs reflecting the state of an enumerated parameter
    StuffHdrPB( hdr );
 
+   // set current special op selection in combo box on "Main" property page
+   m_mainPage.m_cbSpecOp.SetCurSel(hdr.iSpecialOp);
+
    // load and set range of various spin controls on the "Main" property page
    m_mainPage.m_spinWeight.SetPos( hdr.iWeight );
    m_mainPage.m_spinSave.SetRange( 0, (nSegs==0) ? 0 : nSegs - 1 ); 
@@ -2493,22 +2539,6 @@ VOID CCxTrialForm::StuffHdrPB( const TRLHDR& hdr, const UINT id /* = 0 */ )
       m_mainPage.SetDlgItemText( IDC_TRH_STAIRRESP, str );
    }
 
-   if ( (id == 0) || (id == IDC_TRH_SPECOP) )                        // PB label reflects special op that's in effect
-   {
-      str = _T("none");
-      if(hdr.iSpecialOp == TH_SOP_SKIP) str = _T("skipOnSacc");
-      else if(hdr.iSpecialOp == TH_SOP_SELBYFIX) str = _T("selByFix");
-      else if(hdr.iSpecialOp == TH_SOP_SELBYFIX2) str = _T("selByFix2");
-      else if(hdr.iSpecialOp == TH_SOP_SWITCHFIX) str = _T("switchFix");
-      else if(hdr.iSpecialOp == TH_SOP_RPDISTRO) str = _T("R/P Distro");
-      else if(hdr.iSpecialOp == TH_SOP_CHOOSEFIX1) str = _T("chooseFix1");
-      else if(hdr.iSpecialOp == TH_SOP_CHOOSEFIX2) str = _T("chooseFix2");
-      else if(hdr.iSpecialOp == TH_SOP_SEARCH) str = _T("searchTask");
-      else if(hdr.iSpecialOp == TH_SOP_SELDUR) str = _T("selDurByFix");
-
-      m_mainPage.SetDlgItemText( IDC_TRH_SPECOP, str );
-   }
-
    if ( (id == 0) || (id == IDC_TRH_MTRMODE) )                       // PB label reflects the mid-trial reward mode
    {
       str = (hdr.dwFlags & THF_MTRMODE) ? _T("atSegEnd") : _T("periodic");
@@ -2543,6 +2573,7 @@ VOID CCxTrialForm::EnableHdrControls()
       m_bEnable = FALSE;
 
       m_mainPage.m_cbSelChan.EnableWindow( FALSE );
+      m_mainPage.m_cbSpecOp.EnableWindow(FALSE);
       m_mainPage.m_spinWeight.EnableWindow( FALSE );
       m_mainPage.m_edWeight.EnableWindow( FALSE );
       m_mainPage.m_spinSave.EnableWindow( FALSE );
@@ -2553,8 +2584,6 @@ VOID CCxTrialForm::EnableHdrControls()
       m_mainPage.m_edWHVR1Num.EnableWindow(FALSE);
       m_mainPage.m_edWHVR1Den.EnableWindow(FALSE);
       m_mainPage.GetDlgItem( IDC_TRH_KEEP, &hwnd );
-      ::EnableWindow( hwnd, FALSE );
-      m_mainPage.GetDlgItem( IDC_TRH_SPECOP, &hwnd );
       ::EnableWindow( hwnd, FALSE );
       m_mainPage.GetDlgItem( IDC_TRH_TRITYP, &hwnd );
       ::EnableWindow( hwnd, FALSE );
@@ -2610,6 +2639,7 @@ VOID CCxTrialForm::EnableHdrControls()
          m_bEnable = TRUE;
 
          m_mainPage.m_cbSelChan.EnableWindow( TRUE );
+         m_mainPage.m_cbSpecOp.EnableWindow(TRUE);
          m_mainPage.m_spinWeight.EnableWindow( TRUE );
          m_mainPage.m_edWeight.EnableWindow( TRUE );
          m_mainPage.m_spinSave.EnableWindow( TRUE );
@@ -2620,8 +2650,6 @@ VOID CCxTrialForm::EnableHdrControls()
          m_mainPage.m_edWHVR1Num.EnableWindow(TRUE);
          m_mainPage.m_edWHVR1Den.EnableWindow(TRUE);
          m_mainPage.GetDlgItem( IDC_TRH_KEEP, &hwnd );
-         ::EnableWindow( hwnd, TRUE );
-         m_mainPage.GetDlgItem( IDC_TRH_SPECOP, &hwnd );
          ::EnableWindow( hwnd, TRUE );
          m_mainPage.GetDlgItem( IDC_TRH_TRITYP, &hwnd );
          ::EnableWindow( hwnd, TRUE );
