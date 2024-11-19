@@ -27,10 +27,10 @@ class CCxTrialForm;                    // forward declaration
 
 
 //=====================================================================================================================
-// CCxMainPage, CCxRandVarsPage, CCxPertsPage : CPropertyPage containers for the majority of controls on the trial
-// form, for a  more compact presentation. CCxTrialForm is declared a friend class on each so that it can access 
-// private members, and these are friends of CCxTrialForm so that they can forward control notifications to it. ALL
-// real functionality is implemented in CCxTrialForm.
+// CCxMainPage, CCxOtherPage : CPropertyPage containers for the majority of controls on the trial form, for a more 
+// compact presentation. CCxTrialForm is declared a friend class on each so that it can access private members, and 
+// these are friends of CCxTrialForm so that they can forward control notifications to it. ALL real functionality is 
+// implemented in CCxTrialForm.
 //=====================================================================================================================
 //
 class CCxMainPage : public CPropertyPage
@@ -91,96 +91,37 @@ public:
    BOOL PreTranslateMessage(MSG* pMsg);
 };
 
-class CCxRandVarsPage : public CPropertyPage
+class CCxOtherPage : public CPropertyPage
 {
-   DECLARE_DYNCREATE( CCxRandVarsPage )
+   DECLARE_DYNCREATE( CCxOtherPage )
 
    friend class CCxTrialForm;
 
 private:
    CCxTrialForm* m_pTrialForm;
 
-   // the page only contains this grid control in which all trial RV's are listed
+   // the grid control in which all trial RV's are listed
    CLiteGrid m_rvGrid; 
+   // the grid control in which all trial perturbations are listed
+   CLiteGrid m_pertGrid; 
 
-   CCxRandVarsPage(const CCxRandVarsPage& src);               // no copy constructor or assignment operator defined
-   CCxRandVarsPage& operator=( const CCxRandVarsPage& src );
+   CCxOtherPage(const CCxOtherPage& src);               // no copy constructor or assignment operator defined
+   CCxOtherPage& operator=( const CCxOtherPage& src );
 
 public:
-   CCxRandVarsPage() : CPropertyPage(IDD_TRIALFORM_RV) 
+   CCxOtherPage() : CPropertyPage(IDD_TRIALFORM_OTHER) 
    { 
       m_pTrialForm = NULL; 
       m_psp.dwFlags |= PSP_PREMATURE;
    }
-   ~CCxRandVarsPage() {}
+   ~CCxOtherPage() {}
 
 protected:
    DECLARE_MESSAGE_MAP()
 
-   // when focus cell changes on RV grid, redraw the header row so column labels are updated
-   afx_msg void OnSelChanged(NMHDR* pNMHDR, LRESULT* pResult)
-   {
-      m_rvGrid.RedrawRow(0);
-   }
-   // stop propagation of mousewheel event to parent CCxTrialForm -- it was likely intended for the RV grid!
-   afx_msg BOOL OnMouseWheel(UINT, short, CPoint)
-   {
-      return(TRUE);
-   }
-
-private:
-   VOID SetParentForm(CCxTrialForm* pFm) { m_pTrialForm = pFm; }
-public:
-   BOOL OnInitDialog();
-   BOOL PreTranslateMessage(MSG* pMsg);
-};
-
-class CCxPertsPage : public CPropertyPage
-{
-   DECLARE_DYNCREATE( CCxPertsPage )
-
-   friend class CCxTrialForm;
-
-private:
-   CCxTrialForm* m_pTrialForm;
-
-   CComboBox m_cbSgmOp;                                 // combo box used to select PSGM operational mode
-   CSpinButtonCtrl m_spinSgmSeg;                        // spinner w/ RO edit sets the PSGM start segment
-   CNumEdit m_edSgmPulseAmp1;                           // PSGM pulse 1,2 amplitudes
-   CNumEdit m_edSgmPulseAmp2;
-   CNumEdit m_edSgmPulseWidth1;                         // PSGM pulse 1,2 widths
-   CNumEdit m_edSgmPulseWidth2;
-   CNumEdit m_edSgmInterPulse;                          // PSGM interpulse interval
-   CNumEdit m_edSgmInterTrain;                          // PSGM intertrain interval
-   CNumEdit m_edSgmNP;                                  // #pulses per PSGM pulse train
-   CNumEdit m_edSgmNT;                                  // #trains per PSGM stimulus
-
-   CLiteGrid m_pertGrid;                                // grid control displaying trial's "perturbation list"
-
-   CCxPertsPage(const CCxPertsPage& src);               // no copy constructor or assignment operator defined
-   CCxPertsPage& operator=( const CCxPertsPage& src );
-
-public:
-   CCxPertsPage() : CPropertyPage(IDD_TRIALFORM_OTHER)
-   { 
-      m_pTrialForm = NULL; 
-      m_psp.dwFlags |= PSP_PREMATURE;
-   }
-
-   ~CCxPertsPage() {}
-
-protected:
-   DECLARE_MESSAGE_MAP()
-   afx_msg void OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pWnd);
-   afx_msg void OnChange(UINT id);
-   afx_msg void OnSelectSGMOp();
-   afx_msg void OnNMRClick(UINT id, NMHDR* pNMHDR, LRESULT* pResult);
-
-   // stop propagation of mousewheel event to parent CCxTrialForm -- it was likely intended for the perts grid!
-   afx_msg BOOL OnMouseWheel(UINT, short, CPoint)
-   {
-      return(TRUE);
-   }
+   afx_msg void OnSelChanged(NMHDR* pNMHDR, LRESULT* pResult);
+   afx_msg void OnNMRClick(NMHDR* pNMHDR, LRESULT* pResult);
+   afx_msg BOOL OnMouseWheel(UINT, short, CPoint);
 
 private:
    VOID SetParentForm(CCxTrialForm* pFm) { m_pTrialForm = pFm; }
@@ -201,7 +142,7 @@ class CCxTrialForm : public TVTabPane
 
    // so that the property page objects can forward property changes to the trial form
    friend class CCxMainPage;
-   friend class CCxRandVarsPage;
+   friend class CCxOtherPage;
    friend class CCxPertsPage;
 
 //=====================================================================================================================
@@ -290,11 +231,10 @@ protected:
    int               m_nPartitions;             // the loaded trial's partitions, as reflected in the partitions grid
    CPartition        m_partitions[MAX_SEGMENTS];
 
-   // most controls on form are now distributed across three property pages in a property sheet that lies at the top 
+   // most controls on form are now distributed across two property pages in a property sheet that lies at the top 
    // of the form. Only the segment grid, partition grid, and the property sheet itself are children of the form.
    CCxMainPage m_mainPage;
-   CCxPertsPage m_pertsPage;
-   CCxRandVarsPage m_rvPage;
+   CCxOtherPage m_otherPage;
    CPropertySheet* m_pPropSheet;
    
    // the segment table and partition grid (for seg #s and tagged sections

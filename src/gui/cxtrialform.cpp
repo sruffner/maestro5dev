@@ -16,10 +16,10 @@
 // ==> Construction of form; layout of controls; use of grid controls.
 // The layout of the CCxTrialForm view is defined in several dialog template resources: IDD_TRIALFORM defines the
 // overall layout, with a tab pane container (IDC_TRH_TABPROPS), a "partitions" grid (IDC_TRH_PARTITIONS), and the 
-// segment table (IDC_TRH_SEGTABLE) arranged vertically; the "Main" properties tab pane (IDC_TRIALFORM_MAIN);
-// the "Perturbations/PSGM" tab (IDC_TRIALFORM_OTHER), and the "Random Variables" tab (IDC_TRIALFORM_RV). Use the
-// Visual Studio Resource Editor to review the layout of these templates. We use various "Windows common controls" on
-// the "Main" and "Perts/PSGM" tab panes to represent the various parameters in the trial header.
+// segment table (IDC_TRH_SEGTABLE) arranged vertically; the "Main" properties tab pane (IDC_TRIALFORM_MAIN); and
+// the "Perturbations/RV" tab (IDC_TRIALFORM_OTHER). Use the Visual Studio Resource Editor to review the layout of 
+// these templates. We use various "Windows common controls" on the "Main" tab panes to represent the various 
+// parameters in the trial header.
 //
 // Of special note are four custom controls used to represent the segment table, a "partitions" grid that serves as a
 // column header for the segment table, the perturbation table (IDC_TRH_PERTS), and the random variables table 
@@ -33,8 +33,8 @@
 // CLiteGrid object before we use it. See CCxTrialForm::OnInitialUpdate().
 //
 // NOTE:  The integer resource IDs below must represent a contiguous range of values.
-//    1) IDC_TRH_WTSPIN...IDC_TRH_SGMSEGSPIN ==> The spin controls for relative weight, first save seg, failsafe seg,
-//       special operation seg, display marker segments, and the SGM op mode. 
+//    1) IDC_TRH_WTSPIN...IDC_TRH_MARK2SPIN ==> The spin controls for relative weight, first save seg, failsafe seg,
+//       special operation seg, and display marker segments. 
 //    2) IDC_TRH_KEEP...IDC_TRH_IGNVELROT ==> The PB controls for keep/toss flag, staircase
 //       trial designation ("normal", or a member of one of 5 staircases), staircase response input selection, and
 //       mid-trial reward mode ("periodic" or "segEnd") -- plus checkbox control for selecting whether or not an SGM
@@ -44,10 +44,8 @@
 //    3) IDC_TRH_SACCVT...IDC_TRH_WHVR2DEN ==> Edit ctrls for saccade threshold velocity, staircase strength, pulse
 //       length and WHVR numerator/denominator for reward pulses 1 and 2, mid-trial reward interval and pulse length, 
 //       and trial weight. These all appear on the "Main" page of the form.
-//    3a) IDC_TRH_SGMPA1...IDC_TRH_SGMNT ==> Edit controls for selected PSGM parameters appearing on the 
-//       "Perturbations/PSGM" page of the form.
 //    4) IDC_TRH_CHCFG...IDC_TRH_SPECOP ==> Combo box controls specifying the channel config associated with trial,
-//       the special operation in effect (if any), and the SGM operational mode.
+//       and the special operation in effect (if any).
 //    5) ID_GRID_INSERTTARG...ID_PERT_CLEAR ==> Command IDs for items in the context menus associated with the segment
 //       table, partitions grid, and perturbation list grid.
 //    6) IDC_TRH_SEGTABLE...IDC_TRV_GRID ==> Control IDs for the four grid controls on the form.
@@ -481,6 +479,9 @@
 // 14nov2024-- CCxRandVarsPage and CCxPertsPage intercept WM_MOUSEWHEEL, preventing it from being propagated up to
 // the CCxTrialForm parent, where it causes that form to scroll. Don't want, eg., both the RV table and the entire
 // trial form to both scroll in response to the mousewheel events.
+// 19nov2024-- Dropped support for the never-used PSGM module in Maestro 5.0.2. All PSGM-related widgets removed from
+// CCxPertsPage, and the RV grid control was moved to that page. CCxRandVarsPage deleted, and CCxPertsPage renamed
+// CCxOtherPage.
 //=====================================================================================================================
 
 
@@ -502,7 +503,7 @@ static char THIS_FILE[] = __FILE__;
 //=====================================================================================================================
 //=====================================================================================================================
 //
-// Implementation of CCxMainPage, CCxPertsPage, and CCxRandVarsPage
+// Implementation of CCxMainPage, CCxOtherPage
 //
 // These property pages are embedded in a modeless property sheet and serve to organize the many controls on the trial
 // form in a more compact presentation. They serve only as the control containers; all of the functionality remains in
@@ -609,27 +610,80 @@ BOOL CCxMainPage::PreTranslateMessage(MSG* pMsg)
 //=====================================================================================================================
 //=====================================================================================================================
 //
-// Implementation of CCxRandVarsPage
+// Implementation of CCxOtherPage
 //
 //=====================================================================================================================
 //=====================================================================================================================
 
-IMPLEMENT_DYNCREATE( CCxRandVarsPage, CPropertyPage )
+IMPLEMENT_DYNCREATE( CCxOtherPage, CPropertyPage )
 
-BEGIN_MESSAGE_MAP( CCxRandVarsPage, CPropertyPage )
+BEGIN_MESSAGE_MAP( CCxOtherPage, CPropertyPage )
    ON_NOTIFY(GVN_SELCHANGED, IDC_TRV_GRID, OnSelChanged)
+   ON_NOTIFY(NM_RCLICK, IDC_TRH_PERTS, OnNMRClick)
    ON_WM_MOUSEWHEEL()
 END_MESSAGE_MAP()
 
 
-BOOL CCxRandVarsPage::OnInitDialog()
+// when focus cell changes on RV grid, redraw header row so column labels get updated IAW type of RV in focus row
+void CCxOtherPage::OnSelChanged(NMHDR* pNMHDR, LRESULT* pResult)
+{
+   m_rvGrid.RedrawRow(0);
+}
+
+// forward NM_RCLICK on perturbation grid to the parent CCxTrialForm for processing
+void CCxOtherPage::OnNMRClick(NMHDR* pNMHDR, LRESULT* pResult)
+{
+   if(m_pTrialForm != NULL) m_pTrialForm->OnNMRClick(IDC_TRH_PERTS, pNMHDR, pResult);
+}
+
+// stop propagation of mousewheel event to parent CCxTrialForm -- intended for one of the grids on this page
+BOOL CCxOtherPage::OnMouseWheel(UINT, short, CPoint)
+{
+   return(TRUE);
+}
+
+
+BOOL CCxOtherPage::OnInitDialog()
 {
    CPropertyPage::OnInitDialog();
 
-   // set up the RV grid that is the sole control on this tab page
-   if(!m_rvGrid.SubclassDlgItem(IDC_TRV_GRID, this)) AfxThrowNotSupportedException();
+   BOOL bOk = m_pertGrid.SubclassDlgItem(IDC_TRH_PERTS, this);
+   if(bOk) bOk = m_rvGrid.SubclassDlgItem(IDC_TRV_GRID, this);
+   if(!bOk) AfxThrowNotSupportedException();
 
-   // no DnD, no row/col resize, no selection allowed
+   // configure the perturbation list grid control: No DnD, no row/col resize, no selection
+   m_pertGrid.EnableDragAndDrop(FALSE);
+   m_pertGrid.SetRowResize(FALSE);
+   m_pertGrid.SetColumnResize(FALSE);
+   m_pertGrid.EnableSelection(FALSE);
+
+   // set callbacks for perturbation grid. This ASSUMES that m_pTrialForm has already been set!
+   m_pertGrid.SetCallbackFunc(CCxTrialForm::PertGridDispCB, (LPARAM)m_pTrialForm);
+   m_pertGrid.SetEditCBFcn(CCxTrialForm::PertGridEditCB, (LPARAM)m_pTrialForm);
+   m_pertGrid.SetEndEditCBFcn(CCxTrialForm::PertGridEndEditCB, (LPARAM)m_pTrialForm);
+
+   // init grid with only the fixed row header and set default cell formats
+   m_pertGrid.SetRowCount(1);
+   m_pertGrid.SetColumnCount(5);
+   m_pertGrid.SetFixedRowCount(1);
+   m_pertGrid.SetFixedColumnCount(0);
+   m_pertGrid.GetDefaultCell(TRUE, TRUE)->SetFormat(DT_CENTER | DT_SINGLELINE);
+   m_pertGrid.GetDefaultCell(TRUE, FALSE)->SetFormat(DT_CENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+   m_pertGrid.GetDefaultCell(FALSE, TRUE)->SetFormat(DT_RIGHT | DT_SINGLELINE | DT_PATH_ELLIPSIS);
+   m_pertGrid.GetDefaultCell(FALSE, FALSE)->SetFormat(DT_CENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+   // use a bold font for the fixed header row (displaying column labels)
+   m_pertGrid.GetDefaultCell(TRUE, FALSE)->GetFont()->lfWeight = FW_BOLD;
+
+   // set fixed column widths
+   m_pertGrid.SetColumnWidth(0, 120);
+   m_pertGrid.SetColumnWidth(1, 60);
+   m_pertGrid.SetColumnWidth(2, 60);
+   m_pertGrid.SetColumnWidth(3, 100);
+   m_pertGrid.SetColumnWidth(4, 80);
+
+
+   // configure the random variables grid: no DnD, no row/col resize, no selection allowed
    m_rvGrid.EnableDragAndDrop(FALSE);
    m_rvGrid.SetRowResize(FALSE);
    m_rvGrid.SetColumnResize(FALSE);
@@ -671,7 +725,7 @@ BOOL CCxRandVarsPage::OnInitDialog()
 * This override is necessary because a property page is really a dialog, and a dialog eats keyboard accelerators.
 * Here we give the main frame window a chance to catch those accelerators.
 */
-BOOL CCxRandVarsPage::PreTranslateMessage(MSG* pMsg)
+BOOL CCxOtherPage::PreTranslateMessage(MSG* pMsg)
 {
    if(pMsg->message == WM_KEYDOWN)
    {
@@ -680,119 +734,6 @@ BOOL CCxRandVarsPage::PreTranslateMessage(MSG* pMsg)
    return(CPropertyPage::PreTranslateMessage(pMsg));
 }
 
-//=====================================================================================================================
-//=====================================================================================================================
-//
-// Implementation of CCxPertsPage
-//
-//=====================================================================================================================
-//=====================================================================================================================
-
-IMPLEMENT_DYNCREATE( CCxPertsPage, CPropertyPage )
-
-BEGIN_MESSAGE_MAP( CCxPertsPage, CPropertyPage )
-   ON_WM_VSCROLL()
-   ON_CONTROL_RANGE( BN_CLICKED, IDC_TRH_SGMTRIG, IDC_TRH_SGMTRIG, OnChange )
-   ON_CONTROL_RANGE( EN_KILLFOCUS, IDC_TRH_SGMPA1, IDC_TRH_SGMNT, OnChange )
-   ON_CONTROL( CBN_SELCHANGE, IDC_TRH_SGMOP, OnSelectSGMOp )
-   ON_NOTIFY_RANGE(NM_RCLICK, IDC_TRH_PERTS, IDC_TRH_PERTS, OnNMRClick)
-   ON_WM_MOUSEWHEEL()
-END_MESSAGE_MAP()
-
-
-// NOTE: These message handlers simply forward to the relevant handler in CCxTrialForm.
-void CCxPertsPage::OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pWnd )
-{
-   if(m_pTrialForm != NULL && pWnd != NULL) m_pTrialForm->OnVScroll(nSBCode, nPos, pWnd);
-}
-void CCxPertsPage::OnChange(UINT id) { if(m_pTrialForm != NULL) m_pTrialForm->OnChange(id); }
-void CCxPertsPage::OnSelectSGMOp() { if(m_pTrialForm != NULL) m_pTrialForm->OnComboSelChange(IDC_TRH_SGMOP); }
-void CCxPertsPage::OnNMRClick(UINT id, NMHDR* pNMHDR, LRESULT* pResult ) 
-{
-   if(m_pTrialForm != NULL) m_pTrialForm->OnNMRClick(id, pNMHDR, pResult);
-}
-
-BOOL CCxPertsPage::OnInitDialog()
-{
-   CPropertyPage::OnInitDialog();
-
-   BOOL bOk = m_spinSgmSeg.SubclassDlgItem( IDC_TRH_SGMSEGSPIN, this );
-   bOk = bOk && m_edSgmPulseAmp1.SubclassDlgItem( IDC_TRH_SGMPA1, this );
-   bOk = bOk && m_edSgmPulseAmp2.SubclassDlgItem( IDC_TRH_SGMPA2, this );
-   bOk = bOk && m_edSgmPulseWidth1.SubclassDlgItem( IDC_TRH_SGMPW1, this );
-   bOk = bOk && m_edSgmPulseWidth2.SubclassDlgItem( IDC_TRH_SGMPW2, this );
-   bOk = bOk && m_edSgmInterPulse.SubclassDlgItem( IDC_TRH_SGMIPI, this );
-   bOk = bOk && m_edSgmInterTrain.SubclassDlgItem( IDC_TRH_SGMITI, this );
-   bOk = bOk && m_edSgmNP.SubclassDlgItem( IDC_TRH_SGMNP, this );
-   bOk = bOk && m_edSgmNT.SubclassDlgItem( IDC_TRH_SGMNT, this );
-   bOk = bOk && m_cbSgmOp.SubclassDlgItem( IDC_TRH_SGMOP, this );
-   bOk = bOk && m_pertGrid.SubclassDlgItem( IDC_TRH_PERTS, this );
-
-   if( !bOk ) AfxThrowNotSupportedException();
-
-   m_edSgmPulseAmp1.SetFormat( TRUE, FALSE, 6, 1 );
-   m_edSgmPulseAmp2.SetFormat( TRUE, FALSE, 6, 1 );
-   m_edSgmPulseWidth1.SetFormat( TRUE, TRUE, 4, 1 );
-   m_edSgmPulseWidth2.SetFormat( TRUE, TRUE, 4, 1 );
-   m_edSgmInterPulse.SetFormat( TRUE, TRUE, 3, 1 );
-   m_edSgmInterTrain.SetFormat( TRUE, TRUE, 4, 1 );
-   m_edSgmNP.SetFormat(TRUE, TRUE, 3, 1);
-   m_edSgmNT.SetFormat(TRUE, TRUE, 3, 1);
-
-   // stuff SGM op mode combo box with strings describing modes available -- order is important here!
-   m_cbSgmOp.AddString( _T("Single Pulse") );
-   m_cbSgmOp.AddString( _T("Two Pulses") );  
-   m_cbSgmOp.AddString( _T("Biphasic Pulse") ); 
-   m_cbSgmOp.AddString( _T("Pulse Train") );
-   m_cbSgmOp.AddString( _T("Biphasic Train") );
-   m_cbSgmOp.AddString( _T("Not In Use") );
-
-   // configure the perturbation list grid control: No DnD, no row/col resize, no selection
-   m_pertGrid.EnableDragAndDrop( FALSE ); 
-   m_pertGrid.SetRowResize( FALSE ); 
-   m_pertGrid.SetColumnResize( FALSE ); 
-   m_pertGrid.EnableSelection( FALSE ); 
-
-   // set callbacks for perturbation grid. This ASSUMES that m_pTrialForm has already been set!
-   m_pertGrid.SetCallbackFunc( CCxTrialForm::PertGridDispCB, (LPARAM) m_pTrialForm );  
-   m_pertGrid.SetEditCBFcn( CCxTrialForm::PertGridEditCB, (LPARAM) m_pTrialForm );  
-   m_pertGrid.SetEndEditCBFcn( CCxTrialForm::PertGridEndEditCB, (LPARAM) m_pTrialForm ); 
-
-   // init grid with only the fixed row header and set default cell formats
-   m_pertGrid.SetRowCount( 1 );
-   m_pertGrid.SetColumnCount( 5 ); 
-   m_pertGrid.SetFixedRowCount( 1 );
-   m_pertGrid.SetFixedColumnCount( 0 );
-   m_pertGrid.GetDefaultCell( TRUE, TRUE )->SetFormat( DT_CENTER | DT_SINGLELINE ); 
-   m_pertGrid.GetDefaultCell( TRUE, FALSE )->SetFormat( DT_CENTER | DT_SINGLELINE | DT_END_ELLIPSIS );
-   m_pertGrid.GetDefaultCell( FALSE, TRUE )->SetFormat( DT_RIGHT | DT_SINGLELINE | DT_PATH_ELLIPSIS );
-   m_pertGrid.GetDefaultCell( FALSE,FALSE )->SetFormat( DT_CENTER | DT_SINGLELINE | DT_END_ELLIPSIS );
-
-   // use a bold font for the fixed header row (displaying column labels)
-   m_pertGrid.GetDefaultCell(TRUE, FALSE)->GetFont()->lfWeight = FW_BOLD;
-
-   // set fixed column widths
-   m_pertGrid.SetColumnWidth( 0, 120 ); 
-   m_pertGrid.SetColumnWidth( 1, 60 );
-   m_pertGrid.SetColumnWidth( 2, 60 );
-   m_pertGrid.SetColumnWidth( 3, 100 );
-   m_pertGrid.SetColumnWidth( 4, 80 );
-
-   return(TRUE);
-}
-
-/** 
-* This override is necessary because a property page is really a dialog, and a dialog eats keyboard accelerators.
-* Here we give the main frame window a chance to catch those accelerators.
-*/
-BOOL CCxPertsPage::PreTranslateMessage(MSG* pMsg)
-{
-   if(pMsg->message == WM_KEYDOWN)
-   {
-      if(((CCntrlxApp*) AfxGetApp())->GetMainFrame()->PreTranslateMessage(pMsg)) return(TRUE);
-   }
-   return(CPropertyPage::PreTranslateMessage(pMsg));
-}
 
 
 //=====================================================================================================================
@@ -921,8 +862,7 @@ CCxTrialForm::CCxTrialForm() : TVTabPane( CCxTrialForm::IDD )
 
    // set up property pages with a reference to this form, so that they can forward control notifications
    m_mainPage.SetParentForm(this);
-   m_pertsPage.SetParentForm(this);
-   m_rvPage.SetParentForm(this);
+   m_otherPage.SetParentForm(this);
 }
 
 
@@ -955,7 +895,7 @@ CCxTrialForm::~CCxTrialForm()
 
 //=== OnVScroll =======================================================================================================
 //
-//    Handle WM_VSCROLL message from any of the spin controls [IDC_TRH_WTSPIN...IDC_TRH_SGMSEGSPIN] on the form.
+//    Handle WM_VSCROLL message from any of the spin controls [IDC_TRH_WTSPIN...IDC_TRH_MARK2SPIN] on the form.
 //
 //    For *vertical* spin controls, WM_VSCROLL is sent to the owner window after the position of the control has
 //    changed.  We merely extract the control id and invoke OnChange() to update the trial object appropriately.  We
@@ -980,7 +920,7 @@ void CCxTrialForm::OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pWnd )
 
    // if message was from one of our spin controls, forward to OnChange() for processing...
    UINT id = (UINT) pWnd->GetDlgCtrlID();                      
-   if( id >= IDC_TRH_WTSPIN && id <= IDC_TRH_SGMSEGSPIN)
+   if( id >= IDC_TRH_WTSPIN && id <= IDC_TRH_MARK2SPIN)
       OnChange( id );
 }
 
@@ -991,12 +931,12 @@ void CCxTrialForm::OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pWnd )
 * 1) BN_CLICKED ==> User clicked one of the pushbutton/checkbox controls [IDC_TRH_KEEP...IDC_TRH_VELROT]. This action 
 * modifies trial state flags (or other vars) in some way, and in most cases a PB label is updated to reflect the new 
 * state.
-* 2) WM_VSCROLL ==> User scrolled one of the spin controls [IDC_TRH_WTSPIN...IDC_TRH_SGMSEGSPIN]. Here we just need to 
+* 2) WM_VSCROLL ==> User scrolled one of the spin controls [IDC_TRH_WTSPIN...IDC_TRH_MARK2SPIN]. Here we just need to 
 * update the loaded trial's header with the new parameter value.
-* 3) EN_KILLFOCUS ==> Keyboard focus has left a numeric edit ctrl [IDC_TRH_SACCVT ... IDC_TRH_WHVR2DEN, IDC_SGMPA1 ... 
-* IDC_TRH_SGMNT], indicating contents may have changed. Update the corresponding parameter in the loaded trial's 
-* header. Note that this will also be sent by a control that loses the focus b/c it is about to be disabled (in this 
-* case, the contents have not changed!).
+* 3) EN_KILLFOCUS ==> Keyboard focus has left a numeric edit ctrl [IDC_TRH_SACCVT ... IDC_TRH_WHVR2DEN], indicating 
+* contents may have changed. Update the corresponding parameter in the loaded trial's header. Note that this will also
+* be sent by a control that loses the focus b/c it is about to be disabled (in this case, the contents have not
+* changed!).
 *
 * NOTE that this method is now called by message handlers registered on the property page that contains the control!
 *
@@ -1025,9 +965,6 @@ void CCxTrialForm::OnChange(UINT id)
          break;
       case IDC_TRH_MTRMODE :                                   //    toggle state of the mid-trial reward mode flag
          hdr.dwFlags ^= THF_MTRMODE;
-         break;
-      case IDC_TRH_SGMTRIG :                                   //    toggle state of the SGM "Ext Trig?" flag
-         hdr.sgm.bExtTrig = !(hdr.sgm.bExtTrig);
          break;
 
       case IDC_TRH_IGNPOSSCALE :                               //    toggle state of "ignore tgt pos vector scale" and 
@@ -1062,9 +999,6 @@ void CCxTrialForm::OnChange(UINT id)
       case IDC_TRH_MARK2SPIN :                                 //    update display marker segment #2 index
          hdr.iMarkSeg2 = m_mainPage.m_spinMark2.GetPos();
          break;
-      case IDC_TRH_SGMSEGSPIN :                                //    update the SGM start segment index
-         hdr.iSGMSeg = m_pertsPage.m_spinSgmSeg.GetPos();
-         break;
 
       case IDC_TRH_SACCVT :                                    //    update saccade threshold velocity
          hdr.iSaccVt = m_mainPage.m_edSaccVt.AsInteger();
@@ -1090,35 +1024,11 @@ void CCxTrialForm::OnChange(UINT id)
       case IDC_TRH_WHVR2DEN:
          hdr.reward2[2] = m_mainPage.m_edWHVR2Den.AsInteger();
          break;
-      case IDC_TRH_SGMPA1 :                                    //    update SGM pulse 1 amplitude
-         hdr.sgm.iAmp1 = m_pertsPage.m_edSgmPulseAmp1.AsInteger();
-         break;
-      case IDC_TRH_SGMPA2 :                                    //    update SGM pulse 2 amplitude
-         hdr.sgm.iAmp2 = m_pertsPage.m_edSgmPulseAmp2.AsInteger();
-         break;
-      case IDC_TRH_SGMPW1 :                                    //    update SGM pulse 1 width
-         hdr.sgm.iPW1 = m_pertsPage.m_edSgmPulseWidth1.AsInteger();
-         break;
-      case IDC_TRH_SGMPW2 :                                    //    update SGM pulse 2 width
-         hdr.sgm.iPW2 = m_pertsPage.m_edSgmPulseWidth2.AsInteger();
-         break;
-      case IDC_TRH_SGMIPI :                                    //    update SGM interpulse interval
-         hdr.sgm.iPulseIntv = m_pertsPage.m_edSgmInterPulse.AsInteger();
-         break;
-      case IDC_TRH_SGMITI :                                    //    update SGM intertrain interval
-         hdr.sgm.iTrainIntv = m_pertsPage.m_edSgmInterTrain.AsInteger();
-         break;
       case IDC_TRH_MTRINTV :                                   //    update mid-trial reward interval
          hdr.iMTRIntv = m_mainPage.m_edMTRIntv.AsInteger();
          break;
       case IDC_TRH_MTRLEN :                                    //    update mid-trial reward pulse length
          hdr.iMTRLen = m_mainPage.m_edMTRLen.AsInteger();
-         break;
-      case IDC_TRH_SGMNP :                                     //    update #pulses per SGM pulse train
-         hdr.sgm.nPulses = m_pertsPage.m_edSgmNP.AsInteger();
-         break;
-      case IDC_TRH_SGMNT :                                     //    update #pulse trains per SGM stimulus
-         hdr.sgm.nTrains = m_pertsPage.m_edSgmNT.AsInteger();
          break;
       default :                                                //    we should NEVER get here!
          TRACE0( "Bad ID in CCxTrialForm::OnChange!\n" );
@@ -1148,12 +1058,12 @@ void CCxTrialForm::OnChange(UINT id)
 
 //=== OnComboSelChange ================================================================================================
 //
-//    Response to the CBN_SELCHANGE notification from the channel configuration combo box IDC_TRH_CHCFG, the SGM op
-//    mode combo box IDC_TRH_SGMOP, or the special operation combo box IDC_TRH_SPECOP. 
+//    Response to the CBN_SELCHANGE notification from the channel configuration combo box IDC_TRH_CHCFG or the special
+//    operation combo box IDC_TRH_SPECOP. 
 // 
 //    Whenever the selected channel config changes, we update the trial's header and list of object dependencies 
-//    accordingly. When the SGM op mode changes, we update the header and the enable state of the SGM parameter 
-//    controls. Similarly when the special operation is changed.
+//    accordingly. When the special op mode changes, we update the header and the enable state of the other controls
+//    related to the special operation.
 //
 //    ARGS:       id -- [in] resource ID of the child control that sent the notification.
 //
@@ -1180,13 +1090,6 @@ void CCxTrialForm::OnComboSelChange( UINT id )
          pDoc->UpdateObjDep( m_wKey, m_arDepObjs );                     //    update trial's object dependencies
          m_pTrial->GetDependencies( m_arDepObjs );
       }
-   }
-   else if( (id == IDC_TRH_SGMOP) &&                                    // if SGM op mode has been changed...
-            (hdr.sgm.iOpMode != m_pertsPage.m_cbSgmOp.GetCurSel()) )
-   {
-      hdr.sgm.iOpMode = m_pertsPage.m_cbSgmOp.GetCurSel();              //    update trial header
-      if( !m_pTrial->SetHeader( hdr, bChanged ) ) StuffHdrControls();   //    restuff all ctrls if any auto-corrections
-      EnableHdrControls();                                              //    adjust enable state of SGM controls
    }
    else if((id == IDC_TRH_SPECOP) &&                                    // similarly if special op changed...
       (hdr.iSpecialOp != m_mainPage.m_cbSpecOp.GetCurSel()))
@@ -1357,7 +1260,7 @@ void CCxTrialForm::OnNMRClick( UINT id, NMHDR* pNMHDR, LRESULT* pResult )
    }
    else if( id == IDC_TRH_PERTS )                                 // right-click on perturbation list grid:
    {
-      m_pertsPage.m_pertGrid.SetFocus();                          // a right-click does not give grid ctrl the focus
+      m_otherPage.m_pertGrid.SetFocus();                          // a right-click does not give grid ctrl the focus
 
       if( m_contextCell.col == 0 )                                // if clicked on first column, pop up menu...
       {
@@ -1664,15 +1567,15 @@ void CCxTrialForm::OnGridOps( UINT cmdID )
 
       case ID_PERT_APPEND :                                    // 11) Append a perturbation object to trial
          m_contextCell.row = m_contextCell.col = -1;           //    initiating edit on cell (0,0) distinguishes "add"
-         m_pertsPage.m_pertGrid.InitiateCellEdit( 0, 0 );      //    operation from "replace" operation
+         m_otherPage.m_pertGrid.InitiateCellEdit( 0, 0 );      //    operation from "replace" operation
          return;                                               //    ...op completed in PertGridEndEditCB()!
 
       case ID_PERT_REMOVE :                                    // 12) Remove selected obj from trial's perturb list.
-         m_pertsPage.m_pertGrid.SetFocusCell( -1, -1 );        //    (because we will remove this cell)
+         m_otherPage.m_pertGrid.SetFocusCell( -1, -1 );        //    (because we will remove this cell)
          iPos = m_contextCell.row - 1;
          if( m_pTrial->RemovePert( m_contextCell.row - 1 ) )
          {
-            m_pertsPage.m_pertGrid.SetRowCount( m_pTrial->PertCount() + 1 );
+            m_otherPage.m_pertGrid.SetRowCount( m_pTrial->PertCount() + 1 );
             bUpdate = TRUE;
             PropagatePertOp( cmdID, iPos, nP );                //    propagate change IAW current modify mode
 
@@ -1680,10 +1583,10 @@ void CCxTrialForm::OnGridOps( UINT cmdID )
          break;
 
       case ID_PERT_CLEAR :                                     // 13) Clear trial's perturbation list.
-         m_pertsPage.m_pertGrid.SetFocusCell( -1, -1 );        //    (because we will remove this cell)
+         m_otherPage.m_pertGrid.SetFocusCell( -1, -1 );        //    (because we will remove this cell)
          if( m_pTrial->PertCount() > 0 && m_pTrial->RemovePert( -1 ) )
          {
-            m_pertsPage.m_pertGrid.SetRowCount( 1 );
+            m_otherPage.m_pertGrid.SetRowCount( 1 );
             bUpdate = TRUE;
             PropagatePertOp( cmdID, -1, nP );                  //    propagate change IAW current modify mode
          }
@@ -1704,14 +1607,14 @@ void CCxTrialForm::OnGridOps( UINT cmdID )
          ResizeSegmentTable();
 
       if( cmdID >= ID_PERT_APPEND )                            //    refresh the affected grid
-         m_pertsPage.m_pertGrid.Refresh();
+         m_otherPage.m_pertGrid.Refresh();
       else if( cmdID != ID_GRID_REMOVESECT )                   //    segment table not affected by this command
          m_segGrid.Refresh();
 
       if( bSegChange || bTgtChange )                           //    changing # of targets or segments can affect state
       {                                                        //    of hdr ctrls & pert list, so refresh them.
          StuffHdrControls();
-         m_pertsPage.m_pertGrid.Refresh();
+         m_otherPage.m_pertGrid.Refresh();
 
          if( bSegChange )                                      //    rebuild trial partitions grid when #segs change
             RebuildPartitionGrid();
@@ -1780,7 +1683,7 @@ void CCxTrialForm::OnUpdGridOps( CCmdUI* pCmdUI )
    {
       CLiteGrid* pFocus = &m_segGrid;
       if( m_nRightClickedGrid == IDC_TRH_PARTITIONS ) pFocus = &m_partitionGrid;
-      else if( m_nRightClickedGrid == IDC_TRH_PERTS ) pFocus = &(m_pertsPage.m_pertGrid);
+      else if( m_nRightClickedGrid == IDC_TRH_PERTS ) pFocus = &(m_otherPage.m_pertGrid);
 
       bEnable = BOOL(pFocus == (CLiteGrid*) GetFocus());
    }
@@ -1903,7 +1806,7 @@ void CCxTrialForm::OnUpdGridOps( CCmdUI* pCmdUI )
          strItem = _T("Remove ");
          bEnable = BOOL(m_pTrial->IsValidPert( m_contextCell.row - 1 ));
          if( bEnable )
-            strItem += m_pertsPage.m_pertGrid.GetItemText( m_contextCell.row, m_contextCell.col );
+            strItem += m_otherPage.m_pertGrid.GetItemText( m_contextCell.row, m_contextCell.col );
          break;
       case ID_PERT_CLEAR :
          bEnable = BOOL(m_pTrial->PertCount() > 0);
@@ -1946,13 +1849,10 @@ void CCxTrialForm::OnUpdGridOps( CCmdUI* pCmdUI )
 //       3) The combo box IDC_TRH_CHCFG is subclassed to CCxObjCombo, which selects among the CNTRLX child objects
 //          under a specified parent. We use it to select the channel configuration associated with the current trial.
 //          The combo box IDC_TRH_SPECOP is subclassed to CCxComboBox, which is populated with strings describing
-//          the available special operations (including "none"). See CCxMainPage::OnInitDialog().
-//       4) The combo box IDC_TRH_SGMOP is subclassed to CComboBox. We stuff the combo box with strings describing
-//          the available operational modes for the pulse stimulus generator module, and set the initial selection.
-//          See CCxPertsPage::OnInitDialog().
-//       5) Certain edit controls on the property pages are subclassed to CNumEdit objects in order to restrict the 
+//          the available special operations (including "none").
+//       4) Certain edit controls on the property pages are subclassed to CNumEdit objects in order to restrict the 
 //          input to them. The format traits of these numeric edit controls are also set.
-//       6) The spin controls are subclassed to CSpinButtonCtrl objects.
+//       5) The spin controls are subclassed to CSpinButtonCtrl objects.
 //
 //    The "per-document" inits: ensure that the form is emptied each time this method is called (since the previously
 //    loaded trial object, if any, was defined in a document that is no longer there!), and reinstall the "tree info"
@@ -1973,8 +1873,7 @@ void CCxTrialForm::OnInitialUpdate()
       CWnd* pWndSheetParent = GetDlgItem(IDC_TRH_TABPROPS);
       m_pPropSheet = new CPropertySheet(AFX_IDS_APP_TITLE, pWndSheetParent);
       m_pPropSheet->AddPage(&m_mainPage);
-      m_pPropSheet->AddPage(&m_pertsPage);
-      m_pPropSheet->AddPage(&m_rvPage);
+      m_pPropSheet->AddPage(&m_otherPage);
       BOOL bOk = m_pPropSheet->Create(pWndSheetParent, WS_CHILD|WS_VISIBLE, 0);
       if(!bOk)
       {
@@ -1993,8 +1892,7 @@ void CCxTrialForm::OnInitialUpdate()
 
          // force creation of each page by making each one the active page. This is because we need to pre-load
          // or enable/disable various controls during start-up.
-         m_pPropSheet->SetActivePage(&m_pertsPage);
-         m_pPropSheet->SetActivePage(&m_rvPage);
+         m_pPropSheet->SetActivePage(&m_otherPage);
          m_pPropSheet->SetActivePage(&m_mainPage);
       }
 
@@ -2091,7 +1989,7 @@ void CCxTrialForm::OnInitialUpdate()
    // set up form in an "empty state". We reinstall "treeinfo" CBs each time, since we rely on a CCxDoc method!
    LoadTrial( CX_NULLOBJ_KEY );
    m_segGrid.SetTreeInfoCBFcn(CCxDoc::TreeInfoCB, (LPARAM)GetDocument());
-   m_pertsPage.m_pertGrid.SetTreeInfoCBFcn(CCxDoc::TreeInfoCB, (LPARAM)GetDocument());
+   m_otherPage.m_pertGrid.SetTreeInfoCBFcn(CCxDoc::TreeInfoCB, (LPARAM)GetDocument());
    m_wLastTgtKey = CX_NULLOBJ_KEY;
 
    // always call the base class version!
@@ -2187,9 +2085,11 @@ void CCxTrialForm::OnUpdate( CView* pSender, LPARAM lHint, CObject* pHint )
             m_segGrid.Refresh();
 
             nRows = m_pTrial->PertCount() + 1;                          // update perturbation list grid similarly...
-            if( nRows != m_pertsPage.m_pertGrid.GetRowCount() )
-               m_pertsPage.m_pertGrid.SetRowCount( nRows );
-            m_pertsPage.m_pertGrid.Refresh();
+            if( nRows != m_otherPage.m_pertGrid.GetRowCount() )
+               m_otherPage.m_pertGrid.SetRowCount( nRows );
+            m_otherPage.m_pertGrid.Refresh();
+
+            m_otherPage.m_rvGrid.Refresh();                             // the RV grid size never changes, but refresh it
 
             RebuildPartitionGrid();                                     // rebuild trial partitions grid
 
@@ -2204,7 +2104,7 @@ void CCxTrialForm::OnUpdate( CView* pSender, LPARAM lHint, CObject* pHint )
          {
             UpdateCaption(NULL);
             m_segGrid.Refresh();
-            m_pertsPage.m_pertGrid.Refresh();
+            m_otherPage.m_pertGrid.Refresh();
          }
          if( pVuHint->m_code == CXVH_NAMOBJ && pVuHint->m_type == CX_CHANCFG )
             m_mainPage.m_cbSelChan.RefreshContents();
@@ -2323,9 +2223,9 @@ VOID CCxTrialForm::LoadTrial( const WORD key )
                                                                   // trial pointer while loading or resetting form
 
    m_segGrid.SetFocusCell( -1, -1 );                              // remove focus from a grid cell before modifying
-   m_pertsPage.m_pertGrid.SetFocusCell( -1, -1 );                 // grids; avoids an ASSERT in SetRow/ColumnCount()
+   m_otherPage.m_pertGrid.SetFocusCell( -1, -1 );                 // grids; avoids an ASSERT in SetRow/ColumnCount()
    m_partitionGrid.SetFocusCell( -1, -1 );                        // below when a different trial is loaded...
-   m_rvPage.m_rvGrid.SetFocusCell(-1, -1);
+   m_otherPage.m_rvGrid.SetFocusCell(-1, -1);
 
    m_wKey = key;                                                  // unique key of trial to be displayed on form
 
@@ -2342,7 +2242,7 @@ VOID CCxTrialForm::LoadTrial( const WORD key )
       m_segGrid.SetRowCount( nRows );
       m_segGrid.SetColumnCount( nCols );
 
-      m_pertsPage.m_pertGrid.SetRowCount(m_pTrial->PertCount()+1); //    set up right #rows in perturbation list grid
+      m_otherPage.m_pertGrid.SetRowCount(m_pTrial->PertCount()+1); //    set up right #rows in perturbation list grid
    }
    else                                                           // no trial to display: make sure form is cleared...
    {
@@ -2350,7 +2250,7 @@ VOID CCxTrialForm::LoadTrial( const WORD key )
       m_arDepObjs.RemoveAll();
       m_segGrid.SetRowCount( ROWSINHDR );
       m_segGrid.SetColumnCount( 1 );
-      m_pertsPage.m_pertGrid.SetRowCount( 1 );
+      m_otherPage.m_pertGrid.SetRowCount( 1 );
    }
 
    m_bLoading = FALSE;                                            // re-enable grid display callbacks
@@ -2358,8 +2258,8 @@ VOID CCxTrialForm::LoadTrial( const WORD key )
    StuffHdrControls();
    ResizeSegmentTable();
    m_segGrid.Refresh();
-   m_pertsPage.m_pertGrid.Refresh();
-   m_rvPage.m_rvGrid.Refresh();
+   m_otherPage.m_pertGrid.Refresh();
+   m_otherPage.m_rvGrid.Refresh();
    CancelSectionCreateGesture();
    RebuildPartitionGrid();
    m_contextCell.row = m_contextCell.col = -1;                    // make sure context cell is reset
@@ -2430,16 +2330,6 @@ VOID CCxTrialForm::StuffHdrControls()
       hdr.iMTRIntv = TH_DEFREWINTV;
       hdr.iMTRLen = TH_DEFREWLEN;
 
-      hdr.iSGMSeg = 0;
-      hdr.sgm.iOpMode = SGM_NOOP;
-      hdr.sgm.bExtTrig = FALSE;
-      hdr.sgm.iAmp1 = hdr.sgm.iAmp2 = SGM_MAXPA * 80;
-      hdr.sgm.iPW1 = hdr.sgm.iPW2 = SGM_MINPW * 10;
-      hdr.sgm.iPulseIntv = SGM_MINIPI;
-      hdr.sgm.iTrainIntv = SGM_MINITI * 10;
-      hdr.sgm.nPulses = SGM_MINPULSES;
-      hdr.sgm.nTrains = SGM_MINTRAINS;
-
       nSegs = 0;
       nTargs = 0;
    }
@@ -2478,23 +2368,8 @@ VOID CCxTrialForm::StuffHdrControls()
    m_mainPage.m_edMTRIntv.SetWindowText( hdr.iMTRIntv );
    m_mainPage.m_edMTRLen.SetWindowText( hdr.iMTRLen );
 
-   // load SGM parameters into various controls on the "Perturbation/PSGM" property page
-   m_pertsPage.m_cbSgmOp.SetCurSel( hdr.sgm.iOpMode ); 
-   m_pertsPage.m_spinSgmSeg.SetRange( 0, (nSegs==0) ? 0 : nSegs - 1 );
-   m_pertsPage.m_spinSgmSeg.SetPos( hdr.iSGMSeg );
-   m_pertsPage.m_edSgmPulseAmp1.SetWindowText( hdr.sgm.iAmp1 );
-   m_pertsPage.m_edSgmPulseAmp2.SetWindowText( hdr.sgm.iAmp2 );
-   m_pertsPage.m_edSgmPulseWidth1.SetWindowText( hdr.sgm.iPW1 );
-   m_pertsPage.m_edSgmPulseWidth2.SetWindowText( hdr.sgm.iPW2 );
-   m_pertsPage.m_edSgmInterPulse.SetWindowText( hdr.sgm.iPulseIntv );
-   m_pertsPage.m_edSgmInterTrain.SetWindowText( hdr.sgm.iTrainIntv );
-   m_pertsPage.m_edSgmNP.SetWindowText( hdr.sgm.nPulses );
-   m_pertsPage.m_edSgmNT.SetWindowText( hdr.sgm.nTrains );
-   int m = hdr.sgm.bExtTrig ? BST_CHECKED : BST_UNCHECKED;
-   m_pertsPage.SendDlgItemMessage( IDC_TRH_SGMTRIG, BM_SETCHECK, (WPARAM) m, 0 );
-
    // check/uncheck boxes reflecting state of the "ignore pos/vel scale/rotate" flags - on "Main" property page
-   m = (hdr.dwFlags & THF_IGNPOSSCALE) ? BST_CHECKED : BST_UNCHECKED;
+   int m = (hdr.dwFlags & THF_IGNPOSSCALE) ? BST_CHECKED : BST_UNCHECKED;
    m_mainPage.SendDlgItemMessage(IDC_TRH_IGNPOSSCALE, BM_SETCHECK, (WPARAM)m, 0);
    m = (hdr.dwFlags & THF_IGNPOSROT) ? BST_CHECKED : BST_UNCHECKED;
    m_mainPage.SendDlgItemMessage(IDC_TRH_IGNPOSROT, BM_SETCHECK, (WPARAM)m, 0);
@@ -2558,7 +2433,6 @@ VOID CCxTrialForm::StuffHdrPB( const TRLHDR& hdr, const UINT id /* = 0 */ )
 //       3) the second reward pulse length is NOT relevant to the "skipOnSacc" special op; IDC_TRH_REWP2 is disabled
 //          in this case. Also, the sacc threshold velocity does NOT apply to the "searchTask" special op.
 //       4) the mid-trial reward intv widget is enabled only when the mid-trial reward mode is "periodic".
-//       5) not all SGM parameters are relevant to all SGM op modes; only relevant controls are enabled.
 //
 //    ARGS:       NONE
 //
@@ -2606,19 +2480,6 @@ VOID CCxTrialForm::EnableHdrControls()
       m_mainPage.GetDlgItem( IDC_TRH_STAIRRESP, &hwnd );
       ::EnableWindow( hwnd, FALSE );
 
-      m_pertsPage.m_cbSgmOp.EnableWindow( FALSE );
-      m_pertsPage.m_spinSgmSeg.EnableWindow( FALSE );
-      m_pertsPage.m_edSgmPulseAmp1.EnableWindow( FALSE );
-      m_pertsPage.m_edSgmPulseAmp2.EnableWindow( FALSE );
-      m_pertsPage.m_edSgmPulseWidth1.EnableWindow( FALSE );
-      m_pertsPage.m_edSgmPulseWidth2.EnableWindow( FALSE );
-      m_pertsPage.m_edSgmInterPulse.EnableWindow( FALSE );
-      m_pertsPage.m_edSgmInterTrain.EnableWindow( FALSE );
-      m_pertsPage.m_edSgmNP.EnableWindow( FALSE );
-      m_pertsPage.m_edSgmNT.EnableWindow( FALSE );
-      m_pertsPage.GetDlgItem( IDC_TRH_SGMTRIG, &hwnd );
-      ::EnableWindow( hwnd, FALSE );
-
       m_mainPage.GetDlgItem( IDC_TRH_IGNPOSSCALE, &hwnd );
       ::EnableWindow( hwnd, FALSE );
       m_mainPage.GetDlgItem( IDC_TRH_IGNPOSROT, &hwnd );
@@ -2658,8 +2519,6 @@ VOID CCxTrialForm::EnableHdrControls()
          ::EnableWindow( hwnd, TRUE );
          m_mainPage.m_edMTRLen.EnableWindow( TRUE );
 
-         m_pertsPage.m_cbSgmOp.EnableWindow( TRUE );
-
          m_mainPage.GetDlgItem( IDC_TRH_IGNPOSSCALE, &hwnd );
          ::EnableWindow( hwnd, TRUE );
          m_mainPage.GetDlgItem( IDC_TRH_IGNPOSROT, &hwnd );
@@ -2687,27 +2546,6 @@ VOID CCxTrialForm::EnableHdrControls()
       m_mainPage.m_edStairStren.EnableWindow( bEna );                   // normal trials.
       m_mainPage.GetDlgItem( IDC_TRH_STAIRRESP, &hwnd );
       ::EnableWindow( hwnd, bEna );
-
-      BOOL bSgmOn = BOOL( hdr.sgm.iOpMode != SGM_NOOP );                // enable/disable SGM controls depending on SGM
-      m_pertsPage.m_spinSgmSeg.EnableWindow( bSgmOn );                  // operational mode
-      m_pertsPage.m_edSgmPulseAmp1.EnableWindow( bSgmOn );
-      m_pertsPage.m_edSgmPulseWidth1.EnableWindow( bSgmOn );
-      m_pertsPage.GetDlgItem( IDC_TRH_SGMTRIG, &hwnd );
-      ::EnableWindow( hwnd, bSgmOn );
-
-      bEna = BOOL(bSgmOn && 
-         (hdr.sgm.iOpMode == SGM_DUAL || hdr.sgm.iOpMode == SGM_BIPHASIC || hdr.sgm.iOpMode == SGM_BIPHASICTRAIN));
-      m_pertsPage.m_edSgmPulseAmp2.EnableWindow( bEna );
-      m_pertsPage.m_edSgmPulseWidth2.EnableWindow( bEna );
-
-      bEna = BOOL(bSgmOn && 
-         (hdr.sgm.iOpMode == SGM_DUAL || hdr.sgm.iOpMode == SGM_TRAIN || hdr.sgm.iOpMode == SGM_BIPHASICTRAIN));
-      m_pertsPage.m_edSgmInterPulse.EnableWindow( bEna );
-
-      bEna = BOOL(bSgmOn && (hdr.sgm.iOpMode == SGM_TRAIN || hdr.sgm.iOpMode == SGM_BIPHASICTRAIN));
-      m_pertsPage.m_edSgmInterTrain.EnableWindow( bEna );
-      m_pertsPage.m_edSgmNP.EnableWindow( bEna );
-      m_pertsPage.m_edSgmNT.EnableWindow( bEna );
    }
 }
 
@@ -2829,7 +2667,7 @@ BOOL CALLBACK CCxTrialForm::PertGridDispCB( GV_DISPINFO *pDispInfo, LPARAM lPara
 {
    CCxTrialForm* pThis = (CCxTrialForm*)lParam;                         // to access non-static data in the view
    CCxTrial* pTrial = pThis->m_pTrial;                                  // the currently loaded trial
-   CLiteGrid* pGrid = &((pThis->m_pertsPage).m_pertGrid);               // the perturbation list grid
+   CLiteGrid* pGrid = &((pThis->m_otherPage).m_pertGrid);               // the perturbation list grid
    CCellID c( pDispInfo->item.row, pDispInfo->item.col );               // the grid cell of interest
 
    if( pGrid->GetSafeHwnd() == NULL || !pGrid->IsValid( c ) )           // ignore when no grid or cell not valid
@@ -2919,7 +2757,7 @@ BOOL CALLBACK CCxTrialForm::PertGridEditCB( EDITINFO *pEI, LPARAM lParam )
 {
    CCxTrialForm* pThis = (CCxTrialForm*)lParam;                         // to access non-static data in the view
    CCxTrial* pTrial = pThis->m_pTrial;                                  // the currently loaded trial
-   CLiteGrid* pGrid = &((pThis->m_pertsPage).m_pertGrid);               // the perturbation list grid
+   CLiteGrid* pGrid = &((pThis->m_otherPage).m_pertGrid);               // the perturbation list grid
    CCellID c = pEI->cell;                                               // the cell to be edited
    int nPert = c.row - 1;                                               // which perturbation entry
 
@@ -3080,7 +2918,7 @@ BOOL CALLBACK CCxTrialForm::PertGridEndEditCB( ENDEDITINFO *pEEI, LPARAM lParam 
 {
    CCxTrialForm* pThis = (CCxTrialForm*)lParam;                         // to access non-static data in the view
    CCxTrial* pTrial = pThis->m_pTrial;                                  // the currently loaded trial
-   CLiteGrid* pGrid = &((pThis->m_pertsPage).m_pertGrid);               // the perturbation list grid
+   CLiteGrid* pGrid = &((pThis->m_otherPage).m_pertGrid);               // the perturbation list grid
    CCellID c = pEEI->cell;                                              // the cell that was edited
    int nPert = c.row - 1;                                               // which perturbation entry
    BOOL bAdd = BOOL( c == CCellID(0,0) );                               // if TRUE, then adding pert obj to the list
@@ -3516,7 +3354,7 @@ BOOL CALLBACK CCxTrialForm::GridEndEditCB( ENDEDITINFO *pEEI, LPARAM lParam )
 
          // refresh grid, trial header controls, and perturbation list to ensure trial form is visibly up-to-date.
          pGrid->Refresh();
-         (pThis->m_pertsPage).m_pertGrid.Refresh();
+         (pThis->m_otherPage).m_pertGrid.Refresh();
          pThis->StuffHdrControls();
 
          // update trial's object dependencies
@@ -3788,10 +3626,6 @@ VOID CCxTrialForm::PropagateHeader( UINT ctrlID, TRLHDR& oldHdr )
             if( bModify || hdr.iStairNum == oldHdr.iStairNum )
                hdr.iStairNum = hdrLoaded.iStairNum;
             break;
-         case IDC_TRH_SGMTRIG :
-            if( bModify || hdr.sgm.bExtTrig == oldHdr.sgm.bExtTrig )
-               hdr.sgm.bExtTrig = hdrLoaded.sgm.bExtTrig;
-            break;
          case IDC_TRH_WTSPIN :
          case IDC_TRH_WEIGHT :
             if( bModify || hdr.iWeight == oldHdr.iWeight )
@@ -3816,10 +3650,6 @@ VOID CCxTrialForm::PropagateHeader( UINT ctrlID, TRLHDR& oldHdr )
          case IDC_TRH_MARK2SPIN :
             if( bModify || hdr.iMarkSeg2 == oldHdr.iMarkSeg2 )
                hdr.iMarkSeg2 = hdrLoaded.iMarkSeg2;
-            break;
-         case IDC_TRH_SGMSEGSPIN :
-            if( bModify || hdr.iSGMSeg == oldHdr.iSGMSeg )
-               hdr.iSGMSeg = hdrLoaded.iSGMSeg;
             break;
 
          case IDC_TRH_SACCVT :
@@ -3851,43 +3681,6 @@ VOID CCxTrialForm::PropagateHeader( UINT ctrlID, TRLHDR& oldHdr )
          case IDC_TRH_MTRLEN :
             if( bModify || hdr.iMTRLen == oldHdr.iMTRLen )
                hdr.iMTRLen = hdrLoaded.iMTRLen;
-            break;
-         case IDC_TRH_SGMPA1 :
-            if( bModify || hdr.sgm.iAmp1 == oldHdr.sgm.iAmp1 )
-               hdr.sgm.iAmp1 = hdrLoaded.sgm.iAmp1;
-            break;
-         case IDC_TRH_SGMPA2 :
-            if( bModify || hdr.sgm.iAmp2 == oldHdr.sgm.iAmp2 )
-               hdr.sgm.iAmp2 = hdrLoaded.sgm.iAmp2;
-            break;
-         case IDC_TRH_SGMPW1 :
-            if( bModify || hdr.sgm.iPW1 == oldHdr.sgm.iPW1 )
-               hdr.sgm.iPW1 = hdrLoaded.sgm.iPW1;
-            break;
-         case IDC_TRH_SGMPW2 :
-            if( bModify || hdr.sgm.iPW2 == oldHdr.sgm.iPW2 )
-               hdr.sgm.iPW2 = hdrLoaded.sgm.iPW2;
-            break;
-         case IDC_TRH_SGMIPI :
-            if( bModify || hdr.sgm.iPulseIntv == oldHdr.sgm.iPulseIntv )
-               hdr.sgm.iPulseIntv = hdrLoaded.sgm.iPulseIntv;
-            break;
-         case IDC_TRH_SGMITI :
-            if( bModify || hdr.sgm.iTrainIntv == oldHdr.sgm.iTrainIntv )
-               hdr.sgm.iTrainIntv = hdrLoaded.sgm.iTrainIntv;
-            break;
-         case IDC_TRH_SGMNP :
-            if( bModify || hdr.sgm.nPulses == oldHdr.sgm.nPulses )
-               hdr.sgm.nPulses = hdrLoaded.sgm.nPulses;
-            break;
-         case IDC_TRH_SGMNT :
-            if( bModify || hdr.sgm.nTrains == oldHdr.sgm.nTrains )
-               hdr.sgm.nTrains = hdrLoaded.sgm.nTrains;
-            break;
-         
-         case IDC_TRH_SGMOP :
-            if( bModify || hdr.sgm.iOpMode == oldHdr.sgm.iOpMode )
-               hdr.sgm.iOpMode = hdrLoaded.sgm.iOpMode;
             break;
 
          case IDC_TRH_CHCFG :
@@ -4556,7 +4349,7 @@ BOOL CALLBACK CCxTrialForm::RVGridDispCB(GV_DISPINFO *pDispInfo, LPARAM lParam)
 {
    CCxTrialForm* pThis = (CCxTrialForm*)lParam;                         // to access non-static data in the view
    CCxTrial* pTrial = pThis->m_pTrial;                                  // the currently loaded trial
-   CLiteGrid* pGrid = &((pThis->m_rvPage).m_rvGrid);                    // the random variables list grid
+   CLiteGrid* pGrid = &((pThis->m_otherPage).m_rvGrid);                    // the random variables list grid
    CCellID c( pDispInfo->item.row, pDispInfo->item.col );               // the grid cell of interest
 
    // ignore when there's no grid or cell is not valid; or while we're changing the trial that's loaded on form
@@ -4693,7 +4486,7 @@ BOOL CALLBACK CCxTrialForm::RVGridEditCB( EDITINFO *pEI, LPARAM lParam )
 {
    CCxTrialForm* pThis = (CCxTrialForm*)lParam;                         // to access non-static data in the view
    CCxTrial* pTrial = pThis->m_pTrial;                                  // the currently loaded trial
-   CLiteGrid* pGrid = &((pThis->m_rvPage).m_rvGrid);                    // the random variables list grid
+   CLiteGrid* pGrid = &((pThis->m_otherPage).m_rvGrid);                    // the random variables list grid
    CCellID c = pEI->cell;                                               // the cell to be edited
    int idx = c.row - 1;                                                 // index of RV to be edited
 
@@ -4784,7 +4577,7 @@ BOOL CALLBACK CCxTrialForm::RVGridEndEditCB( ENDEDITINFO *pEEI, LPARAM lParam )
 {
    CCxTrialForm* pThis = (CCxTrialForm*)lParam;                         // to access non-static data in the view
    CCxTrial* pTrial = pThis->m_pTrial;                                  // the currently loaded trial
-   CLiteGrid* pGrid = &((pThis->m_rvPage).m_rvGrid);                    // the random variables list grid
+   CLiteGrid* pGrid = &((pThis->m_otherPage).m_rvGrid);                    // the random variables list grid
    CCellID c = pEEI->cell;                                              // the cell that was edited
    int idx = c.row - 1;                                                 // index of corresponding trial RV
 

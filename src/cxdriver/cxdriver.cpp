@@ -189,6 +189,10 @@
  24sep2024-- While support for the XYScope platform was dropped in Maestro 4.0, all XYScope-related code remained in
  cxdriver.*. Began removing all such code for Maestro 5.0. Various typedefs/structs/constants related to XYScope may
  remain...
+ 18nov2024-- Dropping support for: (1) The PSGM module, which was never actually built and put into use (except for
+ testing a prototype). (2) Writing stimulus run definitions into the data file. Stimulus runs are rarely if ever used,
+ and now that XYScope and PSGM support are dropped, the only available stimulus channel type uses the animal chair,
+ which may not be available in any active rigs!
 ========================================================================================================================
 */
 
@@ -1907,10 +1911,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    int nSegs = 0;                                                       // # of segments in trial
    int iCurrSeg = -1;                                                   // the current segment
    int iSaveSeg = -1;                                                   // if >= 0, save data rec from this seg onward
-   int iSgmSeg = -1;                                                    // if >=0, an SGM pulse seq is started this seg
    int iSaccSeg = -1;                                                   // if >= 0, special op occurs in this seg
-
-   SGMPARMS sgmParms;                                                   // params for SGM pulse seq (non-encoded form)
 
    // if trial stops before this tick, data is NOT saved; if -1, trial must go to competion!
    int iFailsafeTime = -1;
@@ -2044,26 +2045,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                tc = m_masterIO.GetTrialCode( ++iCode );
                nMTRIntv = (int) tc.code;
                nMTRLen = (int) tc.time;
-               break;
-
-            // start/enable SGM pulse sequencer in this segment; save SGM parameters to be used.
-            case PSGM_TC : 
-               iSgmSeg = iCurrSeg;
-               tc = m_masterIO.GetTrialCode( ++iCode );
-               sgmParms.iOpMode = int(tc.code);
-               sgmParms.bExtTrig = BOOL(tc.time != 0);
-               tc = m_masterIO.GetTrialCode( ++iCode );
-               sgmParms.iAmp1 = int(tc.code);
-               sgmParms.iAmp2 = int(tc.time);
-               tc = m_masterIO.GetTrialCode( ++iCode );
-               sgmParms.iPW1 = int(tc.code);
-               sgmParms.iPW2 = int(tc.time);
-               tc = m_masterIO.GetTrialCode( ++iCode );
-               sgmParms.iPulseIntv = int(tc.code);
-               sgmParms.iTrainIntv = int(tc.time);
-               tc = m_masterIO.GetTrialCode( ++iCode );
-               sgmParms.nPulses = int(tc.code);
-               sgmParms.nTrains = int(tc.time);
                break;
 
             // ignored for CHAIR, which is not visual and is considered to be "on" at all times
@@ -2553,7 +2534,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    if(iSaveSeg < 0) iSaveSeg = 0;
 
    // to avoid "seg >= 0" checks during runtime, set unused segment indices to a number > max #segments
-   if(iSgmSeg < 0)  iSgmSeg = MAX_SEGMENTS + 2;
    if(iSaccSeg < 0) iSaccSeg = MAX_SEGMENTS + 2;
 
    // related to subject's response -- relevant only to staircase sequencing
@@ -2587,17 +2567,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
       m_masterIO.Message("(!!) Unable to open file for streaming recorded data. Trial ABORTED!");
       pTimer->WriteChar(ABORT_CHARCODE);
       pTimer->WriteChar(STOP_CHARCODE);
-      m_suspendMgr.ChangeTiming(iOldOn, iOldOff);
-      return(CX_FT_ERROR | CX_FT_DONE);
-   }
-   
-   // if event timer's SGM pulse sequencer will be used, configure it accordingly; ABORT on failure.
-   if((iSgmSeg >= 0) && (iSgmSeg < nSegs) && !(pTimer->CfgPulseSeq(&sgmParms)))
-   {
-      m_masterIO.Message("(!!) Illegal parameters for SGM pulse sequence. Trial ABORTED!");
-      pTimer->WriteChar(ABORT_CHARCODE);
-      pTimer->WriteChar(STOP_CHARCODE);
-      CloseStream(FALSE);
       m_suspendMgr.ChangeTiming(iOldOn, iOldOff);
       return(CX_FT_ERROR | CX_FT_DONE);
    }
@@ -2941,10 +2910,6 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                   m_seg[i].tStart -= delta;
             }
          }
-
-         // start SGM pulse sequencer at start of associated seg; disable h/w trig of seq when that segment ends
-         if(iCurrSeg == iSgmSeg) pTimer->StartPulseSeq();
-         else if(iCurrSeg == iSgmSeg+1) pTimer->DisablePulseSeq();
       }
       // END: SEGMENT BOUNDARY WORK
 
@@ -3733,8 +3698,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    if(dwTrialRes & CX_FT_LOSTFIX) pTimer->WriteChar(LOSTFIX_CHARCODE);
    if(dwTrialRes & dwErrResFlags) pTimer->WriteChar(ABORT_CHARCODE);
 
-   // stop/reinit: PSGM module controlled by DIO timer; chair; RMVideo animation
-   pTimer->StopPulseSeq(); 
+   // stop/reinit: chair; RMVideo animation
    pAO->InitChair(); 
    if(nRMVTgts > 0)
    {
@@ -4055,6 +4019,10 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
  25sep2024-- Removing all XYScope-related code for Maestro 5.x. The XYScope platform and related device hardware have
  not been supported since Maestro 4.0. At this point, Continuous mode is really only used for initial calibration of
  subject eye position at the start of an experiment, AFAIK.
+ 18nov2024-- Removed support for the PSGM stimulus channel. The PSGM module was never actually put into use (a prototype
+ was tested, then abandoned). With this change, the only available stimlulus channel type uses the animal chair, which
+ may not be available in any active rigs. We also decided to drop support for writing stimulus run definitions to the
+ Cont-mode data file. Analysis software (readcxdata, JMWork) has always skipped over stimulus run records, anyway.
 */
 VOID RTFCNDCL CCxDriver::RunContinuousMode()
 {
@@ -4339,13 +4307,12 @@ VOID RTFCNDCL CCxDriver::RunContinuousMode()
       // BEGIN: WHILE STIMULUS RUN IS IN PROGRESS...
       if(m_vbStimOn)
       {
-         // get current time within run's "duty cycle". At the end of a duty cycle, stop the PSGM is it's in use;
-         // increment #cycles done and reset duty cycle time to indicate the start of a new cycle. If it's time to
-         // stop (stop requested or autostop), end the stimulus run and notify MaestroGUI of the state change.
+         // get current time within run's "duty cycle". At the end of a duty cycle: increment #cycles done and reset 
+         // duty cycle time to indicate the start of a new cycle. If it's time to stop (stop requested or autostop), 
+         // end the stimulus run and notify MaestroGUI of the state change.
          int tCurrent = m_viStimTicks * m_viScanInterval; 
          if(tCurrent < m_run.tLastUpdate) 
          {
-            if(m_run.bUsesPSGM) pTimer->StopPulseSeq(); 
             ++m_run.iCycles; 
             m_run.tLastUpdate = -1; 
 
@@ -4357,10 +4324,6 @@ VOID RTFCNDCL CCxDriver::RunContinuousMode()
                continue;
             }
          }
-
-         // if PSGM is used, start the pulse sequenc at the designated time within the run's duty cycle
-         if(m_run.bUsesPSGM && (m_run.tStartPSGM <= tCurrent) && (m_run.tStartPSGM > m_run.tLastUpdate))
-            pTimer->StartPulseSeq();
 
          // update current state of stimulus run: marker pulses, calc trajectories, etc.
          UpdateStimulusRun(tCurrent); 
@@ -4821,8 +4784,6 @@ VOID RTFCNDCL CCxDriver::RunContinuousMode()
                dwOpState &= ~(CX_FC_RUNON|CX_FC_RUNSTOPPING);
                m_masterIO.SetResult(dwOpState);
 
-               if(m_run.bUsesPSGM) pTimer->StopPulseSeq();
-
                // case 3: abort requested. If we were recording, stop, discard data file, and resume idle bkg DAQ
                if(i == 2 && bRecordOn)
                {
@@ -5019,7 +4980,6 @@ VOID RTFCNDCL CCxDriver::RunContinuousMode()
    UnloadEyelinkSample(&bInBlink, -1);
    m_vbStimOn = FALSE;                                                  // stimulus run stopped
    m_bFixOn = FALSE;                                                    // disable fixation checking
-   pTimer->ResetPulseSeq();                                             // reset timer's pulse seq module
    pTimer->ClearFixationStatus();                                       // reset fixation status signal
    pAO->InitChair();                                                    // zero chair velocity drive signal
    pAI->Init();                                                         // reset AI device
@@ -5040,6 +5000,9 @@ VOID RTFCNDCL CCxDriver::RunContinuousMode()
 /**
  Helper method for RunContinuousMode(). Reads the stimulus run definition currently in CXIPC, initializes runtime 
  control info for the stimulus run, and starts it.
+
+ [18nov2024] As of Maestro 5.0.2, the only available channel type in a stimulus run is STIM_ISCHAIR; PSGM and
+ XYseq support both dropped.
 */
 VOID RTFCNDCL CCxDriver::StartStimulusRun()
 {
@@ -5050,8 +5013,7 @@ VOID RTFCNDCL CCxDriver::StartStimulusRun()
    m_masterIO.GetStimRunDef(m_run.def);
 
    // initialize runtime control state variables
-   m_run.bUsesChair = FALSE; 
-   m_run.bUsesPSGM = FALSE;
+   m_run.bUsesChair = FALSE;
    m_run.tLastUpdate = -1;                   // this signals the beginning of a new duty cycle!
    m_run.iCycles = 0;
    m_run.bSoftStopReq = FALSE;
@@ -5062,27 +5024,15 @@ VOID RTFCNDCL CCxDriver::StartStimulusRun()
    BOOL bAOAvail = m_masterIO.IsAOAvailable();
 
    // find which stimulus platforms are used and enable stimulus only if required hardware device is present; if not,
-   // turn the stimulus OFF. Remember that there can be more than one STIMCHAN turned ON for most stimulus types (but
-   // not for PSGM). The XYseq stimulus run is DEPRECATED, as the XYScope is no longer supported.
+   // turn the stimulus OFF. The XYseq stimulus run is DEPRECATED, as the XYScope is no longer supported. The PSGM has
+   // also been deprecated -- so the ONLY supported stimulus channel is STIM_ISCHAIR!
    for(i = 0; i < m_run.def.nStimuli; i++)
    {
       PSTIMCHAN pStim = &(m_run.def.stim[i]);
-      if(pStim->bOn) switch(pStim->iType)
+      if(pStim->bOn && (pStim->iType == STIM_ISCHAIR))
       {
-         case STIM_ISCHAIR :
-            m_run.bUsesChair = bAOAvail && m_masterIO.IsChairPresent();
-            pStim->bOn = m_run.bUsesChair;
-            break;
-         case STIM_ISPSGM :
-            m_run.bUsesPSGM = m_masterIO.IsTMRAvailable();
-            pStim->bOn = m_run.bUsesPSGM;
-            // if PSGM will be used, configure it now and remember its start time w/in the stimulus run
-            if(m_run.bUsesPSGM)
-            {
-               m_DevMgr.GetTimer()->CfgPulseSeq(&(pStim->sgm));
-               m_run.tStartPSGM = pStim->tStart;
-            }
-            break;
+         m_run.bUsesChair = bAOAvail && m_masterIO.IsChairPresent();
+         pStim->bOn = m_run.bUsesChair;
       }
    }
 
@@ -5095,6 +5045,10 @@ VOID RTFCNDCL CCxDriver::StartStimulusRun()
 /**
  Helper method for RunContinuousMode(). Advances the trajectories of all active stimulus channels to the specified time 
  point in an ongoing stimulus run.
+
+ [18nov2024] As of Maestro 5.0.2, the only available channel type in a stimulus run is STIM_ISCHAIR; PSGM and
+ XYseq support both dropped.
+
  @param tCurrent Current elapsed time (ms) in duty cycle of the stimulus run.
 */
 VOID RTFCNDCL CCxDriver::UpdateStimulusRun(int tCurrent)
@@ -5253,6 +5207,7 @@ VOID RTFCNDCL CCxDriver::UpdateStimulusRun(int tCurrent)
     !!!
     !!! (25sep2024): The XYScope has not been supported since Maestro 4.0, and we're removing all related code for the
     !!! Maestro 5.0 release.
+    !!! (18nov2024): Dropped support for writing CX_STIMRUNRECORD records a/o Maestro 5.0.2.
 
  CloseStream(): Fill any remaining space in non-empty data records with "end-of-data" values, write those records to the 
  file writer, write the final version of the header record, and close the file writer. This will flush all "queued" 
@@ -5334,57 +5289,6 @@ BOOL RTFCNDCL CCxDriver::OpenStream(LPCTSTR strPath)
    // write any relevant "information records". These are different for a Continuous-mode vs Trial-mode file.
    if(isCont)
    {
-      // Continuous Mode. (1) Store definition of currently loaded stimulus run in one or more definition records
-      ::memset((PVOID) &m_Record, 0, sizeof(CXFILEREC)); 
-      m_Record.idTag[0] = CX_STIMRUNRECORD; 
-      
-      // the run's "header info" is always the first chunk.
-      CXFILESTIMRUNHDR* pHdr = &(m_Record.u.stims[0].hdr); 
-      pHdr->bRunning = m_vbStimOn; 
-      pHdr->iDutyPeriod = m_run.def.iDutyPeriod;
-      pHdr->iDutyPulse = m_run.def.iDutyPulse;
-      pHdr->nAutoStop = m_run.def.nAutoStop;
-      pHdr->fHOffset = m_run.def.fHOffset;
-      pHdr->fVOffset = m_run.def.fVOffset;
-      pHdr->nXYTgts = 0; // the XYScope is DEPRECATED a/o Maestro 5.0; it has not been supported since 4.0!
-
-      // how many stimulus channels are ON. We will only include defns of ON channels.
-      int nStimsOn = 0;
-      for(i = 0; i < m_run.def.nStimuli; i++) { if(m_run.def.stim[i].bOn) ++nStimsOn; }
-      pHdr->nStimuli = nStimsOn;
-
-      // store only those stim channels that are on; IF THERE ARE NONE, WE DON'T WRITE ANY RUN DEFN RECORDS!
-      int nStim = 0; 
-      j = 1; 
-      if(nStimsOn>0) for(i = 0; i < m_run.def.nStimuli; i++)  
-      { 
-         if(m_run.def.stim[i].bOn)
-         {
-            m_Record.u.stims[j].stim = m_run.def.stim[i];
-            ++j;
-            ++nStim;
-         }
-
-         // once the record is full or we've stored all the stim channels, stream record to file. Abort on failure.
-         // Reset record if we have any more stim channel definitions to write...
-         if(j == CX_RECORDSTIMS || nStim == nStimsOn)
-         {
-            if(!m_writer.Write((PVOID) &m_Record))
-            {
-               m_writer.Close(FALSE);
-               return(FALSE);
-            }
-            if(nStim < nStimsOn)
-            {
-               ::memset((PVOID) &m_Record, 0, sizeof(CXFILEREC));
-               m_Record.idTag[0] = CX_STIMRUNRECORD;
-               j = 0;
-            }
-            else
-               break;
-         }
-      }
-
       // write defns of targets in the current active target list in one or more "target definition records".
       ::memset((PVOID) &m_Record, 0, sizeof(CXFILEREC));
       m_Record.idTag[0] = CX_TGTRECORD;

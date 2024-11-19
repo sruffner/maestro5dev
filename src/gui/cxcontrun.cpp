@@ -33,10 +33,11 @@
 //                                                 occurs along this line. x(t) = v(t)*cos(R), y(t) = v(t)*sin(R).
 //                         Trapezoidal vel pulse   Similar to CHAIR, except BLANKENA replaced by rot angle R.
 //    
+//    ****** DEPRECATED -- The PSGM is not supported as of Maestro 5.0.2. ********************************************
 //    PSGM                 *** The PSGM is NOT a visual stimulus at all.  Rather, it delivers an electrical stimulus
 //                         pulse train to the brain via a microelectrode.  With the prerequisite external hardware,
 //                         CNTRLX can control the delivery of one, two, or a train of pulses.  Here we list the five
-//                         kinds of PSGM stimulu supported, and the associated parameters:
+//                         kinds of PSGM stimuli supported, and the associated parameters:
 //
 //                         Single pulse            t0 = start time within duty cycle, EXTTRIG? = is stimulus started by
 //                                                 ext trigger? (else software start), A1 = pulse amplitude in V, and
@@ -192,9 +193,12 @@
 // STIM_ISXYSEQ and STIM_ISPSGM are also adjusted to their new values. Extensive changes have been made to this module
 // to remove support for the Fiber1/2 channels.
 // 05sep2017-- Fix compiler issues while compiling for 64-bit Win 10 using VStudio 2017.
-// 30sep2024-- Made changes to reflect the fact that the XYseq stimulus -- which uses the now-deprecated XYScope
-// platform -- is deprecated a/o Maestro 5.0. CCxContRun can still handle deserialization of stimulus runs using XYseq,
+// 30sep2024-- Made changes to reflect the fact that the XYseq stimulus, which uses the now-deprecated XYScope
+// platform, is deprecated a/o Maestro 5.0. CCxContRun can still handle deserialization of stimulus runs using XYseq,
 // but an exception is thrown if there's an attempt to save a run that uses XYseq.
+// 18nov2024-- The PSGM, an external module that was never put into use in the lab (only a prototype was tested and
+// then the project abandoned), has been removed from Maestro a/o V5.0.2. CCxContRun/CCxStimulus can still handle
+// deserialization of stimulus runs with PSGM stimulus channels, but those channels will be effectively ignored.
 //=====================================================================================================================
 
 
@@ -218,7 +222,7 @@ static char THIS_FILE[] = __FILE__;
 // class CCxStimulus
 //=====================================================================================================================
 //
-IMPLEMENT_SERIAL( CCxStimulus, CObject, 4 | VERSIONABLE_SCHEMA )
+IMPLEMENT_SERIAL( CCxStimulus, CObject, 5 | VERSIONABLE_SCHEMA )
 
 //=====================================================================================================================
 // CONSTANTS
@@ -226,13 +230,10 @@ IMPLEMENT_SERIAL( CCxStimulus, CObject, 4 | VERSIONABLE_SCHEMA )
 
 const int CCxStimulus::NPARAMS[STIM_NTYPES][STIM_NMAXMODES] =     // # of motion parameters varies w/type & mode
 {
-   { 4, 4, 0, 0, 0 },                                             //    STIM_ISCHAIR
-   { 3, 6, 5, 7, 9 },                                             //    STIM_ISPSGM
-   { 7, 7, 8, 8, 0 }                                              //    STIM_ISXYSEQ
+   { 4, 4}                                                        //    STIM_ISCHAIR
 };
 
 LPCTSTR CCxStimulus::STDMODESTRINGS[] = { "Sine", "Pulse" };
-LPCTSTR CCxStimulus::PSGMMODESTRINGS[] = { "Single", "2Pulse", "Biphasic", "Train", "Biph Tr" };
 LPCTSTR CCxStimulus::COMMONLBLSTRINGS[] = { "On/off", "Marker", "Type", "Motion", "t0 (ms)" };
 
 
@@ -251,6 +252,8 @@ LPCTSTR CCxStimulus::COMMONLBLSTRINGS[] = { "On/off", "Marker", "Type", "Motion"
 //    the relevant parameter set.
 //
 //    30sep2024-- A/o Maestro 5.0, XYseq stimuli are deprecated.
+//    18nov2024-- A/o Maestro 5.0.2, PSGM stimulus are deprecated. All that's left is STIM_ISCHAIR!
+// 
 //    ARGS:       stim  -- [in/out] the stimulus channel definition struct compatible with CXDRIVER.
 //
 //    RETURNS:    NONE.
@@ -262,30 +265,23 @@ VOID CCxStimulus::GetStimulusInfo( STIMCHAN& stim ) const
    stim.iType = m_iType;
    stim.tStart = m_tStart;
 
-   if( m_iType == STIM_ISPSGM ) stim.sgm = m_sgm;
-   else
-   {
-      stim.iStdMode = m_iStdMode;
-      if( m_iStdMode == MODE_ISSINE ) stim.sine = m_sine;
-      else stim.pulse = m_pulse;
-   }
+   stim.iStdMode = m_iStdMode;
+   if(m_iStdMode == MODE_ISSINE) stim.sine = m_sine;
+   else stim.pulse = m_pulse;
 }
 
 VOID CCxStimulus::SetStimulusInfo( const STIMCHAN& stim )
 {
+   ASSERT(stim.iType != STIM_ISXYSEQ && stim.iType !+ STIM_ISPSGM);
+
    m_bOn = stim.bOn;
    m_iMarker = stim.iMarker;
    m_iType = stim.iType;
    m_tStart = stim.tStart;
 
-   ASSERT(stim.iType != STIM_ISXYSEQ);
-   if( stim.iType == STIM_ISPSGM ) m_sgm = stim.sgm;
-   else
-   {
-      m_iStdMode = stim.iStdMode;
-      if( stim.iStdMode == MODE_ISSINE ) m_sine = stim.sine;
-      else m_pulse = stim.pulse;
-   }
+   m_iStdMode = stim.iStdMode;
+   if(stim.iStdMode == MODE_ISSINE) m_sine = stim.sine;
+   else m_pulse = stim.pulse;
 
    Validate();                                                       // autocorrect the new defn
 }
@@ -296,7 +292,7 @@ VOID CCxStimulus::SetStimulusInfo( const STIMCHAN& stim )
 //    Copy the contents of the specified "source" stimulus channel to THIS stimulus channel object.  The previous
 //    contents of this object are lost.
 //
-//    REMEMBER:  Unlike the STIMCHAN struct, CCxStimulus includes storage for the motion parameters of every supported
+//    REMEMBER: Unlike the STIMCHAN struct, CCxStimulus includes storage for the motion parameters of every supported
 //    stimulus types.  We must copy ALL motion parameter sets, not just those applicable to the current stimulus type.
 //
 //    ARGS:       src   -- [in] the stimulus channel object to be copied.
@@ -306,7 +302,7 @@ VOID CCxStimulus::SetStimulusInfo( const STIMCHAN& stim )
 VOID CCxStimulus::Copy( const CCxStimulus& src )
 {
    ASSERT_VALID( &src );
-   ASSERT(src.m_iType != STIM_ISXYSEQ);
+   ASSERT(src.m_iType != STIM_ISXYSEQ && src.m_iType != STIM_ISPSGM);
    m_bOn = src.m_bOn;
    m_iMarker = src.m_iMarker;
    m_iType = src.m_iType;
@@ -315,7 +311,7 @@ VOID CCxStimulus::Copy( const CCxStimulus& src )
    m_sine = src.m_sine;
    m_pulse = src.m_pulse;
    // m_xyseq = src.m_xyseq;
-   m_sgm = src.m_sgm;
+   // m_sgm = src.m_sgm;
 }
 
 
@@ -338,6 +334,8 @@ VOID CCxStimulus::Copy( const CCxStimulus& src )
       V4.0, and XYScope targets and XYseq are no longer allowed in experiment docs a/o V5.0. Still supports 
       deserializing XYseq stimuli in order to handle old documents containing them. AFTER deserialization, CCxDoc
       removes all stimlus runs and trial that depend on XYScope targets.
+   5: As of Maestro v5.0.2, support for the never-used PSGM is dropped. PSGM stimuli can no longer be saved. During 
+      deserialization, a PSGM stimulus is read in, then simply discarded.
 
  @param ar The serialization archive.
  @throws The archive may throw CMemoryException, CArchiveException, or CFileException.
@@ -349,16 +347,11 @@ void CCxStimulus::Serialize(CArchive& ar)
 
    if( ar.IsStoring() )                                        // STORE TO ARCHIVE...
    {
-      if(m_iType == STIM_ISXYSEQ)
+      if(m_iType == STIM_ISXYSEQ || m_iType == STIM_ISPSGM)
          ::AfxThrowArchiveException(CArchiveException::genericException);
 
       ar << int(m_bOn) << m_iMarker << m_iType << m_iStdMode << m_tStart;
-      if( m_iType == STIM_ISPSGM )
-      {
-         ar << m_sgm.iOpMode << int(m_sgm.bExtTrig) << m_sgm.iAmp1 << m_sgm.iAmp2 << m_sgm.iPW1 << m_sgm.iPW2;
-         ar << m_sgm.iPulseIntv << m_sgm.iTrainIntv << m_sgm.nPulses << m_sgm.nTrains;
-      }
-      else if( m_iStdMode == MODE_ISSINE )
+      if( m_iStdMode == MODE_ISSINE )
       {
          ar << m_sine.iPeriod << m_sine.nCycles;
          ar << m_sine.fAmp << m_sine.fPhase << m_sine.fDirec;
@@ -371,7 +364,7 @@ void CCxStimulus::Serialize(CArchive& ar)
    }
    else                                                        // READ FROM ARCHIVE...
    {
-      if( nSchema < 1 || nSchema > 4 )                         // unsupported version
+      if( nSchema < 1 || nSchema > 5 )                         // unsupported version
          ::AfxThrowArchiveException( CArchiveException::badSchema );
 
       SetDefaults();
@@ -404,17 +397,30 @@ void CCxStimulus::Serialize(CArchive& ar)
 
       if(m_iType == STIM_ISXYSEQ)
       {
-         // XYseq stimuli cannot appear in schema version 4 documents!
-         if(nSchema == 4)
+         // XYseq stimuli cannot appear in schema version 4+
+         if(nSchema >= 4)
             ::AfxThrowArchiveException(CArchiveException::badSchema);
-         ar >> m_xyseq.iOpMode >> m_xyseq.iRefresh >> m_xyseq.nSegs >> m_xyseq.iSegDur >> m_xyseq.iSeed;
-         ar >> m_xyseq.nChoices >> m_xyseq.fAngle >> m_xyseq.fVel >> m_xyseq.fOffsetV;
+
+         // otherwise, read and discard the XYSeq stimulus params
+         XYSEQSTIM xyseq{};
+         ar >> xyseq.iOpMode >> xyseq.iRefresh >> xyseq.nSegs >> xyseq.iSegDur >> xyseq.iSeed;
+         ar >> xyseq.nChoices >> xyseq.fAngle >> xyseq.fVel >> xyseq.fOffsetV;
+
+         // CCxContRun::Serialize will remove all XYseq stimulus channels after deserialization!!
       }
       else if( m_iType == STIM_ISPSGM )
       {
-         ar >> m_sgm.iOpMode >> i >> m_sgm.iAmp1 >> m_sgm.iAmp2 >> m_sgm.iPW1 >> m_sgm.iPW2;
-         ar >> m_sgm.iPulseIntv >> m_sgm.iTrainIntv >> m_sgm.nPulses >> m_sgm.nTrains;
-         m_sgm.bExtTrig = BOOL(i != 0);
+         // PSGM stimuli cannot appear in schema version 5+
+         if(nSchema >= 5)
+            ::AfxThrowArchiveException(CArchiveException::badSchema);
+
+         // otherwise, read and discard the PSGM stimulus params
+         SGMPARMS sgm;
+         ar >> sgm.iOpMode >> i >> sgm.iAmp1 >> sgm.iAmp2 >> sgm.iPW1 >> sgm.iPW2;
+         ar >> sgm.iPulseIntv >> sgm.iTrainIntv >> sgm.nPulses >> sgm.nTrains;
+         sgm.bExtTrig = BOOL(i != 0);
+
+         // CCxContRun::Serialize() will remove all PSGM stimulus channels after deserialization!!
       }
       else if( m_iStdMode == MODE_ISSINE )
       {
@@ -481,42 +487,22 @@ void CCxStimulus::Serialize(CArchive& ar)
 //    the identities of which var with type and motion mode.
 // 
 //    *** (30sep2024) XYseq stimuli DEPRECATED a/o Maestro 5.0. ***
-//
-//    index    PSGM type                  Sines mode              Pulse mode
+//    *** (18nov2024) PSGM stimuli DEPRECATED a/o Maestro 5.0.2. ***
+//    *** The only remaining stimulus type is STIM_ISCHAIR. The table below has been updated accordingly. ***
+// 
+//    index    Sines mode              Pulse mode
 //    ---------------------------------------------------------------------------------------------------
-//    0        m_bOn                      m_bOn                   m_bOn
-//    1        m_iMarker                  m_iMarker               m_iMarker
-//    2        m_iType                    m_iType                 m_iType
-//    3        m_sgm.iOpMode              m_iStdMode              m_iStdMode
-//    4        m_tStart                   m_tStart                m_tStart
+//    0        m_bOn                   m_bOn
+//    1        m_iMarker               m_iMarker
+//    2        m_iType                 m_iType             <---- Always STIM_ISCHAIR !!!
+//    3        m_iStdMode              m_iStdMode
+//    4        m_tStart                m_tStart
 //
-//    5        m_sgm.bExtTrig             m_sine.fAmp             m_pulse.fAmp
-//    6        m_sgm.iAmp1                m_sine.iPeriod          m_pulse.iPulseDur
-//    7        m_sgm.iPW1                 m_sine.fPhase           m_pulse.iRampDur
-//    8        m_sgm.iAmp2, or            m_sine.nCycles          m_pulse.bBlank 
-//             m_sgm.iPulseIntv, or 
-//             NOT USED
-//
-//    9        m_sgm.iPW2, or             NOT USED                NOT USED
-//             m_sgm.nPulses, or 
-//             NOT USED
-//
-//    10       m_sgm.iPulseIntv, or       NOT USED                NOT USED
-//             m_sgm.iTrainIntv, or
-//             NOT USED
-//
-//    11       m_sgm.nTrains, or          NOT USED                NOT USED
-//             m_sgm.nPulses, or
-//             NOT USED
-//
-//    12       m_sgm.iTrainIntv, or       NOT USED                NOT USED
-//             NOT USED
-//
-//    13       m_sgm.nTrains, or          NOT USED                NOT USED
-//             NOT USED
-//
-//    14       Reserved for future use.
-//
+//    5        m_sine.fAmp             m_pulse.fAmp
+//    6        m_sine.iPeriod          m_pulse.iPulseDur
+//    7        m_sine.fPhase           m_pulse.iRampDur
+//    8        m_sine.nCycles          m_pulse.bBlank 
+// 
 //    ARGS:       i           -- [in] the index of desired parameter in the stimulus channel's parameter list.
 //                str         -- [out] string representation of parameter's value, or a descriptive name for parameter.
 //                bIsChoice   -- [out] TRUE if this is a multi-choice parameter; otherwise it's numeric.
@@ -530,65 +516,20 @@ double CCxStimulus::GetParameter( int i ) const
 {
    if( !IsValidParameter( i ) ) return( 0.0 );                       // merely return 0 if param index invalid
 
-   BOOL bIsTrain = BOOL(m_iType == STIM_ISPSGM && m_sgm.iOpMode == SGM_TRAIN);
    BOOL bIsSine = BOOL(m_iStdMode == MODE_ISSINE);
 
    double d = 0.0;                                                   // return each parameter formatted as a double
    switch( i )
    {
-      case 0 : d = m_bOn ? 1.0 : 0.0;  break;
-      case 1 : d = double(m_iMarker);  break;
-      case 2 : d = double(m_iType);    break;
-      case 4 : d = double(m_tStart);   break;
-
-      case 3 :                                                       // motion mode is stored in several diff places...
-         if( m_iType == STIM_ISPSGM )   d = double(m_sgm.iOpMode);
-         else                           d = double(m_iStdMode);
-         break;
-
-      case 5 :
-         if( m_iType == STIM_ISPSGM )   d = m_sgm.bExtTrig ? 1.0 : 0.0;
-         else if( bIsSine )             d = double(m_sine.fAmp);
-         else                           d = double(m_pulse.fAmp);
-         break;
-
-      case 6 :
-         if( m_iType == STIM_ISPSGM )   d = double(m_sgm.iAmp1);
-         else if( bIsSine )             d = double(m_sine.iPeriod);
-         else                           d = double(m_pulse.iPulseDur);
-         break;
-
-      case 7 :
-         if( m_iType == STIM_ISPSGM )   d = double(m_sgm.iPW1);
-         else if( bIsSine )             d = double(m_sine.fPhase);
-         else                           d = double(m_pulse.iRampDur);
-         break;
-
-      case 8 :
-         if( m_iType == STIM_ISPSGM )   d = double( bIsTrain ? m_sgm.iPulseIntv : m_sgm.iAmp2 );
-         else if( bIsSine )             d = double(m_sine.nCycles);
-         else                           d = m_pulse.bBlank ? 1.0 : 0.0;
-         break;
-
-      case 9 :
-         if( m_iType == STIM_ISPSGM )   d = double( bIsTrain ? m_sgm.nPulses : m_sgm.iPW2 );
-         break;
-
-      case 10 :
-         d = double(bIsTrain ? m_sgm.iTrainIntv : m_sgm.iPulseIntv);
-         break;
-
-      case 11 :
-         d = double(bIsTrain ? m_sgm.nTrains : m_sgm.nPulses);
-         break;
-
-      case 12 : 
-         d = double(m_sgm.iTrainIntv);
-         break;
-
-      case 13 :
-         d = double(m_sgm.nTrains);
-         break;
+      case 0: d = m_bOn ? 1.0 : 0.0;  break;
+      case 1: d = double(m_iMarker);  break;
+      case 2: d = double(m_iType);    break;
+      case 3: d = double(m_iStdMode); break;
+      case 4: d = double(m_tStart);   break;
+      case 5: d = double(bIsSine ? m_sine.fAmp : m_pulse.fAmp); break;
+      case 6: d = double(bIsSine ? m_sine.iPeriod : m_pulse.iPulseDur); break;
+      case 7: d = double(bIsSine ? m_sine.fPhase : m_pulse.iRampDur); break;
+      case 8: d = double(bIsSine ? m_sine.nCycles : (m_pulse.bBlank ? 1.0 : 0.0)); break;
    }
 
    return( d );
@@ -625,34 +566,15 @@ VOID CCxStimulus::GetParameterLabel( int i, CString& str ) const     // all para
 
    if( i < NumberOfCommonParameters() )
       GetCommonParameterLabel( i, str );
-   if( m_iType == STIM_ISPSGM )
+   ASSERT(m_iType == STIM_ISCHAIR);
+   BOOL bIsSine = BOOL(m_iStdMode == MODE_ISSINE);
+   switch(i)
    {
-      BOOL bIsTrain = BOOL( m_sgm.iOpMode == SGM_TRAIN );
-      switch( i )
-      {
-         case 5 : str = _T("extTrig?"); break;
-         case 6 : str = _T("amp1(mV)"); break;
-         case 7 : str = _T("pulseW1(us)"); break;
-         case 8 : str = bIsTrain ? _T("IPI (ms)") : _T("amp2(mV)"); break;
-         case 9 : str = bIsTrain ? _T("#pulses")  : _T("pulseW2(us)"); break;
-         case 10: str = bIsTrain ? _T("ITI (ms)") : _T("IPI (ms)"); break;
-         case 11: str = bIsTrain ? _T("#trains")  : _T("#pulses"); break;
-         case 12: str = _T("ITI (ms)"); break;
-         case 13: str = _T("#trains"); break;
-         default: break;
-      }
-   }
-   else
-   {
-      BOOL bIsSine = BOOL( m_iStdMode == MODE_ISSINE );
-      switch( i )
-      {
-         case 5 : str = _T("amp (deg/s)"); break;
-         case 6 : str = bIsSine ? _T("period(ms)") : _T("pulseDur(ms)"); break;
-         case 7 : str = bIsSine ? _T("phase(deg)") : _T("rampDur(ms)"); break;
-         case 8 : str = bIsSine ? _T("#cycles")    : _T("blank?"); break;
-         default: break;
-      }
+   case 5: str = _T("amp (deg/s)"); break;
+   case 6: str = bIsSine ? _T("period(ms)") : _T("pulseDur(ms)"); break;
+   case 7: str = bIsSine ? _T("phase(deg)") : _T("rampDur(ms)"); break;
+   case 8: str = bIsSine ? _T("#cycles") : _T("blank?"); break;
+   default: break;
    }
 }
 
@@ -685,15 +607,11 @@ VOID CCxStimulus::GetParameterFormat( int i, BOOL& bIsChoice, CStringArray& choi
       choices.Add("Chair");
       choices.Add("PSGM");
    }
-   else if( i == 3 )                                                       // 3) motion mode -- choices depend on
-   {                                                                       // stimulus type
-      if( m_iType == STIM_ISPSGM )
-         for( j=0; j<STIM_NPSGMMODES; j++ ) choices.Add( PSGMMODESTRINGS[j] );
-      else
-         for( j=0; j<STIM_NSTDMODES; j++ ) choices.Add( STDMODESTRINGS[j] );
+   else if( i == 3 )                                                       // 3) chair motion mode 
+   {
+      for( j=0; j<STIM_NSTDMODES; j++ ) choices.Add( STDMODESTRINGS[j] );
    }
-   else if( (m_iType==STIM_ISCHAIR && m_iStdMode==MODE_ISPULSE && i==8)    // motion params "Blank?" and "extTrig?" are
-            || (m_iType==STIM_ISPSGM && i==5) )                            // "NO/YES" choices
+   else if(m_iType==STIM_ISCHAIR && m_iStdMode==MODE_ISPULSE && i==8)      // motion params "Blank?" is "NO/YES choice
    {
       choices.Add( _T("NO") );
       choices.Add( _T("YES") );
@@ -704,33 +622,16 @@ VOID CCxStimulus::GetParameterFormat( int i, BOOL& bIsChoice, CStringArray& choi
       fmt.flags = NES_INTONLY | NES_NONNEG;                                // numeric parameters other than those
       fmt.nPre = 1;                                                        // handled below...
       fmt.nLen = 6;
-      if( m_iType == STIM_ISPSGM )
+      BOOL bIsSine = BOOL(m_iStdMode == MODE_ISSINE);
+      switch(i)
       {
-         BOOL bIsTrain = BOOL(m_sgm.iOpMode == SGM_TRAIN);
-         switch( i )
-         {
-            case 6 : fmt.flags = NES_INTONLY; fmt.nLen = 6; break;
-            case 7 : fmt.nLen = 4; break;
-            case 8 : if(bIsTrain) fmt.nLen = 3;
-                     else { fmt.flags = NES_INTONLY; fmt.nLen = 6; }
-                     break;
-            case 9 : fmt.nLen = bIsTrain ? 3 : 4; break;
-            case 10: fmt.nLen = (bIsTrain) ? 4 : 3; break;
-            case 11: fmt.nLen = 3; break;
-            case 12: fmt.nLen = 4; break;
-            case 13: fmt.nLen = 3; break;
-         }
-      }
-      else
-      {
-         BOOL bIsSine = BOOL(m_iStdMode == MODE_ISSINE);
-         switch( i )
-         {
-            case 5 : fmt.flags = 0; fmt.nPre = 2; fmt.nLen = 8; break;
-            case 7 : if( bIsSine ) fmt.flags = 0;
-                     else fmt.nLen = 3;
-                     break;
-         }
+      case 5: 
+         fmt.flags = 0; fmt.nPre = 2; fmt.nLen = 8; 
+         break;
+      case 7: 
+         if(bIsSine) fmt.flags = 0;
+         else fmt.nLen = 3;
+         break;
       }
    }
 }
@@ -739,21 +640,19 @@ BOOL CCxStimulus::IsParameterMultiChoice( int i ) const
 {
    if( !IsValidParameter( i ) ) return( FALSE );
 
-   return( (i<=3) ||                                                       // first 4 common params are multi-choice
-           (i==8 && m_iType==STIM_ISCHAIR && m_iStdMode==MODE_ISPULSE) ||  // "Blank?" param for Chair in Pulse mode
-           (i==5 && m_iType==STIM_ISPSGM) );                               // "extTrig?" param for PSGM in all modes
+   // first 4 common params are multi-choice, as is "Blank?" param for Chair in Pulse mode
+   return( (i <= 3) || (i == 8 && m_iType == STIM_ISCHAIR && m_iStdMode == MODE_ISPULSE) ); 
 }
 
 BOOL CCxStimulus::SetParameter( int i, double dVal )
 {
-   ASSERT(m_iType != STIM_ISXYSEQ);                                     // XYseq stimulus DEPRECATED
+   ASSERT(m_iType != STIM_ISXYSEQ && m_iType != STIM_ISPSGM);           // these stimulus types are DEPRECATED
 
    if( !IsValidParameter( i ) ) return( FALSE );                        // do nothing if parameter index invalid
    
    int iVal = int(dVal + 0.5);                                          // integer version is rounded value
    BOOL bSideEffect = FALSE;                                            // TRUE if param change may have side effect
 
-   BOOL bIsTrain = BOOL(m_iType == STIM_ISPSGM && m_sgm.iOpMode == SGM_TRAIN);
    BOOL bIsSine = BOOL(m_iStdMode == MODE_ISSINE);
 
    switch( i )
@@ -761,77 +660,27 @@ BOOL CCxStimulus::SetParameter( int i, double dVal )
       case 0 : m_bOn = (iVal<=0 || iVal>1) ? FALSE : TRUE; break;
       case 1 : m_iMarker = iVal; break;
       case 2 : m_iType = iVal; bSideEffect = TRUE; break;               // stim type affects index<->param mapping
-      case 4 : m_tStart = iVal; break;
-
-      case 3 :                                                          // motion mode stored in several diff places...
-         if( m_iType == STIM_ISPSGM )   m_sgm.iOpMode = iVal;
-         else                           m_iStdMode = iVal;
+      case 3:
+         m_iStdMode = iVal;
          bSideEffect = TRUE;                                            // motion mode affects index<->param mapping
          break;
-
+      case 4 : m_tStart = iVal; break;
       case 5 :
-         if( m_iType == STIM_ISPSGM )   m_sgm.bExtTrig = (iVal<=0 || iVal>1) ? FALSE : TRUE;
-         else if( bIsSine )             m_sine.fAmp = float(dVal);
-         else                           m_pulse.fAmp = float(dVal);
+         if( bIsSine ) m_sine.fAmp = float(dVal);
+         else m_pulse.fAmp = float(dVal);
          break;
-
       case 6 :
-         if( m_iType == STIM_ISPSGM )   m_sgm.iAmp1 = iVal;
-         else if( bIsSine )             m_sine.iPeriod = iVal;
-         else                           m_pulse.iPulseDur = iVal;
+         if( bIsSine ) m_sine.iPeriod = iVal;
+         else m_pulse.iPulseDur = iVal;
          break;
-
       case 7 :
-         if(m_iType == STIM_ISPSGM)   
-         {
-            m_sgm.iPW1 = iVal; 
-            bSideEffect = bIsTrain || (m_sgm.iOpMode == SGM_BIPHASICTRAIN) || (m_sgm.iOpMode == SGM_DUAL);
-         }
-         else if(bIsSine) m_sine.fPhase = float(dVal);
+         if(bIsSine) m_sine.fPhase = float(dVal);
          else m_pulse.iRampDur = iVal;
          break;
-
       case 8 :
-         if( m_iType == STIM_ISPSGM )
-         {
-            if( bIsTrain ) 
-            {
-               m_sgm.iPulseIntv = iVal;
-               bSideEffect = TRUE;
-            }
-            else m_sgm.iAmp2 = iVal;
-         }
-         else if( bIsSine ) m_sine.nCycles = iVal;
+         if( bIsSine ) m_sine.nCycles = iVal;
          else m_pulse.bBlank = (iVal<=0 || iVal>1) ? FALSE : TRUE;
          break;
-
-      case 9 :
-         if( m_iType == STIM_ISPSGM )
-         {
-            if( bIsTrain ) m_sgm.nPulses = iVal;
-            else m_sgm.iPW2 = iVal;
-            bSideEffect = bIsTrain || (m_sgm.iOpMode == SGM_BIPHASICTRAIN);
-         }
-         break;
-
-      case 10 :
-         if( bIsTrain ) m_sgm.iTrainIntv = iVal;
-         else { m_sgm.iPulseIntv = iVal; bSideEffect = TRUE; }
-         break;
-
-      case 11 :
-         if(bIsTrain) m_sgm.nTrains = iVal;
-         else { m_sgm.nPulses = iVal; bSideEffect = TRUE; }
-         break;
-
-      case 12 :                              
-         m_sgm.iTrainIntv = iVal;
-         break;
-
-      case 13 :
-         m_sgm.nTrains = iVal; 
-         break;
-      
       default:
          ASSERT( FALSE ); 
          break;
@@ -920,26 +769,6 @@ VOID CCxStimulus::SetDefaults()
    m_pulse.iRampDur  = 50;             //    duration of rising-edge and falling-edge ramps (>= 10ms)
    m_pulse.fAmp = 10.0f;               //    velocity amplitude, in deg/sec: [-500.0 .. 500.0].
    m_pulse.fDirec = 0.0f;              //    direction of motion, CCW angle from x-axis [-180.0..180.0]
-
-   // DEPRECATED: We maintain m_xyseq in order to deserialize older documents containing XYseq runs...
-   m_xyseq.iOpMode = MODE_ISSPARSEDIR; // for XYseq channel type:  sparse-direction motion mode,
-   m_xyseq.iRefresh = 4;               //    refresh period in ms,
-   m_xyseq.nSegs = 100;                //    # of distinct segments of random motion
-   m_xyseq.iSegDur = 64;               //    duration of each segment, in ms (must be multiple of refresh period)
-   m_xyseq.iSeed = 1;                  //    seed for generating random directions or velocities
-   m_xyseq.nChoices = 8;               //    # of different directions (or velocities) randomized
-   m_xyseq.fAngle = 0.0f;              //    offset angle (for direction modes) or direction of motion (for vel modes)
-   m_xyseq.fVel = 128.0f;              //    velocity of motion (for dir modes) or max velocity (for vel modes)
-   m_xyseq.fOffsetV = 0.0f;            //    offset velocity (for vel modes only)
-
-   m_sgm.iOpMode = SGM_SINGLE;         // for PSGM stim channel type: single-pulse motion mode,
-   m_sgm.bExtTrig = FALSE;             //    if TRUE, use external trig to initiate pulse seq; else, s/w start.
-   m_sgm.iAmp1 = m_sgm.iAmp2 = 10000;  //    pulse amplitude.  range [-10240..10160mV], res = 80mV.
-   m_sgm.iPW1 = m_sgm.iPW2 = 50;       //    pulse width.  range [50..2500us], res = 10us.
-   m_sgm.iPulseIntv = 1;               //    interpulse interval.  range [1..250ms].
-   m_sgm.iTrainIntv = 10;              //    intertrain interval.  range [10..2500ms], res = 10ms.
-   m_sgm.nPulses = 1;                  //    #pulses per train.  range [1..250]. 
-   m_sgm.nTrains = 1;                  //    #trains per stimulus.  range [1..250].
 }
 
 
@@ -949,6 +778,8 @@ VOID CCxStimulus::SetDefaults()
 //
 //    30sep2024: XYseq stimuli (STIM_ISXYSEQ) are no longer validated. XYseq-containing stimulus runs may be read in
 //    during deserialization of pre-V5.0 docs, but they are ultimately deleted by CCxDoc after deserialization.
+//    18nov2024: PSGM stimulus (STIM_ISPSGM) are no longer validated. After stimulus channels are deserialized, 
+//    CCxContRun::Serialize() will remove any PSGM or XYSeq stimuli -- so the run could end up with no stimuli!
 // 
 //    ARGS:       NONE.
 //
@@ -957,72 +788,17 @@ VOID CCxStimulus::SetDefaults()
 VOID CCxStimulus::Validate()
 {
    if( m_iMarker < 0 || m_iMarker > STIM_NLASTMARKER ) m_iMarker = 0;   // marker pulse DO<N>, N=[0..max]
-   if( m_iType < 0 || m_iType >= STIM_NTYPES ) m_iType = 0;             // stimulus type, T=[0..#types-1]
+
+   // no longer validate type, which can only be STIM_ISCHAIR except while deserializing older experiment documents
+   // containing runs with now-deprecated STIM_ISXYSEQ or STIM_ISPSGM channels. These get removed by 
+   // CCxContRun::Serialize()
 
    if( m_iStdMode < 0 || m_iStdMode >= STIM_NSTDMODES )                 // motion mode: limited # of choices, depending
        m_iStdMode = 0;                                                  // on stimulus type...
-   if( m_sgm.iOpMode < 0 || m_sgm.iOpMode >= STIM_NPSGMMODES )
-      m_sgm.iOpMode = 0;
 
    if( m_tStart < 0 ) m_tStart = 0;                                     // start time t0 must be >= 0
 
-   if( m_iType == STIM_ISPSGM )                                    // validate ALL motion params for PSGM stim
-   {
-      int iVal = m_sgm.iAmp1 / 80;                                      //    amp1,2: [min..max] in 80mV increments
-      if(iVal < SGM_MINPA) iVal = SGM_MINPA;
-      else if(iVal > SGM_MAXPA) iVal = SGM_MAXPA;
-      m_sgm.iAmp1 = iVal * 80;
-
-      iVal = m_sgm.iAmp2 / 80;
-      if(iVal < SGM_MINPA) iVal = SGM_MINPA;
-      else if(iVal > SGM_MAXPA) iVal = SGM_MAXPA;
-      m_sgm.iAmp2 = iVal * 80;
-
-      iVal = m_sgm.iPW1 / 10;                                           //    pulseW1,2: [min..max] in 10us increments
-      if(iVal < SGM_MINPW) iVal = SGM_MINPW;
-      else if(iVal > SGM_MAXPW) iVal = SGM_MAXPW;
-      m_sgm.iPW1 = iVal * 10;
-
-      iVal = m_sgm.iPW2 / 10;
-      if(iVal < SGM_MINPW) iVal = SGM_MINPW;
-      else if(iVal > SGM_MAXPW) iVal = SGM_MAXPW;
-      m_sgm.iPW2 = iVal * 10;
-
-      iVal = m_sgm.iPulseIntv;                                          //    IPI: [min..max] in 1ms increments
-      if(iVal < SGM_MINIPI) iVal = SGM_MINIPI;
-      else if(iVal > SGM_MAXIPI) iVal = SGM_MAXIPI;
-      m_sgm.iPulseIntv = iVal;
-
-      iVal = m_sgm.iTrainIntv / 10;                                     //    ITI: [min..max] in 10ms increments
-      if(iVal < SGM_MINITI) iVal = SGM_MINITI;
-      else if(iVal > SGM_MAXITI) iVal = SGM_MAXITI;
-      m_sgm.iTrainIntv = iVal * 10;
-
-      if(m_sgm.nPulses < SGM_MINPULSES)                                 //    #pulses per train: [min..max]
-         m_sgm.nPulses = SGM_MINPULSES;
-      else if(m_sgm.nPulses > SGM_MAXPULSES)
-         m_sgm.nPulses = SGM_MAXPULSES;
-
-      if(m_sgm.nTrains < SGM_MINTRAINS)                                 //    #trains in sequence: [min..max]
-         m_sgm.nTrains = SGM_MINTRAINS;
-      else if(m_sgm.nTrains > SGM_MAXTRAINS)
-         m_sgm.nTrains = SGM_MAXTRAINS;
-   
-      // adjust IPI, ITI, and #pulses as needed to ensure PA(+PB) < IPI and IPI*#pulses < ITI, depending on op mode...
-      if(m_sgm.iOpMode == SGM_DUAL || m_sgm.iOpMode == SGM_TRAIN || m_sgm.iOpMode == SGM_BIPHASICTRAIN)
-      {
-         int pw = m_sgm.iPW1;
-         if(m_sgm.iOpMode == SGM_BIPHASICTRAIN) pw += m_sgm.iPW2;
-         while(m_sgm.iPulseIntv * 1000 <= pw) ++m_sgm.iPulseIntv;
-      }
-
-      if(m_sgm.iOpMode == SGM_TRAIN || m_sgm.iOpMode == SGM_BIPHASICTRAIN)
-      {
-         while(m_sgm.iPulseIntv * m_sgm.nPulses >= SGM_MAXITI * 10) --m_sgm.nPulses;
-         while(m_sgm.iPulseIntv * m_sgm.nPulses >= m_sgm.iTrainIntv) m_sgm.iTrainIntv += 10;
-      }
-   }
-   else if( m_iStdMode == MODE_ISSINE )                                 // validate motion params for SINE stim:
+   if( m_iStdMode == MODE_ISSINE )                                      // validate motion params for SINE stim:
    {
       if( m_sine.iPeriod < 10 ) m_sine.iPeriod = 10;                    //    period in ms must be >= 10
       if( m_sine.nCycles < 1 ) m_sine.nCycles = 1;                      //    #cycles must be >= 1
@@ -1270,6 +1046,7 @@ VOID CCxContRun::GetDependencies( CWordArray& wArKeys ) const
 //    ignored. Do NOT use this method to obtain a complete copy of the run's current contents.
 //
 //    30sep2024: No longer supports XYseq stimuli - deprecated a/o Maestro 5.0.
+//    18nov2024: No longer supports PSGM stimuli - deprecated a/o Maestro 5.0.2.
 //
 //    ARGS:       runDef   -- [out] run definition in CXDRIVER-compatible format.
 //
@@ -1292,8 +1069,6 @@ VOID CCxContRun::GetDefinition( CONTRUN& runDef ) const
       ++nActive;
    }
    runDef.nStimuli = nActive;
-
-   runDef.nXYTgts = 0;   // XYseq stimulus DEPRECATED
 }
 
 
@@ -1426,9 +1201,6 @@ CCxStimulus* CCxContRun::CopyStimulus( int iPos ) const
 //    unprotected (the caller could delete it without going through CCxContRun methods!).  We insert a new stimulus at
 //    the specified pos and make it the same as the pasted stimulus channel.
 //
-//    If the pasted stimulus is an active PSGM, we must turn off the currently active PSGM before pasting -- enforcing 
-//    the rule that only one PSGM can be active in the run.
-//
 //    ARGS:       iPos  -- [in] zero-based insertion position; if invalid pos, stimulus channel is appended.
 //                pStim -- [in] ptr to the stim channel to be pasted.
 //
@@ -1446,10 +1218,6 @@ int CCxContRun::PasteStimulus( int iPos, const CCxStimulus* pStim )
    CCxStimulus* pNew = RetrieveStimulus( iIns );            // get ptr to new stimulus and copy the paste stim to it
    pNew->Copy( *pStim );
 
-   int iType = pNew->GetType();                             // if pasted stimulus is an active PSGM channel
-   if(pNew->IsOn() && (iType == STIM_ISPSGM))               // deactivate all other PSGM channels
-      DeactivateAllOthers( pNew );
-
    return(iIns);
 }
 
@@ -1460,9 +1228,6 @@ int CCxContRun::PasteStimulus( int iPos, const CCxStimulus* pStim )
 //
 //    NOTE that we do NOT simply insert the provided stimulus channel ptr into the list, as this would leave the stim
 //    channel object unprotected (the caller could delete it without going through CCxContRun methods!).
-//
-//    If the replacement stimulus is an active PSGM, we must turn off any other active PSGM -- enforcing the rule that 
-//    only one PSGM can be active in the run.
 //
 //    ARGS:       iPos  -- [in] zero-based position of stimulus channel to be replaced.
 //                pStim -- [in] ptr to the replacement channel definition.
@@ -1477,10 +1242,6 @@ BOOL CCxContRun::ReplaceStimulus( int iPos, const CCxStimulus* pStim )
    {
       CCxStimulus* pS = RetrieveStimulus( iPos );              // retrieve ptr to existing stimulus
       pS->Copy( *pStim );                                      // and copy replacement stimulus into it.
-
-      int iType = pS->GetType();                               // if replacement is an active PSGM channel,
-      if(pS->IsOn() && (iType == STIM_ISPSGM))                 // deactivate all other PSGM channels
-         DeactivateAllOthers( pS );
 
       return( TRUE );
    }
@@ -1527,9 +1288,13 @@ VOID CCxContRun::Clear()
 //    Handles reading/writing the Maestro stimulus run object from/to a disk file via a serialization archive.
 //
 //    NOTE: The XYScope platform, unsupported since V4.0, is dropped for V5.0. Hence, the XYSeq stimlus type is also
-//    deprecated. This method throws an exception if there is an attempt to save a run using the XYSeq stimulus
-//    channel, but it still supports reading in such an object so that Maestro can load and migrate older experiment
-//    documents containing XYSeq runs.
+//    deprecated. This method throws an exception if there is an attempt to save a run containg a non-empty XYseq
+//    target list, but it still supports reading in such an object so that Maestro can load and migrate older experiment
+//    documents by deleting any stimulus runs that depend on now-deprecated XYScope targets.
+// 
+//    [18nov2024] PSGM stimulus channels also deprecated. After the stimulus channels are deserialized, this method
+//    will DELETE any stimulus channel that uses the PSGM OR XYseq. Afterwards, the run will contain only Chair
+//    stimuli, or no stimuli at all!
 // 
 //    ARGS:       ar -- [in] the serialization archive.
 //
@@ -1542,6 +1307,21 @@ void CCxContRun::Serialize ( CArchive& ar )
 {
    CTreeObj::Serialize( ar );                               // base class stuff first
    m_Stimuli.Serialize( ar );                               // the stimulus channels
+
+   // remove all stimulus channels with type != STIM_ISCHAIR, which is the only stimulus channel type supported!
+   int iPos = 0;
+   while(iPos < m_Stimuli.GetCount())
+   {
+      POSITION pos = m_Stimuli.FindIndex(iPos);
+      CCxStimulus* pStim = m_Stimuli.GetAt(pos);
+      if(pStim->GetType() != STIM_ISCHAIR)
+      {
+         m_Stimuli.RemoveAt(pos);
+         delete pStim;
+      }
+      else
+         ++iPos;
+   }
 
    int i, nTgts;
    if(ar.IsStoring())
@@ -1621,12 +1401,8 @@ VOID CCxContRun::GetDutyPulseChoices( CStringArray& choices )
 //    Change the value of the specified parameter for the specified stimulus channel. Illegal parameter values are
 //    auto-corrected.
 //
-//    Only one PSGM stimulus channel can be turned ON at any time (though more than one PSGM channel can be defined).
-//    We enforce this restriction here by turning OFF any other active PSGM stimulus channel.
-//
 //    NOTE:  Any view class that displays CCxContRun should be aware of the possible "side effects" of changing a
-//    single stimulus parameter. As mentioned above, turning ON a PSGM stimulus will automatically turn OFF any other 
-//    PSGM channel. In addition, changing certain stimulus channel parameters may affect other parameter(s) in that 
+//    single stimulus parameter. Changing certain stimulus channel parameters may affect other parameter(s) in that 
 //    channel's definition -- see CCxStimulus::SetParameter(). We return TRUE here if a side effect has or may have 
 //    occurred.
 //
@@ -1643,12 +1419,6 @@ BOOL CCxContRun::SetStimParameter( int i, int j, double dVal )
    int iOldType = pStim->GetType();
    BOOL bWasOff = !pStim->IsOn();
    BOOL bSideEffect = pStim->SetParameter( j, dVal );
-
-   int iType = pStim->GetType();
-   if((iType == STIM_ISPSGM) && pStim->IsOn() && (iType != iOldType || bWasOff) )
-   {
-      if(DeactivateAllOthers(pStim)) bSideEffect = TRUE;
-   }
 
    return( bSideEffect );
 }
@@ -1732,35 +1502,6 @@ VOID CCxContRun::SetDefaults()
    m_nAutoStop = 0;
    m_fHOffset = 0.0;
    m_fVOffset = 0.0;
-}
-
-
-//=== DeactivateAllOthers =============================================================================================
-//
-//    Deactivate (ie, turn "OFF") all stimulus channels in the run that are of the same type as the specified channel.
-//    The specified channel is unaffected. This convenience method is used to enforce the rule that a run may have
-//    only one active ("ON") PSGM stimulus; however, it can be used for any stimulus type.
-//
-//    ARGS:       pStim -- [in] the stimulus channel that will remain "ON"; all other channels OF THE SAME TYPE are
-//                         turned OFF.
-//
-//    RETURNS:    TRUE if at least one stimulus channel was turned "OFF"; FALSE otherwise.
-//
-BOOL CCxContRun::DeactivateAllOthers( CCxStimulus* pStim )
-{
-   BOOL bDeactivated = FALSE;
-   int iType = pStim->GetType();
-   POSITION pos = m_Stimuli.GetHeadPosition();
-   while( pos != NULL )
-   {
-      CCxStimulus* pS = m_Stimuli.GetNext( pos );
-      if( (pS != pStim) && (pS->GetType() == iType) && pS->IsOn() )
-      {
-         pS->SetOn( FALSE );
-         bDeactivated = TRUE;
-      }
-   }
-   return( bDeactivated );
 }
 
 //

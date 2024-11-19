@@ -235,6 +235,8 @@
 // terminate trial sequencing. 
 // 26sep2024-- Eliminating XYScope-specific code. The XYScope platform, unsupported since Maestro V4.0, has been
 // removed entirely in V5.0.
+// 19nov2024-- Support for the never-used PSGM module dropped in Maestro 5.0.2. PSGM_TC trial code no longer sent to
+// CXDRIVER. Updated GetTrialInfo() accordingly.
 //=====================================================================================================================
 
 
@@ -1200,10 +1202,6 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
       pCodes[n].code = short(0);
    pCodes[n++].time = short( pSet->GetScaledRewardPulseLen(pTrial->GetMidTrialRewardLen()) );
 
-
-   SGMPARMS sgm;                                                              // trial's SGM parameter set
-   pTrial->GetSgmParms( sgm );
-
    int iT0Seg = pTrial->GetMarkSeg1Pos();                                     // get segment range spanning portion of
    int iT1Seg = pTrial->GetMarkSeg2Pos();                                     // trial to be shown in trace display
    BOOL isFullTrialDisplayed = TRUE;
@@ -1467,22 +1465,6 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
          *pN = 0;
          pApp->LogMessage( strErr );
          return( FALSE );
-      }
-
-      if( (sgm.iOpMode != SGM_NOOP) && (iSeg == pTrial->GetSgmSegPos()) )     // PSGM_TC code group sends SGM params
-      {                                                                       // as follows:
-         pCodes[n].code = PSGM_TC;                                            // 1: trial code & time
-         pCodes[n++].time = shFrame;
-         pCodes[n].code = short( sgm.iOpMode );                               // 2: op mode & ext trig flag [0,1]
-         pCodes[n++].time = sgm.bExtTrig ? 1 : 0;
-         pCodes[n].code = short( sgm.iAmp1 );                                 // 3: pulse amplitudes [-10240..10160].
-         pCodes[n++].time = short( sgm.iAmp2 );
-         pCodes[n].code = short( sgm.iPW1 );                                  // 4: pulse widths [50..2500us].
-         pCodes[n++].time = short( sgm.iPW2 );
-         pCodes[n].code = short( sgm.iPulseIntv );                            // 5: interpulse intv [1..250ms];
-         pCodes[n++].time = short( sgm.iTrainIntv );                          //    intertrain intv [10..2500ms].
-         pCodes[n].code = short( sgm.nPulses );                               // 6: #pulses per train; #trains per
-         pCodes[n++].time = short( sgm.nTrains );                             //    stimulus.
       }
 
       if( iSeg == pTrial->GetSaveSegPos() )                                   // ADCON:  record data from start of the

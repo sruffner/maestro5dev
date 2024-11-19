@@ -33,7 +33,6 @@ class CCxStimulus : public CObject
 private:
    static const int NPARAMS[STIM_NTYPES][STIM_NMAXMODES];   // size of motion param list -- varies with type, mode
    static LPCTSTR STDMODESTRINGS[STIM_NSTDMODES];           // human-readable names for supported motion modes
-   static LPCTSTR PSGMMODESTRINGS[STIM_NPSGMMODES];
    static LPCTSTR COMMONLBLSTRINGS[STIM_NCOMMON];           // labels for the common parameters
 
 
@@ -52,10 +51,6 @@ private:
                               // the "motion" parameter sets -- which set is used depends on stim type & motion mode
    SINESTIM    m_sine;        //    for sinusoidal motion mode
    PULSESTIM   m_pulse;       //    for trapezoidal pulse motion mode
-   SGMPARMS    m_sgm;         //    for PSGM stim channel type
-
-   // DEPRECATED -- but we maintain it to handle deserialization of pre-V5.0 experiment documents containin XYseq runs
-   XYSEQSTIM   m_xyseq;       //    for XYseq stim channel type
 
 
 //===================================================================================================================== 
@@ -119,12 +114,7 @@ public:
    BOOL IsOn() const { return( m_bOn ); }                // access to common parameters by name...
    VOID SetOn( BOOL bOn ) { m_bOn = bOn; }
    int GetType() const { return( m_iType ); } 
-   int GetMotionMode() const 
-   { 
-      if( m_iType == STIM_ISXYSEQ ) return( m_xyseq.iOpMode );
-      else if( m_iType == STIM_ISPSGM ) return( m_sgm.iOpMode );
-      else return( m_iStdMode );
-   } 
+   int GetMotionMode() const { return( m_iStdMode ); } 
    int GetMarker() const { return( m_iMarker ); }
    int GetStartTime() const { return( m_tStart ); }
 
@@ -192,6 +182,8 @@ private:
    float       m_fVOffset;                   // vertical position offset in deg subtended at eye
    CCxStimuli  m_Stimuli;                    // the currently defined stimulus channels in this run
 
+   // deprecated but kept so we can deserialize existing documents containing runs with XYseq targets. After 
+   // after deserialization, CCxDoc removes all stimulus runs with XYseq targets!!
    struct CXYseqTgt                          // for each XY target participating in an XYseq stim, we must save:
    {
       WORD  wKey;                            //    the target object's key
@@ -224,12 +216,9 @@ public:
 //===================================================================================================================== 
 public:
    static int GetMaxStimuli() { return( MAXSTIMULI ); }
-   static int GetMaxXYseqTargets() { return( MAXTGTSINXYSEQ ); }
 
    int GetStimulusCount() const { return( static_cast<int>(m_Stimuli.GetCount()) ); } 
    BOOL IsValidStimulus( int i ) const { return( BOOL( i>=0 && i < GetStimulusCount() ) ); }
-   int GetXYseqTargCount() const { return( static_cast<int>(m_XYseqTgts.GetCount()) ); } 
-   BOOL IsValidXYseqTarg( int i ) const { return( BOOL( i>=0 && i < GetXYseqTargCount() ) ); }
 
    BOOL CanRemove() const                                // prevent removal of "predefined" CNTRLX run
    { return( (m_flags & CX_ISPREDEF) == 0 ); }           //
@@ -362,7 +351,6 @@ private:
    }
 
    VOID SetDefaults();                                   // init run's general parameters to default values 
-   BOOL DeactivateAllOthers( CCxStimulus* pStim );       // turn off all other stim channels of the same type
 };
 
 

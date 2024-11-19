@@ -498,31 +498,35 @@ const int   TH_RPD_HEVEL      = 1;        //    horizontal eye velocity in deg/s
 const int   TH_RPD_VEVEL      = 2;        //    vertical eye velocity in deg/sec
 const int   TH_RPD_EYEDIR     = 3;        //    eye velocity vector direction in deg CCW from rightward motion
 
-                                          // op modes for electrical pulse stimulus generator module (SGM):
-const int   SGM_SINGLE        = 0;        //    single pulse presented, of specified amplitude and width
-const int   SGM_DUAL          = 1;        //    two pulses of distinct amp & width, separated by interpulse interval
-const int   SGM_BIPHASIC      = 2;        //    same as SGM_DUAL, but interpulse interval = 0
-const int   SGM_TRAIN         = 3;        //    seq of identical pulses occurring in one or more pulse trains
-const int   SGM_BIPHASICTRAIN = 4;        //    similar to SGM_TRAIN, except pulses are biphasic (most used mode)
-const int   SGM_NOOP          = 5;        //    SGM not in use
-const int   SGM_NMODES        = 6;        //    total # of supported operational modes
+// [18nov2024] DEPRECATED: The PSGM module was never really used. It is dropped a/o Maestro 5.0.2. The SGMPARMS struct
+// is maintained only to handle deserialization of documents, as the PSGM parameters are serialized with every trial
+// (even if unused) and in any stimulus run channel that used the STIM_ISPSGM type. All associated constants have been
+// commented out...
+// 
+// op modes for electrical pulse stimulus generator module (SGM):
+// const int   SGM_SINGLE        = 0;        //    single pulse presented, of specified amplitude and width
+// const int   SGM_DUAL          = 1;        //    two pulses of distinct amp & width, separated by interpulse interval
+// const int   SGM_BIPHASIC      = 2;        //    same as SGM_DUAL, but interpulse interval = 0
+// const int   SGM_TRAIN         = 3;        //    seq of identical pulses occurring in one or more pulse trains
+// const int   SGM_BIPHASICTRAIN = 4;        //    similar to SGM_TRAIN, except pulses are biphasic (most used mode)
+// const int   SGM_NOOP          = 5;        //    SGM not in use
+// const int   SGM_NMODES        = 6;        //    total # of supported operational modes
+// range limits for various SGM parameters:
+// const int   SGM_MINPA         = -128;     //    pulse amplitude min/max (in 80mV increments)
+// const int   SGM_MAXPA         = 127;
+// const int   SGM_MINPW         = 5;        //    pulse width min/max (in 10us increments)
+// const int   SGM_MAXPW         = 250;
+// const int   SGM_MINIPI        = 1;        //    interpulse interval min/max (in 1ms increments)
+// const int   SGM_MAXIPI        = 250;
+// const int   SGM_MINITI        = 1;        //    intertrain interval min/max (in 10ms increments)
+// const int   SGM_MAXITI        = 250;
+// const int   SGM_MINPULSES     = 1;        //    #pulses per train min/max
+// const int   SGM_MAXPULSES     = 250;
+// const int   SGM_MINTRAINS     = 1;        //    #trains min/max
+// const int   SGM_MAXTRAINS     = 250;
 
-                                          // range limits for various SGM parameters:
-const int   SGM_MINPA         = -128;     //    pulse amplitude min/max (in 80mV increments)
-const int   SGM_MAXPA         = 127;
-const int   SGM_MINPW         = 5;        //    pulse width min/max (in 10us increments)
-const int   SGM_MAXPW         = 250;
-const int   SGM_MINIPI        = 1;        //    interpulse interval min/max (in 1ms increments)
-const int   SGM_MAXIPI        = 250;
-const int   SGM_MINITI        = 1;        //    intertrain interval min/max (in 10ms increments)
-const int   SGM_MAXITI        = 250;
-const int   SGM_MINPULSES     = 1;        //    #pulses per train min/max
-const int   SGM_MAXPULSES     = 250;
-const int   SGM_MINTRAINS     = 1;        //    #trains min/max
-const int   SGM_MAXTRAINS     = 250;
-
-typedef struct tagSGMParams               // control parameters for the pulse stimulus generator module (SGM). Note
-{                                         // that some parameters do not apply to all op modes.
+typedef struct tagSGMParams               // [DEPRECATED] control parameters for the pulse stimulus generator module
+{                                         // (SGM). Note that some parameters do not apply to all op modes.
    int      iOpMode;                      //    motion mode -- one of the SGM_* defined constants
    BOOL     bExtTrig;                     //    if TRUE, use external trig to initiate pulse seq; else, s/w start.
    int      iAmp1, iAmp2;                 //    pulse amplitude in mV.  range [-10240..10160mV], res = 80mV.
@@ -564,8 +568,9 @@ typedef struct tagTrialHeader             // trial header contains general trial
    WORD     wChanKey;                     //    MAESTRO "channel config" obj attached to this trial; if CX_NULLOBJ_KEY,
                                           //    no data is saved or displayed
 
-   int      iSGMSeg;                      //    segment at which a pulse stimulus seq is initiated on SGM (if >= 0)
-   SGMPARMS sgm;                          //    control params for the SGM pulse stimulus seq presented during trial
+   // [REMOVED A/O Maestro 5.0.2]
+   // int      iSGMSeg;                      //    segment at which a pulse stimulus seq is initiated on SGM (if >= 0)
+   // SGMPARMS sgm;                          //    control params for the SGM pulse stimulus seq presented during trial
 } TRLHDR, *PTRLHDR;
 
 //=====================================================================================================================
@@ -672,17 +677,20 @@ typedef struct tagTrialSection            // a tagged section of contiguous segm
 //=====================================================================================================================
 
 const int   MAXSTIMULI        = 20;    // maximum # of stimulus channels per continuous-mode run
-const int   MAXTGTSINXYSEQ    = 25;    // maximum # of XY scope targets participating in the XYSEQ stimulus
-const int   MAX_XYSEQVECS     = 32;    // max # of different motion vectors for XY targets in 'XYseq' xstim
+const int   MAXTGTSINXYSEQ    = 25;    // [depr] maximum # of XY scope targets participating in the XYSEQ stimulus
+// const int   MAX_XYSEQVECS     = 32;    // [depr] max # of different motion vectors for XY targets in 'XYseq' xstim
 const int   MAX_ACTIVETGTS    = 5;     // maximum # of targets in ContMode's "active target list"
 
 const int   STIM_NLASTMARKER  = SGH_MAXMARKER;    // marker pulses delivered on DOUT<1..max>; 0 ==> "OFF"
 
-const int   STIM_NTYPES       = 3;     // available stimulus channel types:
+// a/o Maestro 5.0.2, the only valid stimululus channel type is STIM_ISCHAIR
+const int   STIM_NTYPES       = 1;     // available stimulus channel types:
 const int   STIM_ISCHAIR      = 0;     //    animal chair (trial target CX_CHAIR)
 // const int   STIM_ISFIBER1     = 1;     //    NO LONGER SUPPORTED AS OF Maestro 3.0: fiber-optic target #1 (CX_FIBER1)
 // const int   STIM_ISFIBER2     = 2;     //    NO LONGER SUPPORTED AS OF Maestro 3.0: fiber-optic target #2 (CX_FIBER2)
-const int   STIM_ISPSGM       = 1;     //    pulse stimlus generator module
+
+// [deprecated] pulse stimlus generator module
+const int   STIM_ISPSGM       = 1;     
 // [deprecated] specialized random-motion sequence on a set of XYScope targets
 const int   STIM_ISXYSEQ      = 2;
 
@@ -690,15 +698,14 @@ const int   STIM_NSTDMODES    = 2;     // motion modes for STIM_ISCHAIR
 const int   MODE_ISSINE       = 0;     //    sinuosoidal
 const int   MODE_ISPULSE      = 1;     //    trapezoidal pulse (with non-zero rise & fall times)
 
-const int   STIM_NPSGMMODES   = SGM_NMODES-1;   // (SGM_NOOP is not used in stimulus runs!)
+// [deprecated] motion modes applicable to the XYSEQ stimulus type:
+// const int   STIM_NXYSEQMODES  = 4;     
+// const int   MODE_ISSPARSEDIR  = 0;     //    direction randomized.  one XY tgt, chosen randomly, moves per "segment"
+// const int   MODE_ISDENSEDIR   = 1;     //    all targets move, directions separately randomized each "segment"
+// const int   MODE_ISSPARSEVEL  = 2;     //    velocity randomized.  one XY tgt, randomly chosen, moves per "segment"
+//const int   MODE_ISDENSEVEL   = 3;     //    all targets move, velocities separately randomized each "segment"
 
-const int   STIM_NXYSEQMODES  = 4;     // [deprecated] motion modes applicable to the XYSEQ stimulus type:
-const int   MODE_ISSPARSEDIR  = 0;     //    direction randomized.  one XY tgt, chosen randomly, moves per "segment"
-const int   MODE_ISDENSEDIR   = 1;     //    all targets move, directions separately randomized each "segment"
-const int   MODE_ISSPARSEVEL  = 2;     //    velocity randomized.  one XY tgt, randomly chosen, moves per "segment"
-const int   MODE_ISDENSEVEL   = 3;     //    all targets move, velocities separately randomized each "segment"
-
-const int   STIM_NMAXMODES    = 5;     // maximum # of motion modes for any type
+const int   STIM_NMAXMODES    = 2;     // maximum # of motion modes for any type
 
 typedef struct tagXYseqMotion       // [deprecated] the motion parameters for an XYseq stimulus channel:
 {
@@ -734,8 +741,8 @@ typedef struct tagPulseMotion       // the motion parameters for trapezoidal pul
 } PULSESTIM, *PPULSESTIM;
 
 const int   STIM_NCOMMON      = 5;  // # of common parameters in a stimulus channel definition
-const int   MAXSTIMPARAMS     = 15; // max # of total parameters ("common" + "motion") defining a stimulus channel
-typedef struct tagStimChannel       // defn of a stim channet w/in a ContMode run, in a MAESTRODRIVER-compatible form
+const int   MAXSTIMPARAMS     = 9;  // max # of total parameters ("common" + "motion") defining a stimulus channel
+typedef struct tagStimChannel       // defn of a stim channel w/in a ContMode run, in a MAESTRODRIVER-compatible form
 {                                   //
    BOOL     bOn;                    //    TRUE = stimulus should be played during the run; FALSE = stim disabled
    int      iMarker;                //    OFF (0), or DOUT ch# on which marker pulse is delivered at stimulus start
@@ -746,8 +753,6 @@ typedef struct tagStimChannel       // defn of a stim channet w/in a ContMode ru
    {
       SINESTIM    sine;
       PULSESTIM   pulse;
-      SGMPARMS    sgm;
-      XYSEQSTIM   xy;
    };
 } STIMCHAN, *PSTIMCHAN;
 
@@ -761,10 +766,12 @@ typedef struct tagRun               // definition of a ContMode run in a CXDRIVE
    float    fVOffset;               //    vertical position offset in deg subtended at eye
    int      nStimuli;               //    # of stimulus channels defined for this run
    STIMCHAN stim[MAXSTIMULI];       //    the individual stimulus channel definitions
-   int      nXYTgts;                //    # of XY scope targets participating in an XYseq stimulus in this run
-   CXTARGET xyTgts[MAXTGTSINXYSEQ]; //    defns of those targets (in format used for storing to file)
-   float    fCtrX[MAXTGTSINXYSEQ];  //    center location of each XY target's window
-   float    fCtrY[MAXTGTSINXYSEQ];  //
+
+   // [deprecated a/o Maestro 5.0; removed from struct a/o Maestro 5.0.2]
+   // int      nXYTgts;                //    # of XY scope targets participating in an XYseq stimulus in this run
+   // CXTARGET xyTgts[MAXTGTSINXYSEQ]; //    defns of those targets (in format used for storing to file)
+   // float    fCtrX[MAXTGTSINXYSEQ];  //    center location of each XY target's window
+   // float    fCtrY[MAXTGTSINXYSEQ];  //
 } CONTRUN, *PCONTRUN;
 
 

@@ -7,7 +7,6 @@
 
 #include "device.h"                    // CDevice -- base class for CNTRLX device interfaces  
 #include "util.h"                      // for CRand16 -- a pseudo-random number generator
-#include "cxobj_ifc.h"                 // for defn of struct SGMPARMS, the non-encoded form of SGM parameters
 
 
 class CCxEventTimerAlt : public CDevice

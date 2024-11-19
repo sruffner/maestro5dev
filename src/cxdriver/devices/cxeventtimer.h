@@ -7,7 +7,6 @@
 
 #include "device.h"                    // CDevice -- base class for CNTRLX device interfaces  
 #include "util.h"                      // for CRand16 -- a pseudo-random number generator
-#include "cxobj_ifc.h"                 // for defn of struct SGMPARMS, the non-encoded form of SGM parameters
 
 
 class CCxEventTimer : public CDevice
@@ -25,7 +24,6 @@ private:
    // DO<15..12> is the device address, and DO<11..0> is the data latched into that device.
    static const DWORD DD_MARKERS = 0x00001000;           // marker pulse output
    static const DWORD DD_ADJREWARD = 0x00004000;         // adjustable rewards
-   static const DWORD DD_SGM = 0x00005000;               // pulse stimulus generator module
    static const DWORD DD_MISC = 0x00006000;              // miscellaneous function (rarely used)
    static const DWORD DD_WRITER = 0x00007000;            // character writer for integration with Plexon
 
@@ -36,49 +34,10 @@ private:
    static const DWORD FIXSTAT_MISC = ((DWORD)(1 << 0));  // fixation status bit in ContMode 
    static const DWORD AUDIOREW_MISC = ((DWORD)(1 << 1)); // "audio" reward pulse on this DO line of DD_MISC device
 
-   /**
-   Programming the electrical pulse stimulus generator module (SGM). The SGM is an external h/w device that can deliver
-   a wide variety of electrical pulse sequences (for direct brain stimulation). The device is programmed via the event
-   timer's first 16 digital outputs:  DO<15..12> are the device address,  DO<11..8> are the parameter address, and
-   DO<7..0> represent the addressed parameter's value. See hardware spec for a full description...
-   */
-   static const DWORD SGM_NT = 0x00000000;         // parameter addresses: # of trains per sequence,
-   static const DWORD SGM_NPPT = 0x00000100;       //    # of pulses per train,
-   static const DWORD SGM_ITI = 0x00000200;        //    intertrain interval,
-   static const DWORD SGM_IPI = 0x00000300;        //    interpulse interval,
-   static const DWORD SGM_PW1 = 0x00000400;        //    pulse 1 width,
-   static const DWORD SGM_PW2 = 0x00000500;        //    pulse 2 width,
-   static const DWORD SGM_AMP1 = 0x00000600;       //    pulse 1 amplitude,
-   static const DWORD SGM_AMP2 = 0x00000700;       //    pulse 2 amplitude,
-   static const DWORD SGM_MODE = 0x00000800;       //    sequence mode register,
-   static const DWORD SGM_DACADDR = 0x00000900;    //    Direct to DAC memory address,
-   static const DWORD SGM_DACDATA = 0x00000A00;    //    Direct to DAC memory value,
-   static const DWORD SGM_DACOUT = 0x00000B00;     //    Direct to DAC output (for test/debug)
-   static const DWORD SGM_AMP1FINE = 0x00000C00;   //    first 4 bits of pulse 1 amp (in lo nibble)
-   static const DWORD SGM_AMP2FINE = 0x00000D00;   //    first 4 bits of pulse 2 amp (in lo nibble)
-   static const DWORD SGM_CONTROL = 0x00000F00;    //    control/trigger enable register:
-   static const DWORD SGM_STOP = 0x0000009E;       //       stop sequence, 
-   static const DWORD SGM_START = 0x0000003E;      //       software start (immediate),
-   static const DWORD SGM_EXTON = 0x0000001F;      //       enable externally trig'd sequence, 
-   static const DWORD SGM_EXTOFF = 0x0000001E;     //       disable externally trig'd sequence
-
    // the min, max and default software busy wait time after each state change in SetDO(), in microseconds
    static const int MIN_DOBUSYWAITUS = 0;
    static const int MAX_DOBUSYWAITUS = 20;
    static const int DEF_DOBUSYWAITUS = 3; 
-
-   typedef struct CSGMParms                  // parameters for the electrical pulse SGM in ENCODED format:
-   {
-      short mode,                            //    operational mode
-            bExtTrig,                        //    if nonzero, use external trig to initiate pulse seq; else s/w start. 
-            amp1, amp2,                      //    pulse amp (encoded: -10240..10160mV --> 0..255; resolution = 10mV)
-            pw1, pw2,                        //    pulse widths (encoded: 50..2500 us --> 5..250; resolution = 10us)
-            tInterpulse,                     //    interpulse interval in ms (1..250)
-            tIntertrain,                     //    intertrain interval (encoded: 10..2500ms --> 1..250; res = 10ms)
-            nPulses,                         //    #pulses per train, 1..250 (train modes only)
-            nTrains;                         //    #trains per presentation, 1..250 (train modes only)
-   } SGM, *PSGM;
-
 
    int      m_nDI;                           // # of digital inputs supported by device
    int      m_nDO;                           // # of digital outputs supported by device
@@ -92,9 +51,6 @@ private:
    float    m_fSumIEI[MAX_CHANNELS];         // sum of inter-event intervals in seconds (per channel)
    DWORD    m_dwEvtMaskBuf[SM_BUFSZ];        // buffers for downloading events & timestamps from event timer
    float    m_fEvtTimeBuf[SM_BUFSZ]; 
-
-   SGM      m_sgm;                           // current state of the SGM module controlled by event timer's DO<16..0>
-   BOOL     m_bSgmIsRunning;                 // TRUE if SGM pulse sequence is currently running 
 
    DWORD    m_dwMisc;                        // current state of data bits DO<11..0> on device DD_MISC
 
@@ -181,14 +137,6 @@ public:
    // raise/lower DO line reflecting "fixation status" on device DD_MISC
    VOID RTFCNDCL SetFixationStatus(); 
    VOID RTFCNDCL ClearFixationStatus(); 
-
-   // control of pulse stimulus generator module, a latched device
-   BOOL RTFCNDCL CfgPulseSeq(PSGMPARMS pSgm); 
-   BOOL RTFCNDCL StartPulseSeq(); 
-   BOOL RTFCNDCL IsOnPulseSeq();
-   VOID RTFCNDCL StopPulseSeq();
-   VOID RTFCNDCL DisablePulseSeq();
-   VOID RTFCNDCL ResetPulseSeq();
 
    // write a single ASCII character or a null-terminated string via the character writer latched device
    VOID RTFCNDCL WriteChar(char c); 

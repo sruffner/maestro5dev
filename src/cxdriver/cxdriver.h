@@ -190,8 +190,7 @@ private:
    {
       CONTRUN     def;                             //    the run definition
 
-      BOOL        bUsesChair;                      //    TRUE if corresponding stimulus platform is used during run
-      BOOL        bUsesPSGM;
+      BOOL        bUsesChair;                      //    TRUE if animal chair in use during run
 
       int         tLastUpdate;                     //    timepoint (within duty cycle) of last trajectory update (ms)
       int         iCycles;                         //    #duty cycles completed (for auto-stop feature)
@@ -200,8 +199,6 @@ private:
       float       fChairVel;                       //    current chair velocity
       float       fExpectedChairPos;               //    current expected pos of chair
       DWORD       dwMarkers;                       //    marker pulses to be delivered on next update
-
-      int         tStartPSGM;                      //    timepoint (within duty cycle) at which SGM seq is started (ms)
    };
 
 

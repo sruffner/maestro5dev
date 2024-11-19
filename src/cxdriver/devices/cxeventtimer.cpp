@@ -64,17 +64,7 @@
  probably obsolete. Use Set/ClearFixationStatus() to manipulate this signal. DO1 is used to drive a speaker, 
  implementing a simple "audio" reward; this usage is covered in a later section.
 
-    3) Electrical pulse stimulus generator module (dev DD_SGM = 0x5). The PSGM is a programmable digital device that 
- controls a Grass stimulus generator which, in turn, delivers a sequence of electrical pulses to the brain via an 
- extracellular electrode. 
-    CfgPulseSeq()     ==> configure a new pulse sequence on the module, but do not start it.
-    StartPulseSeq()   ==> start a previously configured pulse sequence.
-    StopPulseSeq()    ==> stop the current pulse sequence (but keep configuration, so we can start it again).
-    ResetPulseSeq()   ==> reset the SGM (no pulse sequence configured).
-    IsOnPulseSeq()    ==> TRUE if a pulse sequence was previously started on the SGM (it may have stopped).
-    DisablePulseSeq() ==> if a pulse seq was configured to start by an ext trig, this disables the trigger.
-
-    4) Reward delivery system (dev DD_ADJREWARD = 0x4, DD_MISC = 0x6). Originally, MaestroRTSS rewarded the animal by 
+    3) Reward delivery system (dev DD_ADJREWARD = 0x4, DD_MISC = 0x6). Originally, MaestroRTSS rewarded the animal by 
  triggering a fixed-length pulse to a solenoid which, in turn, delivered a fixed amount of fluid. The experiment rigs
  now use an adjustable reward pulse device (DD_ADJREWARD), which delivers a pulse whose duration in ms is specified by 
  data lines DO<11..0>. In addition, a random reward withholding scheme was introduced to train intractable subjects, 
@@ -84,7 +74,7 @@
  timer's DO port, it made sense to encapsulate the entire "reward system" in CCxEventTimer. 
     Invoke DeliverReward() to deliver a reward to the subject -- see its detailed description for more info. 
 
-    5) Character writer (dev DD_WRITER = 0x7). A simple device for transmitting ASCII characters to an external target. 
+    4) Character writer (dev DD_WRITER = 0x7). A simple device for transmitting ASCII characters to an external target. 
  When addressed, device should latch data lines DO<7..0>, which represents an 8-bit ASCII character. WriteChar() will 
  write a single character to the device, while WriteString() transmits an entire null-terminated string one character at
  a time. The characters in the string are transmitted in rapid succession -- the time between characters depending on
@@ -194,6 +184,8 @@
  05sep2019-- To resolve the above issue, introduced busy wait times for each of the three fundamental steps in any
  SetDO() implementation. See details above. Added method SetDOBusyWaitTimes(), plus protected member m_fDOBusyWaits[]
  to store the busy wait times. SetDO() implementations should be updated to honor these busy wait times.
+ 18nov2024-- Dropped support for PSGM a/o Maestro 5.0.2. The PSGM was never put into use -- except for a prototype that
+ was tested and then abandoned. All **PulseSeq() methods removed.
 ======================================================================================================================*/
 
 #include "cxeventtimer.h"
@@ -232,8 +224,6 @@ CCxEventTimer::CCxEventTimer(const CDevice::DevInfo& devInfo, int iDevNum, int n
 
    // create timer handler which terminates "audio" reward pulse. Handler requires THIS reference!
    m_hAudioRewTimer = ::RtCreateTimer(NULL,0,CCxEventTimer::AudioTimeout, (PVOID)this, RT_PRIORITY_MAX, CLOCK_FASTEST); 
-
-   ResetPulseSeq();
 }
 
 /**
@@ -380,7 +370,6 @@ VOID RTFCNDCL CCxEventTimer::StopMonitor()
 */
 VOID RTFCNDCL CCxEventTimer::ResetLatchedDevices()
 {
-   ResetPulseSeq();                 // stop & disable the PSGM
    SetDO( DD_MISC );                // clear miscellaneous signals
    m_dwMisc = 0;
 
@@ -511,180 +500,6 @@ VOID RTFCNDCL CCxEventTimer::ClearFixationStatus()
       m_dwMisc &= ~FIXSTAT_MISC;
       SetDO(DD_MISC | m_dwMisc);
    }
-}
-
-
-/**
- ***PulseSeq: Functions for controlling the electrical pulse stimulus generator module (SGM). The SGM is a custom-built
- Maestro rig hardware  device that is controlled via the timer board's digital output port. Its device address (which 
- distinguishes it from the other latched devices controlled via the timer board DOUT) is DD_SGM = 0x5. For details on 
- how to program the SGM, consult Ken McGary's detailed hardware specification.
-
- This module internally maintains the current state of the SGM.  We only support the "Sequence Parameter" modes of 
- operation.
-
- 04apr2007-- Spec recommends 1ms between parameter writes when configuring the pulse sequence. This will cause a problem
- when CfgPulseSeq() is used in ContMode. So, for now, I'm only sleeping 100us... Testing indicated that 100us is enough.
- 13jun2007-- New spec requires that timing-related parameters be written in the following order (if applicable to the 
- sequence mode): SGM_MODE, SGM_PW1, SGM_PW2, SGM_NP, SGM_NT, SGM_IPI, SGM_ITI. Also, if the "halt" bit in SGM_CONTROL is 
- set, all other bits are ignored -- so we have to write again with the halt bit cleared to set the other control bits to
- their "not running" state...
- 13jun2007-- New firmware design requires longer time between parameter writes -- now 5ms instead of 100us. CANNOT USE 
- PSGM IN CONTINUOUS MODE AS A RESULT!
- 05sep2013-- The existing PSGM spec we have, last updated 5/26/07, does NOT say that 5ms are required between parameter 
- writes, only 100us. A 5ms delay is required only after issuing a HALT command, in StopPulseSeq(). However, I'm not sure
- about this -- the change noted on 13jun07 may never have gotten into a spec. So I'm leaving things as is. The PSGM
- has never really been used in the Lisberger lab anyway.
-
- CfgPulseSeq() ==> Resets the SGM and programs (but does not start) a new pulse sequence. If the provided SGM parameters
-    are bad, fcn fails.  Note that ALL param values are checked, even though some may not apply to the chosen op mode! 
-    Parameters are converted to an ENCODED format, ready for writing to the DD_SGM device.
- StartPulseSeq() ==> Starts a previously programmed pulse sequence. If the op mode is SGM_NOOP, nothing happens! If 
-    called while a sequence is running, it will restart that same sequence.
- IsOnPulseSeq() ==> Returns TRUE if a pulse sequence was started. CANNOT determine if seq has finished!!
- StopPulseSeq() ==> Halts any running pulse sequence, whether ext trig or software-start.
- DisablePulseSeq() ==> Applies only to ext-trig pulse sequences. If the pulse sequence has already started, it has no 
-    effect. If the sequence has not started, it disables the triggering of the sequence.
- ResetPulseSeq() ==> Stop the SGM and configure internal state to disable the SGM (op mode SGM_NOOP).
-
- @param pSgm The desired parameters for the SGM sequence, in a NON-ENCODED format.
- @return (where applicable) TRUE if successful, FALSE otherwise.
-*/
-BOOL RTFCNDCL CCxEventTimer::CfgPulseSeq( PSGMPARMS pSgm )
-{
-   if( !IsOn() )                                                              // event timer dev not avail
-   {
-      SetDeviceError( CDevice::EMSG_DEVNOTAVAIL );
-      return( FALSE );
-   }
-   
-   LARGE_INTEGER i64Sleep;                                                    // 5ms sleep period
-   i64Sleep.QuadPart = 50000; 
-
-   if( m_bSgmIsRunning )                                                      // stop current sequence, if any 
-   {
-      StopPulseSeq();
-      ::RtSleepFt( &i64Sleep );
-   }
-   
-   if( pSgm->iOpMode < 0 || pSgm->iOpMode >= SGM_NMODES ||                    // validate supplied parameter values 
-       pSgm->iAmp1 < -10240 || pSgm->iAmp1 > 10160 || pSgm->iAmp2 < -10240 || pSgm->iAmp2 > 10160 || 
-       pSgm->iPW1 < 50 || pSgm->iPW1 > 2500 || pSgm->iPW2 < 50 || pSgm->iPW2 > 2500 || 
-       pSgm->iPulseIntv < 1 || pSgm->iPulseIntv > 250 || pSgm->iTrainIntv < 10 || pSgm->iTrainIntv > 2500 || 
-       pSgm->nPulses < 1 || pSgm->nPulses > 250 || pSgm->nTrains < 1 || pSgm->nTrains > 250
-      )
-   {
-      SetDeviceError( "Illegal SGM parameter" );
-      return( FALSE );
-   }
-
-   m_sgm.mode = short(pSgm->iOpMode);                                         // convert SGM params to encoded format 
-   m_sgm.bExtTrig = short( pSgm->bExtTrig ? 1 : 0 );
-   m_sgm.amp1 = short( pSgm->iAmp1 / 80 + 128 );
-   m_sgm.amp2 = short( pSgm->iAmp2 / 80 + 128 );
-   m_sgm.pw1 = short( pSgm->iPW1 / 10 );
-   m_sgm.pw2 = short( pSgm->iPW2 / 10 );
-   m_sgm.tInterpulse = short( pSgm->iPulseIntv );
-   m_sgm.tIntertrain = short( pSgm->iTrainIntv / 10 );
-   m_sgm.nPulses = short( pSgm->nPulses );
-   m_sgm.nTrains = short( pSgm->nTrains );
-
-   if(m_sgm.mode == SGM_NOOP) return( TRUE );                                 // no pulse seq -- nothing to config!
-
-   // we normally leave bits 4(TRIG_OUT follows pulses), 3(TRIG_OUT enable), 2(Output LED follows pulses), and 1
-   // (Manual TRIG enable) on all the time -- EXCEPT when programming a sequence. Here we clear those bits.
-   SetDO( DD_SGM | SGM_CONTROL ); 
-   ::RtSleepFt( &i64Sleep );
-
-   SetDO( DD_SGM | SGM_MODE | ((DWORD) m_sgm.mode) );                         // only write params req'd for op mode... 
-   ::RtSleepFt( &i64Sleep );
-   SetDO( DD_SGM | SGM_AMP1 | ((DWORD) m_sgm.amp1) );
-   ::RtSleepFt( &i64Sleep );
-   SetDO( DD_SGM | SGM_PW1 | ((DWORD) m_sgm.pw1) );
-   ::RtSleepFt( &i64Sleep );
-   
-   if(m_sgm.mode == SGM_DUAL || m_sgm.mode == SGM_BIPHASIC || m_sgm.mode == SGM_BIPHASICTRAIN)
-   {
-      SetDO( DD_SGM | SGM_AMP2 | ((DWORD) m_sgm.amp2) );
-      ::RtSleepFt( &i64Sleep );
-      SetDO( DD_SGM | SGM_PW2 | ((DWORD) m_sgm.pw2) );
-      ::RtSleepFt( &i64Sleep );
-   }
-
-   
-   if(m_sgm.mode == SGM_TRAIN || m_sgm.mode == SGM_BIPHASICTRAIN)
-   {
-      SetDO( DD_SGM | SGM_NPPT | ((DWORD) m_sgm.nPulses) );
-      ::RtSleepFt( &i64Sleep );
-      SetDO( DD_SGM | SGM_NT | ((DWORD) m_sgm.nTrains) );
-      ::RtSleepFt( &i64Sleep );
-   }
-
-   if(m_sgm.mode == SGM_DUAL || m_sgm.mode == SGM_TRAIN || m_sgm.mode == SGM_BIPHASICTRAIN)
-   {
-      SetDO( DD_SGM | SGM_IPI | ((DWORD) m_sgm.tInterpulse) );
-      ::RtSleepFt( &i64Sleep );
-      if(m_sgm.mode != SGM_DUAL)
-      {
-         SetDO( DD_SGM | SGM_ITI | ((DWORD) m_sgm.tIntertrain) );
-         ::RtSleepFt( &i64Sleep );
-      }
-   }
-
-   // set bits 4-1 in the control register now that we're done programming the sequence.
-   SetDO( DD_SGM | SGM_CONTROL | SGM_EXTOFF ); 
-   ::RtSleepFt( &i64Sleep );
-
-   return( TRUE );
-}
-
-BOOL RTFCNDCL CCxEventTimer::StartPulseSeq()
-{
-   if( !IsOn() )                                                              // event timer dev not avail
-   {
-      SetDeviceError( CDevice::EMSG_DEVNOTAVAIL );
-      return( FALSE );
-   }
-   if( m_bSgmIsRunning ) StopPulseSeq();                                      // stop current sequence, if any 
-   if( m_sgm.mode != SGM_NOOP )                                               // start the currently cfg'd seq
-   {
-      DWORD dwCmd = DD_SGM | SGM_CONTROL;
-      dwCmd |= (m_sgm.bExtTrig ? SGM_EXTON : SGM_START);                      // ext trig or immed s/w start!
-      SetDO( dwCmd );
-      m_bSgmIsRunning = TRUE;
-   }
-   return( TRUE );
-}
-
-BOOL RTFCNDCL CCxEventTimer::IsOnPulseSeq() { return( m_bSgmIsRunning ); }
-
-VOID RTFCNDCL CCxEventTimer::StopPulseSeq()
-{
-   if( m_bSgmIsRunning )
-   {
-      SetDO( DD_SGM | SGM_CONTROL | SGM_STOP );
-      m_bSgmIsRunning = FALSE;
-      LARGE_INTEGER i64Sleep;                                                 // 5ms sleep between writes
-      i64Sleep.QuadPart = 50000; 
-      ::RtSleepFt( &i64Sleep );
-      SetDO( DD_SGM | SGM_CONTROL | SGM_EXTOFF );
-   }
-}
-
-VOID RTFCNDCL CCxEventTimer::DisablePulseSeq()
-{
-   if( m_bSgmIsRunning && m_sgm.bExtTrig ) SetDO( DD_SGM | SGM_CONTROL | SGM_EXTOFF );
-}
-
-VOID RTFCNDCL CCxEventTimer::ResetPulseSeq()
-{
-   StopPulseSeq();
-   m_sgm.mode = SGM_NOOP;                                                     // pulse sequencer not in use
-   m_sgm.bExtTrig = 0;                                                        // s/w start selected
-   m_sgm.amp1 = m_sgm.amp2 = 128;                                             // 0.0V
-   m_sgm.pw1 = m_sgm.pw2 = 5;                                                 // 50 microsecs
-   m_sgm.tInterpulse = m_sgm.tIntertrain = 1;                                 // 1 ms for ipi, 10ms for iti
-   m_sgm.nPulses = m_sgm.nTrains = 1;
 }
 
 

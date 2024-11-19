@@ -55,6 +55,8 @@
 //          -- maestrodoc() v1.2.2 no longer produces JMX docs with XYScope-related content. While JMXDocImporter
 // has already been updated to ignore such content, had to update ImportTargetSets() to treat the target "isxy" field
 // as optional rather than required.
+// 18nov2024-- PSGM dropped from Maestro a/o V5.0.2. Maestrodoc() v1.2.3 and later will not include the field 
+// trial.psgm. If present, the field is now ignored.
 //=====================================================================================================================
 
 #include <stdafx.h>                          // standard MFC stuff
@@ -1240,8 +1242,8 @@ WORD JMXDocImporter::ImportTrialSubset(CCxDoc* pDoc, WORD wSet, JSONObject* pJSO
 
 /**
  * Helper method for ImportTrialSets(). It imports a single JSON object defining a Maestro trial into the Maestro 
- * experiment document (CCxDoc). The JSON object TRIAL encapsulating a trial's definition is quite complex, with nine
- * different fields.
+ * experiment document (CCxDoc). The JSON object TRIAL encapsulating a trial's definition is quite complex, with up to
+ * nine fields.
  * 
  * NOTE: All parameter values that are segment or target indices are zero-based in Maestro and one-based in JMX. Thus,
  * during import, such parameters are decremented by 1!
@@ -1286,26 +1288,8 @@ WORD JMXDocImporter::ImportTrialSubset(CCxDoc* pDoc, WORD wSet, JSONObject* pJSO
  *    that trial is NOT part of a staircase sequence. S = the staircase strength value assigned to the trial, a 
  *    floating-point value restricted to [0..1000). I = the correct-response input channel (zero = AI12 and nonzero = 
  *    AI13). Default = [0 1.0 0] (NOT a staircase trial).
- *
- * TRIAL.PSGM: Control parameters for a pulse train sequence delivered by Maestro's pulse stimulus generator module
- * (PSGM) during the trial. Value should be an empty array [] if the PSGM is not used in trial. Otherwise, it must be 
- * an 11-element vector [MODE SEG EXTRIG PA1 PA2 PW1 PW2 IPI ITI NP NT], where:
- *
- * MODE = Operational mode. An integer in [0..5], where: 0 => single pulse; 1 => dual pulse (two distinct pulses
- *    separated by the interpulse interval); 2 => biphasic pulse (same as dual pulse, but no interpulse interval);
- *    3 => pulse train (sequence of identical pulses in one or more pulse trains), 4 => biphasic pulse train; 
- *    5 => none (PSGM not used).
- * SEG = Index of trial segment during which PSGM sequence begins. Integer in [1..#segs].
- * EXTRIG: Scalar flag. If nonzero, PSGM sequence does not start until module detects an external trigger pulse
- *    during the designated segment. If zero, PSGM sequence starts at the beginning of that segment.
- * PA1, PA2: Amplitudes of first and second pulses, in millivolts. Each is an integer restricted to [-10240..10160] in 
- *    80mV increments.
- * PW1, PW2: Widths of first and second pulses, in microseconds. Each is an integer restricted to [50..2500] in 10us
- *    increments. 
- * IPI: Interpulse interval in ms. Integer restricted to [1..250] in 1ms increments.
- * ITI: Intertrain interval in ms. Integer restricted to [10..2500] in 10ms increments.
- * NP: #Pulses per train. Integer restricted to [1..250].
- * NT: #Trains in stimulus sequence. Integer restricted to [1..250].
+ * 
+ * TRIAL.PSGM: As of Maestro V5.0.3, support for the PSGM is dropped. JMXDocImporter simply ignores this field.
  *
  * TRIAL.PERTS: List of perturbations participating in trial, with control parameters. A JSON array of up to four 
  * elements, each of which is a JSON array defining a trial perturabation {NAME, A, S, T, C}, where:
@@ -1806,7 +1790,8 @@ WORD JMXDocImporter::ImportTrial(CCxDoc* pDoc, WORD wSet, JSONObject* pJSONTrial
       }
    }
 
-   // STEP 4: Set trial header IAW contents of 'params' and 'psgm' fields in the JSON trial object.
+   // STEP 4: Set trial header IAW contents of 'params' field in the JSON trial object. The PSGM was dropped in
+   // Maestro 5.0.3 and is no longer part of the trial header.
    JSONArray* pArParams = NULL;
    if(pJSONTrial->Lookup("params", pValue) && pValue->IsArray())
    {
@@ -1820,27 +1805,6 @@ WORD JMXDocImporter::ImportTrial(CCxDoc* pDoc, WORD wSet, JSONObject* pJSONTrial
    else
    {
       errMsg = "Missing or invalid field -- 'params'";
-      return(CX_NULLOBJ_KEY);
-   }
-
-   JSONArray* pArPSGM;
-   if(pJSONTrial->Lookup("psgm", pValue) && pValue->IsArray()) 
-   {
-      pArPSGM = pValue->AsArray();
-      if(pArPSGM->GetSize() != 0 && pArPSGM->GetSize() != 11)
-      {
-         errMsg = "Length of 'psgm' is neither 0 nor 11";
-         return(CX_NULLOBJ_KEY);
-      }
-      for(i=0; i<pArPSGM->GetSize(); i++) if(!pArPSGM->ElementAt(i)->IsNumber())
-      {
-         errMsg = "At least one element of 'psgm' array is not a number";
-         return(CX_NULLOBJ_KEY);
-      }
-   }
-   else
-   {
-      errMsg = "Missing or invalid field -- 'psgm'";
       return(CX_NULLOBJ_KEY);
    }
 
@@ -1990,23 +1954,6 @@ WORD JMXDocImporter::ImportTrial(CCxDoc* pDoc, WORD wSet, JSONObject* pJSONTrial
          errMsg.Format("Unrecognized header parameter or bad parameter value: %s", paramName);
          return(CX_NULLOBJ_KEY);
       }
-   }
-   
-   // set PSGM parameters IAW contents of 'psgm' array = [MODE SEG EXTRIG PA1 PA2 PW1 PW2 IPI ITI NP NT]. If array is
-   // empty, then PSGM is not used, which is how the default header was set up.
-   if(pArPSGM->GetSize() > 0)
-   {
-      hdr.sgm.iOpMode = (int) pArPSGM->ElementAt(0)->AsNumber();
-      hdr.iSGMSeg = ((int) pArPSGM->ElementAt(1)->AsNumber()) - 1;
-      hdr.sgm.bExtTrig = BOOL( pArPSGM->ElementAt(2)->AsNumber() != 0);
-      hdr.sgm.iAmp1 = (int) pArPSGM->ElementAt(3)->AsNumber();
-      hdr.sgm.iAmp2 = (int) pArPSGM->ElementAt(4)->AsNumber();
-      hdr.sgm.iPW1 = (int) pArPSGM->ElementAt(5)->AsNumber();
-      hdr.sgm.iPW2 = (int) pArPSGM->ElementAt(6)->AsNumber();
-      hdr.sgm.iPulseIntv = (int) pArPSGM->ElementAt(7)->AsNumber();
-      hdr.sgm.iTrainIntv = (int) pArPSGM->ElementAt(8)->AsNumber();
-      hdr.sgm.nPulses = (int) pArPSGM->ElementAt(9)->AsNumber();
-      hdr.sgm.nTrains = (int) pArPSGM->ElementAt(10)->AsNumber();
    }
    
    // update trial's header parameters. NOTE that we allow auto-corrections -- the assumption being that the JMX trial

@@ -391,8 +391,6 @@ public:
    double GetStairStrength() const { return( (double) m_hdr.fStairStrength ); }
    WORD GetChannels() const { return( m_hdr.wChanKey ); }
    VOID SetChannels( WORD wChanKey )  { m_hdr.wChanKey = wChanKey; }
-   int GetSgmSegPos() const { return( m_hdr.iSGMSeg ); }
-   VOID GetSgmParms( SGMPARMS& sgm ) const { sgm = m_hdr.sgm; }
 
    int GetFixTarg1Pos( int iSeg ) const { return( RetrieveSegment( iSeg )->GetFixTarg1Pos() ); }
    BOOL SetFixTarg1Pos( int iSeg, int iVal )

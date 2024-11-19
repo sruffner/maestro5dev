@@ -345,6 +345,8 @@
 // specify DIFFERENT RVs to randomly choose the min and the max duration of that subsequent segment, CCxTrial no
 // longer forces the min/max duration params to be assigned to the same RV. Now each can be independently assigned to
 // a constant value or any RV. Of course, this usage only really makes sense for the "selDurByFix" feature.
+// 19nov2024-- Dropped support for the PSGM, which was never actually put into use in experiment rigs (a prototype
+// was tested, then abandoned. TRLHDR.iSGMSeg and .sgm no longer exist (see cxobj_ifc.h).
 //=====================================================================================================================
 
 
@@ -1281,7 +1283,7 @@ FLOAT CCxSegment::LimitTraj( const float fVal, const float fLim,  BOOL& bFlag ) 
 // class CCxTrial
 //=====================================================================================================================
 //
-IMPLEMENT_SERIAL( CCxTrial, CTreeObj, 13 | VERSIONABLE_SCHEMA )
+IMPLEMENT_SERIAL( CCxTrial, CTreeObj, 14 | VERSIONABLE_SCHEMA )
 
 
 //=====================================================================================================================
@@ -1579,6 +1581,8 @@ BOOL CCxTrial::IsResponseChecked() const
 //
 //    Modify the trial header.  Any invalid parameters are corrected.
 //
+// [19nov2024]: PSGM dropped. TRLHDR fields related to the PSGM, .iSGMSeg and .seg, have been REMOVED from TRLHDR.
+// 
 //    ARGS:       hdr      -- [in] new trial header; [out] same, except that any invalid param values are corrected.
 //                bChanged -- [out] TRUE if any header param was changed; FALSE otherwise.
 //
@@ -1737,79 +1741,6 @@ BOOL CCxTrial::SetHeader( TRLHDR& hdr, BOOL& bChanged )
       bOk = FALSE;
    }
 
-   PSGMPARMS psg = &(hdr.sgm);                                 // parameters for the SGM pulse stimulus train
-   if( psg->iOpMode < SGM_SINGLE || psg->iOpMode > SGM_NOOP )
-   {
-      psg->iOpMode = SGM_NOOP;
-      bOk = FALSE;
-   }
-
-   if( (SegCount() == 0 && hdr.iSGMSeg != 0) ||                // validate SGM start seg index; when no segs, index
-       hdr.iSGMSeg < 0 || hdr.iSGMSeg >= SegCount() )          // is always 0.
-   {
-      hdr.iSGMSeg = 0;
-      bOk = FALSE;
-   }
-
-   int i = hdr.sgm.iAmp1 / 80;                                 // pulse amplitudes: INT, range-limited, res = 80mV.
-   i = (i<SGM_MINPA) ? SGM_MINPA : ((i>SGM_MAXPA) ? SGM_MAXPA : i);
-   i *= 80;
-   if( i != hdr.sgm.iAmp1 ) { hdr.sgm.iAmp1 = i; bOk = FALSE; }
-
-   i = hdr.sgm.iAmp2 / 80;
-   i = (i<SGM_MINPA) ? SGM_MINPA : ((i>SGM_MAXPA) ? SGM_MAXPA : i);
-   i *= 80;
-   if( i != hdr.sgm.iAmp2 ) { hdr.sgm.iAmp2 = i; bOk = FALSE; }
-
-   i = hdr.sgm.iPW1 / 10;                                      // pulse widths: INT, range-limited, res = 10us.
-   i = (i<SGM_MINPW) ? SGM_MINPW : ((i>SGM_MAXPW) ? SGM_MAXPW : i);
-   i *= 10;
-   if( i != hdr.sgm.iPW1 ) { hdr.sgm.iPW1 = i; bOk = FALSE; }
-
-   i = hdr.sgm.iPW2 / 10;
-   i = (i<SGM_MINPW) ? SGM_MINPW : ((i>SGM_MAXPW) ? SGM_MAXPW : i);
-   i *= 10;
-   if( i != hdr.sgm.iPW2 ) { hdr.sgm.iPW2 = i; bOk = FALSE; }
-
-   i = hdr.sgm.iPulseIntv;                                     // interpulse interval: INT, range-limited, res = 1ms.
-   i = (i<SGM_MINIPI) ? SGM_MINIPI : ((i>SGM_MAXIPI) ? SGM_MAXIPI : i);
-   if( i != hdr.sgm.iPulseIntv ) { hdr.sgm.iPulseIntv = i; bOk = FALSE; }
-
-   i = hdr.sgm.iTrainIntv / 10;                                // interpulse interval: INT, range-limited, res = 10ms.
-   i = (i<SGM_MINITI) ? SGM_MINITI : ((i>SGM_MAXITI) ? SGM_MAXITI : i);
-   i *= 10;
-   if( i != hdr.sgm.iTrainIntv ) { hdr.sgm.iTrainIntv = i; bOk = FALSE; }
-
-   i = hdr.sgm.nPulses;                                        // #pulses per train: INT, range-limited
-   i = (i<SGM_MINPULSES) ? SGM_MINPULSES : ((i>SGM_MAXPULSES) ? SGM_MAXPULSES : i);
-   if( i != hdr.sgm.nPulses ) { hdr.sgm.nPulses = i; bOk = FALSE; }
-
-   i = hdr.sgm.nTrains;                                        // #trains per stimulus: INT, range-limited.
-   i = (i<SGM_MINTRAINS) ? SGM_MINTRAINS : ((i>SGM_MAXTRAINS) ? SGM_MAXTRAINS : i);
-   if( i != hdr.sgm.nTrains ) { hdr.sgm.nTrains = i; bOk = FALSE; }
-
-   // adjust IPI, ITI, and #pulses as needed to ensure PA(+PB) < IPI and IPI*#pulses < ITI, depending on op mode...
-   if(hdr.sgm.iOpMode == SGM_DUAL || hdr.sgm.iOpMode == SGM_TRAIN || hdr.sgm.iOpMode == SGM_BIPHASICTRAIN)
-   {
-      int pw = hdr.sgm.iPW1;
-      if(hdr.sgm.iOpMode == SGM_BIPHASICTRAIN) pw += hdr.sgm.iPW2;
-      if(hdr.sgm.iPulseIntv * 1000 <= pw)
-      {
-         bOk = FALSE;
-         while(hdr.sgm.iPulseIntv * 1000 <= pw) ++hdr.sgm.iPulseIntv;
-      }
-   }
-
-   if(hdr.sgm.iOpMode == SGM_TRAIN || hdr.sgm.iOpMode == SGM_BIPHASICTRAIN)
-   {
-      if(hdr.sgm.iPulseIntv * hdr.sgm.nPulses > hdr.sgm.iTrainIntv)
-      {
-         bOk = FALSE;
-         while(hdr.sgm.iPulseIntv * hdr.sgm.nPulses >= SGM_MAXITI * 10) --hdr.sgm.nPulses;
-         while(hdr.sgm.iPulseIntv * hdr.sgm.nPulses >= hdr.sgm.iTrainIntv) hdr.sgm.iTrainIntv += 10;
-      }
-   }
-
    if( !IsSameHeader( hdr ) )                                  // if proposed corrected hdr != current header, update
    {                                                           // internal copy of current header
       bChanged = TRUE;
@@ -1931,10 +1862,6 @@ int CCxTrial::InsertSeg( const int iPos )
       if ( (iNew < iSeg) || ((iNew == iSeg) && (!bAfter)) )
          ++(m_hdr.iMarkSeg2);
 
-      iSeg = m_hdr.iSGMSeg;
-      if ( (iNew < iSeg) || ((iNew == iSeg) && (!bAfter)) )
-         ++(m_hdr.iSGMSeg);
-
       for( int i = 0; i < m_nPerts; i++ )                      // adjust pos of all segment indices in pert list...
       {
          iSeg = int(m_Perts[i].cSeg);
@@ -2022,10 +1949,6 @@ CCxSegment* CCxTrial::CutSeg( const int iPos )
    if( (iPos < iSeg) || ((iPos == iSeg) && bLastSegDel) )
       --(m_hdr.iMarkSeg2);
 
-   iSeg = m_hdr.iSGMSeg;                                          // adjust SGM start segment as needed...
-   if( iPos < iSeg )                                              // (remains at 0 when last seg deleted)
-      --(m_hdr.iSGMSeg);
-
    for( int i = 0; i < m_nPerts; i++ )                            // adjust start segment indices in pert list...
    {
       iSeg = int(m_Perts[i].cSeg);
@@ -2035,11 +1958,8 @@ CCxSegment* CCxTrial::CutSeg( const int iPos )
 
    UpdateTaggedSectionsOnSegRemove( iPos );                       // adjust seg indices in tagged section list
 
-   if( SegCount() == 0 )                                          // if last seg deleted, turn off special op and SGM
-   {
+   if( SegCount() == 0 )                                          // if last seg deleted, turn off special op
       m_hdr.iSpecialOp = TH_SOP_NONE;
-      m_hdr.sgm.iOpMode = SGM_NOOP;
-   }
 
    return( pSeg );
 }
@@ -2350,6 +2270,9 @@ VOID CCxTrial::Clear()
 //      12: (v4.1.0) Added support for WHVR for reward pulses 1 and 2. No effect on existing documents.
 //      13: (v5.0.0) XYScope support officially removed. Deprecated trial header parameters TRLHDR.iXYDotSeedAlt and
 //          TRLHDR.nXYInterleave are no longer serialized and are ignored when a pre-v13 trial is deserialized.
+//      14: (v5.0.2) PSGM support removed (the module was never actually used in experiments). PSGM-specific trial
+//          header fields TRLHDR.iSGMSeg and TRLHDR.sgm no longer exist. When deserializing a pre-V14 trial, all 
+//          PSGM parameters are simply read in and discarded.
 //
 //    ARGS:       ar -- [in] the serialization archive.
 //
@@ -2378,10 +2301,6 @@ void CCxTrial::Serialize ( CArchive& ar )
       ar << m_hdr.reward1[0] << m_hdr.reward1[1] << m_hdr.reward1[2];
       ar << m_hdr.reward2[0] << m_hdr.reward2[1] << m_hdr.reward2[2];
       ar << m_hdr.fStairStrength << m_hdr.wChanKey;
-      ar << m_hdr.iSGMSeg << m_hdr.sgm.iOpMode << m_hdr.sgm.bExtTrig;
-      ar << m_hdr.sgm.iAmp1 << m_hdr.sgm.iAmp2 << m_hdr.sgm.iPW1 << m_hdr.sgm.iPW2;
-      ar << m_hdr.sgm.iPulseIntv << m_hdr.sgm.iTrainIntv;
-      ar << m_hdr.sgm.nPulses << m_hdr.sgm.nTrains;
 
       ar << m_nPerts;                                       // #perts in perturbation list
       for( i = 0; i < m_nPerts; i++ )                       // the perturbation list itself
@@ -2436,8 +2355,8 @@ void CCxTrial::Serialize ( CArchive& ar )
    }
    else
    {
-      if( nSchema < 1 || nSchema > 13 )                     // unsupported version
-         ::AfxThrowArchiveException( CArchiveException::badSchema );
+      if(nSchema < 1 || nSchema > 14)                     // unsupported version
+         ::AfxThrowArchiveException(CArchiveException::badSchema);
 
       TRLHDR hdr;                                           // first fill in temporary header from archive...
       ar >> hdr.dwFlags;
@@ -2452,7 +2371,7 @@ void CCxTrial::Serialize ( CArchive& ar )
       {
          DWORD oldSpecOpFlags = (hdr.dwFlags & THF_SPECALL);
          hdr.dwFlags &= ~THF_SPECALL;
-         
+
          if(oldSpecOpFlags == THF_SACCSKIP) hdr.iSpecialOp = TH_SOP_SKIP;
          else if(oldSpecOpFlags == THF_SELBYFIX) hdr.iSpecialOp = TH_SOP_SELBYFIX;
          else if(oldSpecOpFlags == THF_SELBYFIX2) hdr.iSpecialOp = TH_SOP_SELBYFIX2;
@@ -2460,15 +2379,15 @@ void CCxTrial::Serialize ( CArchive& ar )
          else if(oldSpecOpFlags == THF_RPDISTRO) hdr.iSpecialOp = TH_SOP_RPDISTRO;
          else hdr.iSpecialOp = TH_SOP_NONE;
       }
-   
-      if( nSchema < 8 )                                     // next two fields exist only in docs prior to schema 8.
+
+      if(nSchema < 8)                                     // next two fields exist only in docs prior to schema 8.
       {                                                     // They are NOW obsolete, but we need them to migrate old
          ar >> hdr.iOpenSeg;                                // doc to the new way that v.stab is configured!
-         if( nSchema >= 7 ) ar >> hdr.nOpenSegs;
+         if(nSchema >= 7) ar >> hdr.nOpenSegs;
          else hdr.nOpenSegs = 1;
       }
 
-      if( nSchema >= 3 )                                    // ver 3 includes display marker segments #1, #2 in hdr;
+      if(nSchema >= 3)                                    // ver 3 includes display marker segments #1, #2 in hdr;
       {                                                     // for earlier docs, we default these to -1 (ie, no
          ar >> hdr.iMarkSeg1 >> hdr.iMarkSeg2;              // display markers)
       }
@@ -2478,7 +2397,7 @@ void CCxTrial::Serialize ( CArchive& ar )
          hdr.iMarkSeg2 = -1;
       }
 
-      if( nSchema >= 4 )                                    // ver 4 includes params for mid-trial reward feature
+      if(nSchema >= 4)                                    // ver 4 includes params for mid-trial reward feature
       {
          ar >> hdr.iMTRIntv >> hdr.iMTRLen;
       }
@@ -2489,8 +2408,8 @@ void CCxTrial::Serialize ( CArchive& ar )
       }
 
       // XYScope alternate dot seed: Added in v6, deprecated in v13
-      if(nSchema >= 6 && nSchema < 13) 
-         ar >> hdr.iXYDotSeedAlt; 
+      if(nSchema >= 6 && nSchema < 13)
+         ar >> hdr.iXYDotSeedAlt;
       else
          hdr.iXYDotSeedAlt = -1;
 
@@ -2516,18 +2435,19 @@ void CCxTrial::Serialize ( CArchive& ar )
       }
 
       ar >> hdr.fStairStrength >> hdr.wChanKey;
-      ar >> hdr.iSGMSeg >> hdr.sgm.iOpMode;
 
-      if(nSchema < 10)                                      // ver 10 introduced new SGM op mode SGM_BIPHASICTRAIN,
-      {                                                     // which has former value of SGM_NOOP in prior versions.
-         if(hdr.sgm.iOpMode == SGM_BIPHASICTRAIN)
-            hdr.sgm.iOpMode = SGM_NOOP;
+      // PSGM support dropped in schema version 14. For pre-V14 trials, we simply read and discard the PSGM params.
+      if(nSchema < 14)
+      {
+         int iSGMSeg = 0;
+         SGMPARMS sgm{};
+
+         ar >> iSGMSeg >> sgm.iOpMode;
+         ar >> sgm.bExtTrig;
+         ar >> sgm.iAmp1 >> sgm.iAmp2 >> sgm.iPW1 >> sgm.iPW2;
+         ar >> sgm.iPulseIntv >> sgm.iTrainIntv;
+         ar >> sgm.nPulses >> sgm.nTrains;
       }
-      
-      ar >> hdr.sgm.bExtTrig;
-      ar >> hdr.sgm.iAmp1 >> hdr.sgm.iAmp2 >> hdr.sgm.iPW1 >> hdr.sgm.iPW2;
-      ar >> hdr.sgm.iPulseIntv >> hdr.sgm.iTrainIntv;
-      ar >> hdr.sgm.nPulses >> hdr.sgm.nTrains;
 
       BOOL bChanged = FALSE;
       SetHeader( hdr, bChanged );                           // ...then set the real header w/ auto-correction
@@ -4362,7 +4282,7 @@ void CCxTrial::Dump( CDumpContext& dc ) const
                m_hdr.iStartSeg, m_hdr.iFailsafeSeg, m_hdr.iSpecialSeg, m_hdr.iSpecialOp );
    dc << msg;
 
-   msg.Format( "\nSGM seg = %d; Sacc Vt = %d deg/sec", m_hdr.iSGMSeg, m_hdr.iSaccVt );
+   msg.Format( "\nSacc Vt = %d deg/sec", m_hdr.iSaccVt );
    dc << msg;
    
    msg.Format("\nReward pulse 1: len = %d ms; WHVR = %d/%d. Reward pulse 2: len= %d ms; WHVR=%d/%d.", m_hdr.reward1[0],
@@ -4374,9 +4294,6 @@ void CCxTrial::Dump( CDumpContext& dc ) const
    dc << msg;
    msg.Format( "\nChan cfg key = %d; stair strength = %.3f", m_hdr.wChanKey, m_hdr.fStairStrength );
    dc << msg;
-   msg.Format( "\nSGM: %d  %d  %d  %d  %d  %d  %d  %d  %d  %d", m_hdr.sgm.iOpMode, int(m_hdr.sgm.bExtTrig),
-               m_hdr.sgm.iAmp1, m_hdr.sgm.iAmp2, m_hdr.sgm.iPW1, m_hdr.sgm.iPW2, m_hdr.sgm.iPulseIntv,
-               m_hdr.sgm.iTrainIntv, m_hdr.sgm.nPulses, m_hdr.sgm.nTrains );
    dc << "\n";
    dc << "\nParticipating target ID array:";
    m_wArTargs.Dump( dc );
@@ -4500,16 +4417,6 @@ VOID CCxTrial::AssignDefaultHeader()
 
    m_hdr.wChanKey = CX_NULLOBJ_KEY;                // default channel set will be attached to this trial
    m_hdr.fStairStrength = (float)1.0;              // ignored since this is not a staircase trial
-
-   m_hdr.iSGMSeg = 0;                              // SGM pulse stimulus generator not used in trial
-   m_hdr.sgm.iOpMode = SGM_NOOP;
-   m_hdr.sgm.bExtTrig = FALSE;
-   m_hdr.sgm.iAmp1 = m_hdr.sgm.iAmp2 = SGM_MAXPA * 80;
-   m_hdr.sgm.iPW1 = m_hdr.sgm.iPW2 = SGM_MINPW * 10;
-   m_hdr.sgm.iPulseIntv = SGM_MINIPI;
-   m_hdr.sgm.iTrainIntv = SGM_MINITI * 10;
-   m_hdr.sgm.nPulses = SGM_MINPULSES;
-   m_hdr.sgm.nTrains = SGM_MINTRAINS;
 }
 
 
