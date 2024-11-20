@@ -63,6 +63,7 @@
 //             indirectly via rmvideo_common.h, which MEX can handle. Deprecated RMVTGTDEF is RMVTGTDEF_V22, applicable
 //             to data file versions 13-22.
 // 05nov2024-- Modified IAW changes in CXOBJ_IFC.H dtd 15may2019 - 31oct2024.
+// 19nov2024-- Modified IAW changes in CXOBJ_IFC.H dtd 18nov2024: Dropped support for the never-used PSGM module.
 //=====================================================================================================================
 
 
@@ -426,6 +427,11 @@ typedef union tagTgParms_v22
 #define     TH_RPD_VEVEL         2           //    vertical eye velocity in deg/sec
 #define     TH_RPD_EYEDIR        3           //    eye velocity vector direction in deg CCW from rightward motion
 
+
+/* [18nov2024] DEPRECATED: The PSGM module was never really used.It is dropped a / o Maestro 5.0.2.Since it was never used,
+   READCXDATA output no longer includes the 'psgm' field. All typedefs and constants related to the PSGM are commented out
+   below...
+
                                              // op modes for electrical pulse stimulus generator module (SGM):
 #define     SGM_SINGLE           0           //    single pulse presented, of specified amplitude and width
 #define     SGM_DUAL             1           //    two pulses of distinct amp & width, separated by interpulse interval
@@ -460,6 +466,8 @@ typedef struct tagSGMParams                  // control parameters for the pulse
    int      nPulses;                         //    #pulses per train.  range [1..250].  (train modes only)
    int      nTrains;                         //    #trains per stimulus.  range [1..250].  (train modes only)
 } SGMPARMS, *PSGMPARMS;
+*/
+
 
 typedef struct tagTrialHeader                // trial header contains general trial attributes and control parameters:
 {
@@ -491,9 +499,9 @@ typedef struct tagTrialHeader                // trial header contains general tr
    float    fStairStrength;                  //    staircase strength (unitless) -- used by staircase trial sequencer
    WORD     wChanKey;                        //    CNTRLX "channel config" obj atch'd to this trial; if CX_NULLOBJ_KEY,
                                              //    no data is saved or displayed
-
-   int      iSGMSeg;                         //    segment at which a pulse stimulus seq is initiated on SGM (if >= 0)
-   SGMPARMS sgm;                             //    control params for the SGM pulse stim seq presented during trial
+   // REMOVED as of Maestro 5.0.2:
+   // int      iSGMSeg;                      //    segment at which a pulse stimulus seq is initiated on SGM (if >= 0)
+   // SGMPARMS sgm;                          //    control params for the SGM pulse stim seq presented during trial
 } TRLHDR, *PTRLHDR;
 
 //=====================================================================================================================
@@ -597,29 +605,31 @@ typedef struct tagTrialSection               // a tagged section of contiguous s
 
 
 //=====================================================================================================================
-// MAESTRO CONTINUOUS RUN-SPECIFIC DEFINITIONS
+// MAESTRO CONTINUOUS RUN-SPECIFIC DEFINITIONS -- READCXDATA DOESN'T USE THIS STUFF
 //=====================================================================================================================
 
 #define     MAXSTIMULI           20          // maximum # of stimulus channels per continuous-mode run
 #define     MAXTGTSINXYSEQ       25          // maximum # of XY scope targets participating in the XYSEQ stimulus
-#define     MAX_XYSEQVECS        32          // max # of different motion vectors for XY targets in 'XYseq' xstim
+// #define     MAX_XYSEQVECS        32          // max # of different motion vectors for XY targets in 'XYseq' xstim
 #define     MAX_ACTIVETGTS       5           // maximum # of targets in ContMode's "active target list"
 
 #define     STIM_NLASTMARKER     SGH_MAXMARKER           // marker pulses delivered on DOUT<1..max>; 0 ==> "OFF"
 
-#define     STIM_NTYPES          5           // available stimulus channel types:
+// a/o Maestro 5.0.2, the only valid stimululus channel type is STIM_ISCHAIR
+#define     STIM_NTYPES          1           // available stimulus channel types:
 #define     STIM_ISCHAIR         0           //    animal chair (trial target CX_CHAIR)
 
 // OKNDRUM NO LONGER SUPPORTED FOR DATA FILE VERSIONS >= 7.  FOR DATA FILE VERSIONS < 7, we need to increment the
 // channel types below by 1 to get the correct value; also STIM_NTYPES = 6 in this case.
 // #define     STIM_ISOKN           1
 
-#define     STIM_ISFIBER1        1           //    fiber-optic target #1 (trial target CX_FIBER1)
-#define     STIM_ISFIBER2        2           //    fiber-optic target #2 (trial target CX_FIBER2)
-#define     STIM_ISPSGM          3           //    pulse stimlus generator module
+// #define     STIM_ISFIBER1        1           //   UNSUPPORTED SINCE Maestro 3: fiber-optic target #1
+// #define     STIM_ISFIBER2        2           //   UNSUPPORTED SINCE Maestro 3: fiber-optic target #2 
+
+// [deprecated] pulse stimlus generator module
+#define     STIM_ISPSGM          1           //    pulse stimlus generator module
 // [deprecated] specialized random-motion sequence on a set of XYScope targets
-#define     STIM_ISXYSEQ         4           //    specialized random-motion seq on a set of XY scope targets; only one
-                                             //    instance of this stimulus type is allowed per continous-mode run!!
+#define     STIM_ISXYSEQ         2  
 
 #define     STIM_NSTDMODES       2           // motion modes for "standard" stim types (_ISCHAIR, _ISFIBER*, _ISOKN)
 #define     MODE_ISSINE          0           //    sinuosoidal
@@ -627,13 +637,15 @@ typedef struct tagTrialSection               // a tagged section of contiguous s
 
 #define     STIM_NPSGMMODES      SGM_NMODES-1   // (SGM_NOOP is not used in stimulus runs!)
 
-#define     STIM_NXYSEQMODES     4           // [deprecated]motion modes applicable to the XYSEQ stimulus type:
+/* [deprecated] motion modes applicable to the XYSEQ stimulus type :
+#define     STIM_NXYSEQMODES     4 
 #define     MODE_ISSPARSEDIR     0           //    direction randomized.  one randomly chosen XY tgt moves each seg
 #define     MODE_ISDENSEDIR      1           //    all targets move, directions separately randomized each seg
 #define     MODE_ISSPARSEVEL     2           //    velocity randomized.  one randomly chose XY tgt moves each seg
 #define     MODE_ISDENSEVEL      3           //    all targets move, velocities separately randomized each seg
+*/
 
-#define     STIM_NMAXMODES       5           // maximum # of motion modes for any type
+#define     STIM_NMAXMODES       2           // maximum # of motion modes for any type
 
 typedef struct tagXYseqMotion                // [deprecated] the motion parameters for an XYseq stimulus channel:
 {
@@ -667,7 +679,7 @@ typedef struct tagPulseMotion                // the motion parameters for trapez
 } PULSESTIM, *PPULSESTIM;
 
 #define     STIM_NCOMMON         5           // # of common parameters in a stimulus channel definition
-#define     MAXSTIMPARAMS        15          // max # of total params ("common" + "motion") defining a stimulus channel
+#define     MAXSTIMPARAMS        9           // max # of total params ("common" + "motion") defining a stimulus channel
 typedef struct tagRunChannel                 // defn of a stim chan w/in a ContMode run, in a CXDRIVER-compatible form
 {                                            //
    BOOL     bOn;                             //    TRUE = stimulus should be played during run; FALSE = stim disabled
@@ -679,8 +691,6 @@ typedef struct tagRunChannel                 // defn of a stim chan w/in a ContM
    {
       SINESTIM    sine;
       PULSESTIM   pulse;
-      SGMPARMS    sgm;
-      XYSEQSTIM   xy;
    };
 } STIMCHAN, *PSTIMCHAN;
 
@@ -694,10 +704,12 @@ typedef struct tagRun                        // definition of a ContMode run in 
    float    fVOffset;                        //    vertical position offset in deg subtended at eye
    int      nStimuli;                        //    # of stimulus channels defined for this run
    STIMCHAN stim[MAXSTIMULI];                //    the individual stimulus channel definitions
-   int      nXYTgts;                         //    # of XY scope targets participating in an XYseq stimulus in this run
-   CXTARGET xyTgts[MAXTGTSINXYSEQ];          //    defns of those targets (in format used for storing to file)
-   float    fCtrX[MAXTGTSINXYSEQ];           //    center location of each XY target's window
-   float    fCtrY[MAXTGTSINXYSEQ];           //
+
+   // [deprecated a/o Maestro 5.0; removed from struct a/o Maestro 5.0.2]
+   // int      nXYTgts;                //    # of XY scope targets participating in an XYseq stimulus in this run
+   // CXTARGET xyTgts[MAXTGTSINXYSEQ]; //    defns of those targets (in format used for storing to file)
+   // float    fCtrX[MAXTGTSINXYSEQ];  //    center location of each XY target's window
+   // float    fCtrY[MAXTGTSINXYSEQ];  //
 } CONTRUN, *PCONTRUN;
 
 

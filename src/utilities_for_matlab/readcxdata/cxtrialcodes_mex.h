@@ -47,6 +47,7 @@
 // 13may2019-- Modified IAW change in CXTRIALCODES.h dtd 30apr2019 -- need to enclose definition of VSTAB_MASK in 
 // parentheses!
 // 05nov2024-- Modified IAW changes in CXTRIALCODES.h dtd 20may2019 - 04nov2024.
+// 19nov2024-- Modified IAW changes in CXTRIALCODES.h dtd 18nov2024: PSGM_TC trial code deprecated.
 //=====================================================================================================================
 
 #if !defined(CXTRIALCODES_MEX_H__INCLUDED_)
@@ -198,6 +199,9 @@ typedef struct tagTrialCode            // one trial code block contains:
                                        //            reward pulse of this length is given when the subject "selects"
                                        //            second fixation target.  for all other trials, this is ignored.
 
+// [18nov2024] Effective Maestro 5.0.2, the PSGM (which was never put into use in the Maestro era) is no longer
+// supported. Maestro does not send nor does CXDRIVER recognize this code group. Analysis programs that process
+// trial codes in a data file need this constant to handle files generated prior to V5.0.2.
 #define     PSGM_TC              62    // defining params for SGM electrical pulse stimulus seq (N=6)
                                        //    code1 = op mode; time1 = external trig (1) or s/w start (0).
                                        //    code2 = pulse 1 amplitude; time2 = pulse 2 amplitude.

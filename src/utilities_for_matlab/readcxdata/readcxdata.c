@@ -191,6 +191,13 @@
 // 04jun2021-- Mods to support 200 distinct sorted-spike train channels instead of 50. To do so, we make use of the
 // second byte in the 8-byte record tag to store a multiplier M in [0..3]. Combined with the sorted spike train tag
 // N=8..57, we have 4 "banks" of 50 different channels. Channel # = M*50 + (N-8).
+// 20nov2024-- Removed vestigial field 'stimulusrun' from output. READCXDATA was never updated to populate the 
+// 'stimulusrun' field, and stimulus runs were a rarely-if-ever used feature in Maestro. As of Maestro V5.0.2 (data
+// file version 25), Maestro no longer even write stimulus run records into the dat file. Regardless the data file
+// version, READCXDATA now simply skips over any data file record with id tag CX_STIMRUNRECORD. 
+//          -- Removed vestigial field 'psgm' from output. The PSGM was designed conceptually and a prototype tested,
+// but a working module was never put to use in any experiment rigs. The PSGM was removed from Maestro altogether in
+// V5.0.2 (data file version = 25).
 //=====================================================================================================================
 
 #include <stdio.h>
@@ -237,7 +244,6 @@ void endianSwapTgtDefV7( CXFILETGT_V7* pTgt );
 void endianSwapTgtDefV12( CXFILETGT_V12* pTgt );
 void endianSwapTgtDefV22( CXFILETGT_V22* pTgt );
 void endianSwapTgtDef( CXFILETGT* pTgt );
-void endianSwapStimDef( CXFILESTIM_U* pStimU, BOOL isHdr );
 
 BOOL readAI( CXFILEREC* pRec );
 void uncompressAIData( double* pDst, int iDstSz, char* pSrc, int iSrcSz, int nCh, int* pNC, int* pNScans );
@@ -248,7 +254,6 @@ BOOL readSortedSpikes( CXFILEREC* pRec );
 BOOL readTrialCodes( CXFILEREC* pRec );
 BOOL readEdits( CXFILEREC* pRec );
 BOOL readTargets( CXFILEREC* pRec );
-BOOL readStims( CXFILEREC* pRec );
 BOOL readTagSections( CXFILEREC* pRec );
 
 mxArray* createUInt32Scalar( DWORD dwValue );
@@ -256,7 +261,6 @@ mxArray* createInt32Scalar( int iValue );
 void setSortedSpikesOutput( mxArray* pOut );
 void setHeaderOutput( mxArray* pOut );
 void setTargetDefns( mxArray* pOut );
-void setStimulusRunDefn( mxArray* pOut );
 void setTagSections( mxArray* pOut );
 void setTrialInfo(mxArray* pOut);
 
@@ -472,7 +476,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
             bOk = readTargets( &fileRec );
             break;
          case CX_STIMRUNRECORD :
-            bOk = readStims( &fileRec );
+            if(iVerbose)
+               printf("Skipping stimulus run record! Not supported.\n");
             break;
          case CX_TAGSECTRECORD :
             bOk = readTagSections( &fileRec );
@@ -509,9 +514,9 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 
    //
    // We now start copying data from our internal buffers into the various fields of the MATLAB-compatible output
-   // structure.  Of course, the MATLAB mx**() functions must allocate memory for the various fields, some of which may
-   // be very large matrices.  To make better use of system memory resources, we free each internal buffer as we finish
-   // with it.  Note that we save spike waveform data for last because that potentially uses the most memory by far....
+   // structure. Of course, the MATLAB mx**() functions must allocate memory for the various fields, some of which may
+   // be very large matrices. To make better use of system memory resources, we free each internal buffer as we finish
+   // with it. Note that we save spike waveform data for last because that potentially uses the most memory by far....
    //
 
    strFileName[CXH_NAME_SZ] = '\0';                                     // trial name.  it's possible that the char str
@@ -676,11 +681,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
    
    setTagSections( plhs[0] );                                           // store info on any tagged sections found
    setTrialInfo(plhs[0]);                                               // store additional trial info (as of 20Jan09)
-   setTargetDefns( plhs[0] );                                           // store target & stimulus run defns, if any,
-   // setStimulusRunDefn( plhs[0] );                                    // in relevant fields of MATLAB output struct
-                                                                        // TODO: MATLAB cannot handle array of structs
-                                                                        // of different sizes?? "stimulusrun" field
-                                                                        // currently unavailable
+   setTargetDefns( plhs[0] );                                           // store target defns
 
    if( cxData.nFastBytes > 0 )                                          // uncompress spike waveform into output array:
    {
@@ -1026,12 +1027,7 @@ BOOL allocBuffers( BOOL bNoHeader )
          cxData.pCodes = (TRIALCODE*) malloc( sizeof(TRIALCODE) * cxData.nCodesBufSz );
          if( cxData.pCodes == NULL ) return( FALSE );
       }
-      else if( pHdr->version >= 2 )                                        // stim run defn record applies only to
-      {                                                                    // ContMode files w/ version >= 2
-         cxData.nStimsBufSz = MAXSTIMULI + 5;                              //    we should never need more
-         cxData.pStimBuf = (CXFILESTIM_U*) malloc( sizeof(CXFILESTIM_U) * cxData.nStimsBufSz );
-         if( cxData.pStimBuf == NULL ) return( FALSE );
-      }
+
    }
    return( TRUE );
 }
@@ -1071,8 +1067,6 @@ void freeBuffers()
    if(cxData.pTargets_V22 != NULL) { free(cxData.pTargets_V22); cxData.pTargets_V22 = NULL; cxData.nTgtsBufSz = 0; }
 
    if(cxData.pCodes != NULL) { free(cxData.pCodes); cxData.pCodes = NULL; cxData.nCodesBufSz = 0; }
-
-   if(cxData.pStimBuf != NULL) { free(cxData.pStimBuf); cxData.pStimBuf = NULL; cxData.nStimsBufSz = 0; }
 }
 
 
@@ -1432,96 +1426,6 @@ void endianSwapTgtDef( CXFILETGT* pTgt )
       endianSwap( (BYTE*) &(pTgt->def.u.rmv.iFlickerOn), nInt );
       endianSwap( (BYTE*) &(pTgt->def.u.rmv.iFlickerOff), nInt );
       endianSwap( (BYTE*) &(pTgt->def.u.rmv.iFlickerDelay), nInt );
-   }
-}
-
-//=== endianSwapStimDef ===============================================================================================
-//
-//    Swaps endianness of the individual members in the CXFILESTIM_U union encapsulating definition of a Maestro
-//    stimulus run within the data file's CX_STIMRUNRECORD record.  The first CXFILESTIM_U structure in the first
-//    stimulus run record is a header encapsulated by the CXFILESTIMRUNHDR struct; the rest of the stimulus run records
-//    are populated by STIMCHAN structs.
-//
-//    ARGS:       pStimU   -- [in/out] A union representing the stimulus run header (CXFILESTIMRUNHDR) or a stimulus
-//                            run definition (STIMCHAN).  Endianness of atomic members converted in place.
-//                isHdr    -- [in] TRUE if first argument is the header.
-//
-void endianSwapStimDef( CXFILESTIM_U* pStimU, BOOL isHdr )
-{
-   int nInt, nFloat, xySeqType, psgmType;
-   CXFILESTIMRUNHDR* pHdr;
-   STIMCHAN* pStim;
-
-   nInt = sizeof(int);
-   nFloat = sizeof(float);
-
-   xySeqType = STIM_ISXYSEQ;                                                  // chan type consts changed in vers 7!
-   if( cxData.fileHdr.version < 7 ) ++xySeqType;
-   psgmType = STIM_ISPSGM;
-   if( cxData.fileHdr.version < 7 ) ++psgmType;
-
-   if( isHdr )
-   {
-      pHdr = &(pStimU->hdr);
-      endianSwap( (BYTE*) &(pHdr->bRunning), sizeof(BOOL) );
-      endianSwap( (BYTE*) &(pHdr->iDutyPeriod), nInt );
-      endianSwap( (BYTE*) &(pHdr->iDutyPulse), nInt );
-      endianSwap( (BYTE*) &(pHdr->nAutoStop), nInt );
-      endianSwap( (BYTE*) &(pHdr->fHOffset), nFloat );
-      endianSwap( (BYTE*) &(pHdr->fVOffset), nFloat );
-      endianSwap( (BYTE*) &(pHdr->nStimuli), nInt );
-      endianSwap( (BYTE*) &(pHdr->nXYTgts), nInt );
-   }
-   else
-   {
-      pStim = &(pStimU->stim);
-      endianSwap( (BYTE*) &(pStim->bOn), sizeof(BOOL) );
-      endianSwap( (BYTE*) &(pStim->iMarker), nInt );
-      endianSwap( (BYTE*) &(pStim->iType), nInt );
-      endianSwap( (BYTE*) &(pStim->iStdMode), nInt );
-      endianSwap( (BYTE*) &(pStim->tStart), nInt );
-
-      if( pStim->iType == xySeqType )                          // convert union -- depends on type of stimulus run...
-      {
-         endianSwap( (BYTE*) &(pStim->xy.iOpMode), nInt );
-         endianSwap( (BYTE*) &(pStim->xy.iRefresh), nInt );
-         endianSwap( (BYTE*) &(pStim->xy.nSegs), nInt );
-         endianSwap( (BYTE*) &(pStim->xy.iSegDur), nInt );
-         endianSwap( (BYTE*) &(pStim->xy.iSeed), nInt );
-         endianSwap( (BYTE*) &(pStim->xy.nChoices), nInt );
-         endianSwap( (BYTE*) &(pStim->xy.fAngle), nFloat );
-         endianSwap( (BYTE*) &(pStim->xy.fVel), nFloat );
-         endianSwap( (BYTE*) &(pStim->xy.fOffsetV), nFloat );
-      }
-      else if( pStim->iType == psgmType )
-      {
-         endianSwap( (BYTE*) &(pStim->sgm.iOpMode), nInt );
-         endianSwap( (BYTE*) &(pStim->sgm.bExtTrig), sizeof(BOOL) );
-         endianSwap( (BYTE*) &(pStim->sgm.iAmp1), nInt );
-         endianSwap( (BYTE*) &(pStim->sgm.iAmp2), nInt );
-         endianSwap( (BYTE*) &(pStim->sgm.iPW1), nInt );
-         endianSwap( (BYTE*) &(pStim->sgm.iPW2), nInt );
-         endianSwap( (BYTE*) &(pStim->sgm.iPulseIntv), nInt );
-         endianSwap( (BYTE*) &(pStim->sgm.iTrainIntv), nInt );
-         endianSwap( (BYTE*) &(pStim->sgm.nPulses), nInt );
-         endianSwap( (BYTE*) &(pStim->sgm.nTrains), nInt );
-      }
-      else if( pStim->iStdMode == MODE_ISSINE )
-      {
-         endianSwap( (BYTE*) &(pStim->sine.iPeriod), nInt );
-         endianSwap( (BYTE*) &(pStim->sine.nCycles), nInt );
-         endianSwap( (BYTE*) &(pStim->sine.fAmp), nFloat );
-         endianSwap( (BYTE*) &(pStim->sine.fPhase), nFloat );
-         endianSwap( (BYTE*) &(pStim->sine.fDirec), nFloat );
-      }
-      else if( pStim->iStdMode == MODE_ISPULSE )
-      {
-         endianSwap( (BYTE*) &(pStim->pulse.bBlank), sizeof(BOOL) );
-         endianSwap( (BYTE*) &(pStim->pulse.iPulseDur), nInt );
-         endianSwap( (BYTE*) &(pStim->pulse.iRampDur), nInt );
-         endianSwap( (BYTE*) &(pStim->pulse.fAmp), nFloat );
-         endianSwap( (BYTE*) &(pStim->pulse.fDirec), nFloat );
-      }
    }
 }
 
@@ -2171,55 +2075,6 @@ BOOL readTargets( CXFILEREC* pRec )
 }
 
 
-//=== readStims =======================================================================================================
-//
-//    Read contents of a CX_STIMRUNRECORD data file record into the appropriate internal buffer.  Fail if we find more
-//    stimulus channel definitions than we've allocated for -- which should never happen!
-//
-//    The CX_STIMRUNRECORD record was introduced with CNTRLX data file version 2.  One (or at most two) of these
-//    records may appear in ContMode data files to summarize the defn of the stimulus run that was in memory (whether
-//    or not it was actually used) WHEN DATA RECORDING BEGAN.  Each record contains up to CX_RECORDSTIMS objects
-//    defined by the CXFILESTIM_U structure.  We merely copy all of the objects into the internal buffer, even though
-//    some of them may be dummy objects filling the last partially full CX_STIMRUNRECORD in the file.
-//
-//    ARGS:       pRec  -- [in] ptr to buffer holding the CX_STIMRUNRECORD record.  File fmt encapsulated by the
-//                         CXFILEREC structure (see CXFILEFMT.H).
-//
-//    RETURNS:    TRUE if successful, FALSE otherwise.
-//
-BOOL readStims( CXFILEREC* pRec )
-{
-   int i;
-
-   if( cxData.fileHdr.version < 2 )                                        // just a consistency check
-   {
-      printf( "ERROR: Data file version inconsistent!\n" );
-      return( FALSE );
-   }
-
-   if( cxData.nStims == cxData.nStimsBufSz )                               // internal buffer is already full and we've
-   {                                                                       // encountered another record -- this should
-      printf( "ERROR: No more room for stimulus run info!\n" );            // never happen!
-      return( FALSE );
-   }
-
-   for( i = 0; i < CX_RECORDSTIMS; i++ )                                   // copy stim run info into buffer:
-   {
-      if( isBigEndian )                                                    //    convert endianness if necessary
-         endianSwapStimDef( &(pRec->u.stims[i]), (cxData.nStims == 0) );
-
-      memcpy( (void*) &(cxData.pStimBuf[cxData.nStims]),
-              (void*) &(pRec->u.stims[i]), sizeof(CXFILESTIM_U) );
-      ++(cxData.nStims);
-
-      if( cxData.nStims == cxData.nStimsBufSz ) break;                     //    stop! internal buf now full.  anything
-                                                                           //    else in record should be junk anyway.
-   }
-
-   return( TRUE );
-}
-
-
 //=== readTagSections =================================================================================================
 //
 //    Read contents of a CX_TAGSECTRECORD data file record into the appropriate internal buffer.
@@ -2812,115 +2667,6 @@ void setTargetDefns(mxArray* pOut)
    }
 
    mxSetField( pOut, 0, "tgtdefns", pMXTgt );                                    // set "tgtdefns" field in output
-}
-
-
-//=== setStimulusRunDefn ==============================================================================================
-//
-//    Creates the "stimulusrun" field in the output structure returned by readcxdata().  This field is a structure
-//    containing some general run parameters and an array of N structures defining the N active stimulus channels in
-//    the run.  The field is created only for CNTRLX data files with version >= 2.  Stimulus run information is copied
-//    from our internal CXFILEDATA structure.
-//
-//    ARGS:       pOut  -- [in/out] ptr to the MATLAB structure array prepared by readcxdata().
-//
-//    RETURNS:    NONE.
-//
-void setStimulusRunDefn( mxArray* pOut )
-{
-   int i, xySeqType, psgmType;
-   mxArray* pMXRun;
-   mxArray* pMXStims;
-   mxArray* pMXParms;
-   CXFILESTIMRUNHDR* pHdr;
-   STIMCHAN* pStim;
-
-   if( cxData.nStims <= 1 || cxData.fileHdr.version < 2 )                        // no run defined, or file vers < 2
-      return;
-
-   xySeqType = STIM_ISXYSEQ;                                                     // chan type consts changed in vers 7!
-   if( cxData.fileHdr.version < 7 ) ++xySeqType;
-   psgmType = STIM_ISPSGM;
-   if( cxData.fileHdr.version < 7 ) ++psgmType;
-
-   pMXRun = mxCreateStructMatrix( 1, 1, NUMRUNFIELDS, runFields );               // create stimulus run output struct
-   if( pMXRun == NULL ) return;
-   mxSetField( pOut, 0, "stimulusrun", pMXRun );                                 // set "stimulusrun" field in output
-
-   pHdr = &(cxData.pStimBuf[0].hdr);                                             // copy stim run hdr params
-   mxSetField( pMXRun, 0, "bRunning", createUInt32Scalar( (DWORD) pHdr->bRunning ) );
-   mxSetField( pMXRun, 0, "iDutyPeriod", createInt32Scalar( pHdr->iDutyPeriod ) );
-   mxSetField( pMXRun, 0, "iDutyPulse", createInt32Scalar( pHdr->iDutyPulse ) );
-   mxSetField( pMXRun, 0, "nAutoStop", createInt32Scalar( pHdr->nAutoStop ) );
-   mxSetField( pMXRun, 0, "fHOffset", mxCreateDoubleScalar( pHdr->fHOffset ) );
-   mxSetField( pMXRun, 0, "fVOffset", mxCreateDoubleScalar( pHdr->fVOffset ) );
-   mxSetField( pMXRun, 0, "nXYTgts", createInt32Scalar( pHdr->nXYTgts ) );
-
-   pMXStims=mxCreateStructMatrix(1, pHdr->nStimuli, NUMSTIMFIELDS, stimFields);  // array of stimulus channel defns
-   if( pMXStims == NULL ) return;
-   mxSetField( pMXRun, 0, "stimuli", pMXStims );
-
-   for( i = 0; (i < pHdr->nStimuli) && (i < cxData.nStims - 1); i++ )            // copy stimulus channel defns into
-   {                                                                             // output array of structs...
-      pStim = &(cxData.pStimBuf[i+1].stim);
-      mxSetField( pMXStims, i, "bOn", createUInt32Scalar( (DWORD) pStim->bOn ) );
-      mxSetField( pMXStims, i, "iMarker", createInt32Scalar( pStim->iMarker ) );
-      mxSetField( pMXStims, i, "iType", createInt32Scalar( pStim->iType ) );
-      mxSetField( pMXStims, i, "iStdMode", createInt32Scalar( pStim->iStdMode ) );
-      mxSetField( pMXStims, i, "tStart", createInt32Scalar( pStim->tStart ) );
-
-      if( pStim->iType == xySeqType )                                            // each stimulus channel type has a
-      {                                                                          // different parameter set...
-         pMXParms = mxCreateStructMatrix( 1, 1, NUMXYSEQFIELDS, xyseqFields );
-         if( pMXParms == NULL ) return;
-         mxSetField( pMXParms, 0, "iOpMode", createInt32Scalar( pStim->xy.iOpMode ) );
-         mxSetField( pMXParms, 0, "iRefresh", createInt32Scalar( pStim->xy.iRefresh ) );
-         mxSetField( pMXParms, 0, "nSegs", createInt32Scalar( pStim->xy.nSegs ) );
-         mxSetField( pMXParms, 0, "iSegDur", createInt32Scalar( pStim->xy.iSegDur ) );
-         mxSetField( pMXParms, 0, "iSeed", createInt32Scalar( pStim->xy.iSeed ) );
-         mxSetField( pMXParms, 0, "nChoices", createInt32Scalar( pStim->xy.nChoices ) );
-         mxSetField( pMXParms, 0, "fAngle", mxCreateDoubleScalar( pStim->xy.fAngle ) );
-         mxSetField( pMXParms, 0, "fVel", mxCreateDoubleScalar( pStim->xy.fVel ) );
-         mxSetField( pMXParms, 0, "fOffsetV", mxCreateDoubleScalar( pStim->xy.fOffsetV ) );
-      }
-      else if( pStim->iType == psgmType )
-      {
-         pMXParms = mxCreateStructMatrix( 1, 1, NUMSGMFIELDS, sgmFields );
-         if( pMXParms == NULL ) return;
-         mxSetField( pMXParms, 0, "iOpMode", createInt32Scalar( pStim->sgm.iOpMode ) );
-         mxSetField( pMXParms, 0, "bExtTrig", createUInt32Scalar( (DWORD) pStim->sgm.bExtTrig ) );
-         mxSetField( pMXParms, 0, "iAmp1", createInt32Scalar( pStim->sgm.iAmp1 ) );
-         mxSetField( pMXParms, 0, "iAmp2", createInt32Scalar( pStim->sgm.iAmp2 ) );
-         mxSetField( pMXParms, 0, "iPW1", createInt32Scalar( pStim->sgm.iPW1 ) );
-         mxSetField( pMXParms, 0, "iPW2", createInt32Scalar( pStim->sgm.iPW2 ) );
-         mxSetField( pMXParms, 0, "iPulseIntv", createInt32Scalar( pStim->sgm.iPulseIntv ) );
-         mxSetField( pMXParms, 0, "iTrainIntv", createInt32Scalar( pStim->sgm.iTrainIntv ) );
-         mxSetField( pMXParms, 0, "nPulses", createInt32Scalar( pStim->sgm.nPulses ) );
-         mxSetField( pMXParms, 0, "nTrains", createInt32Scalar( pStim->sgm.nTrains ) );
-      }
-      else if( pStim->iStdMode == MODE_ISSINE )
-      {
-         pMXParms = mxCreateStructMatrix( 1, 1, NUMSINEFIELDS, sineFields );
-         if( pMXParms == NULL ) return;
-         mxSetField( pMXParms, 0, "iPeriod", createInt32Scalar( pStim->sine.iPeriod ) );
-         mxSetField( pMXParms, 0, "fAmp", mxCreateDoubleScalar( pStim->sine.fAmp ) );
-         mxSetField( pMXParms, 0, "fPhase", mxCreateDoubleScalar( pStim->sine.fPhase ) );
-         mxSetField( pMXParms, 0, "fDirec", mxCreateDoubleScalar( pStim->sine.fDirec ) );
-      }
-      else if( pStim->iStdMode == MODE_ISPULSE )
-      {
-         pMXParms = mxCreateStructMatrix( 1, 1, NUMPULSEFIELDS, pulseFields );
-         if( pMXParms == NULL ) return;
-         mxSetField( pMXParms, 0, "bBlank", createUInt32Scalar( (DWORD) pStim->pulse.bBlank ) );
-         mxSetField( pMXParms, 0, "iPulseDur", createInt32Scalar( pStim->pulse.iPulseDur ) );
-         mxSetField( pMXParms, 0, "iRampDur", createInt32Scalar( pStim->pulse.iRampDur ) );
-         mxSetField( pMXParms, 0, "fAmp", mxCreateDoubleScalar( pStim->pulse.fAmp ) );
-         mxSetField( pMXParms, 0, "fDirec", mxCreateDoubleScalar( pStim->pulse.fDirec ) );
-      }
-
-      mxSetField( pMXStims, i, "params", pMXParms );
-   }
-
 }
 
 
@@ -3961,6 +3707,9 @@ BOOL shouldAdjustPatternMotionDuringVStab(int pos)
 //    As of 7/22/08, output field 'psgm' is initialized IAW PSGM sequence parameters gleaned from trial code group
 //    PSGM_TC. Retroactive to data file version 10, app v2.1.1 -- even though the PSGM hardware was only recently
 //    installed in a lab rig.
+//       [20nov2024] The PSGM module was never used successfully and has been abandoned. Maestro 5.0.2 dropped 
+//       support for the PSGM entirely and no longer uses the PSGM_TC trial code group. Since the PSGM was never
+//       really used, the 'psgm' field has been eliminated.
 //
 //    13apr2011-May2011: BUG FIXES AND OTHER CHANGES
 //    1) In April 2011 we uncovered problems with the implementation of the XYScope NOISYDIR and NOISYSPEED targets. We
@@ -4083,8 +3832,6 @@ BOOL processTrialCodes( mxArray* pOut )
    double* pdPatVelV;                        //
    double* pdTgtIDs;                         // ptr to MATLAB array holding old-style tgt IDs
    mxArray* pMXTraj;                         // ptr to MATLAB structure array holding trial tgt trajectory data
-   
-   mxArray* pMXPSGM;                         // ptr to MATLAB structure array holding trial's PSGM parameters
    
    mxArray* pMXOnEpochs;                     // ptr to MATLAB cell array holding target ON epochs [on1 off1 on2 off2 ...]
    mxArray* pMXEpochTimes;                   // ptr to MATLAB vector holding target ON epoch times for one target
@@ -4564,26 +4311,9 @@ BOOL processTrialCodes( mxArray* pOut )
             i += 3;
             break;
 
-         case PSGM_TC :                                                 //    N = 6; as of data file v>=10, we save
-            if(cxData.fileHdr.version >= 10)                            //    PSGM seq params in an output field. No
-            {                                                           //     effect on target motion.
-               pMXPSGM = mxCreateStructMatrix(1, 1, NUMSGMFIELDS, sgmFields);
-               if(pMXPSGM != NULL)
-               {
-                  mxSetField(pMXPSGM, 0, "tStart", createInt32Scalar(cxData.pCodes[i].time));
-                  mxSetField(pMXPSGM, 0, "iOpMode", createInt32Scalar(cxData.pCodes[i+1].code) ); 
-                  mxSetField(pMXPSGM, 0, "bExtTrig", createUInt32Scalar((DWORD) cxData.pCodes[i+1].time) ); 
-                  mxSetField(pMXPSGM, 0, "iAmp1", createInt32Scalar((int) cxData.pCodes[i+2].code) ); 
-                  mxSetField(pMXPSGM, 0, "iAmp2", createInt32Scalar((int) cxData.pCodes[i+2].time) );
-                  mxSetField(pMXPSGM, 0, "iPW1", createInt32Scalar((int) cxData.pCodes[i+3].code) );
-                  mxSetField(pMXPSGM, 0, "iPW2", createInt32Scalar((int) cxData.pCodes[i+3].time) );
-                  mxSetField(pMXPSGM, 0, "iPulseIntv", createInt32Scalar((int) cxData.pCodes[i+4].code) );
-                  mxSetField(pMXPSGM, 0, "iTrainIntv", createInt32Scalar((int) cxData.pCodes[i+4].time) );
-                  mxSetField(pMXPSGM, 0, "nPulses", createInt32Scalar((int) cxData.pCodes[i+5].code) );
-                  mxSetField(pMXPSGM, 0, "nTrains", createInt32Scalar((int) cxData.pCodes[i+5].time) );
-                  mxSetField(pOut, 0, "psgm", pMXPSGM);
-               }
-            }
+         // the PSGM was never really used and was removed from Maestro in V5.0.2. Deleted output field 'psgm'..
+         // regardless, this trial code has no effect on target motion.
+         case PSGM_TC : 
             i += 6;
             break;
 

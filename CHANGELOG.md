@@ -20,20 +20,24 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
-## 18-19 Nov 2024: Dropped support for the PSGM
-- The Pulse Stimulus Generator Module (PSGM), design back in 2007, was another "latched device" controlled by Maestro's
+## 18-20 Nov 2024: Dropped support for the PSGM
+- The Pulse Stimulus Generator Module (PSGM), designed back in 2007, was another "latched device" controlled by Maestro's
 16 digital outputs. It was intended to drive a Grass stimulator to deliver electrical pulses to the brain during a trial
-or Cont-mode stimulus run. However, after initial testing, the PSGM project was abandoned and has been a vestigial part
-of Maestro for many years.
-- With the PSGM (and XYseq) gone, the only remaining "stimulus channel" type in a Cont-mode run is "Chair". Given that no 
-labs are using the animal chair AFAIK, also dropped support for writing stimulus run definitions in the Maestro data file.
-Note that readcxdata() and JMWork have never supported digesting these "stimulus run records" anyway. Very minor data file
-format change; data file version incremented to 25.
+or Continuous-mode "stimulus run". However, after initial testing, the PSGM project was abandoned and has been a vestigial 
+part of Maestro for many years.
+- With the PSGM (and XYseq) gone, the only remaining "stimulus channel" type in a stimulus run is "Chair". Given that no 
+labs are using the animal chair AFAIK, I also dropped support for writing stimulus run definitions in the Maestro data file.
+Note that `readcxdata()` and **JMWork** have never supported digesting these "stimulus run records" anyway. Very minor data 
+file format change; data file version incremented to 25.
 - The **Trial Editor** now only contains two tab pages above the segment table: the **Main** tab is unchanged, while the
 **Perturbations/RVs** tab houses two grids displaying the trial's perturbations and random variables. The PSGM-related
 widgets, formerly on the same tab with the perturbations list, have been removed.
-- Existing experiment documents (.cxe) are migrated silently. PSGM parameters stored in a trial object are simply read
+- Existing experiment documents (`.cxe`) are migrated silently. PSGM parameters stored in a trial object are simply read
 in and discarded; similarly for stimulus run channels that used the channel type "PSGM".
+- Matlab utility `readcxdata()` updated to accept data files with version 25. In addition, since the PSGM was never really 
+used and since `readcxdata()` never reported stimulus run definitions in its output (an unfixed bug), the output fields 
+`stimulusrun` and `psgm` have been removed. The utility simply skips over stimulus run records (if any) and the trial 
+code group `PSGM_TC` that contains PSGM parameters.
 
 ## 13-14 Nov 2024: Cosmetic changes.
 - On the **Random Variables** tab of the **Trial Editor**, the parameter labels in the grid's header row are updated

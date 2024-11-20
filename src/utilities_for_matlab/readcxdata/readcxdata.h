@@ -193,9 +193,11 @@ typedef struct tagCxDataFile
    BOOL bSkipOccurred;                          //    if TRUE, then trial included a "skip on saccade" op -- in which
                                                 //    case the trial times here may be incorrect!
 
-   int nStims;                                  // relevant stimulus run defn found in data file.  only in ContMode
-   int nStimsBufSz;                             // files with version >= 2.  first CXFILESTIM_U obj in buffer contains
-   CXFILESTIM_U* pStimBuf;                      // header params for run, remaining ones are stim channel defns.
+   // [20nov2024] Dropped support for reading CX_STIMRUNRECORDS -- regardless the data file version. READCXDATA was
+   // never able to report stimulus run definitions in the output (technical issue with Matlab structs).
+   // int nStims;                                  // relevant stimulus run defn found in data file.  only in ContMode
+   // int nStimsBufSz;                             // files with version >= 2.  first CXFILESTIM_U obj in buffer contains
+   // CXFILESTIM_U* pStimBuf;                      // header params for run, remaining ones are stim channel defns.
 
 } CXFILEDATA, *PCXFILEDATA;
 
@@ -230,7 +232,7 @@ const char* outputFields[] =  // the MATLAB-compatible output structure returned
 
                               // available for Maestro data files with version >= 2...
    "tgtdefns",                //    defining parameters of relevant targets (see below)
-   "stimulusrun",             //    ContMode stimulus run defined when recording started (see below)
+   // "stimulusrun",          //    [REMOVED 20nov2024] ContMode stimulus run defined when recording started
    "spikewave",               //    sampled data from AI<15>, dedicated to 25KHz recording of spike waveform
 
    "sortedSpikes",            //    "sorted spike trains", a 1x200 cell array containing sorted spike trains culled
@@ -252,14 +254,14 @@ const char* outputFields[] =  // the MATLAB-compatible output structure returned
 
 
                               // available for Maestro data files with version >= 10...
-   "psgm",                    //    parameter of a PSGM sequence delivered during a Maestro trial (see below).
+   // "psgm",                 //    [REMOVED 20nov2024] parameter of a PSGM sequence delivered during a Maestro trial
    
    "trialInfo",               // additional info about a trial: #segments, seg start times, etcetera
    
-   "xynoisy",                 // results from emulating XYScope OR RMVideonoisy-dots targets during a trial; available 
+   "xynoisy",                 // results from emulating XYScope OR RMVideo noisy-dots targets during a trial; available 
    "xynoisytimes"             //    for Maestro data file w/version >= 12. See NOISYEM.H.
 };
-const int NUMOUTFIELDS = 24;  // the # of fields in the output structure
+const int NUMOUTFIELDS = 22;  // the # of fields in the output structure
 
 const char* headerFields[] =  // defines MATLAB structure mirroring the contents of the data file header record (the
 {                             // field names are the same as corresponding members of the CXFILEHDR structure 
@@ -390,6 +392,7 @@ const char *rmvTgtParams[] =  // defining parameters for a Maestro RMVideo targe
 };
 const int NUMRMVTGTPARMS = 25;
 
+/* [20nov2024] Eliminated the output fields 'stimulusrun' and ''psgm'.
 const char *runFields[] =     // stimulus run definition extracted from Maestro data files
 {
    "bRunning",                //    was stimulus run in progress when recording started?
@@ -460,6 +463,8 @@ const char *pulseFields[] =   // parameters specific for trapezoidal pulse stimu
    "fDirec"                   //    direction of motion, CCW angle from x-axis [-180.0..180.0]
 };
 const int NUMPULSEFIELDS = 5;
+*/
+
 
 const char *tagSectFields[] = // information provided for each tagged section defined on a Maestro trial:
 {

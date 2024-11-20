@@ -107,6 +107,11 @@
 // 05nov2024 -- Update to sync with changes in CXFILEFMT.H for Maestro v4.2.0 (data file version = 24). Added header 
 // flag CXHF_ST_2GOAL. NOTE that the XYScope display was dropped entirely for Maestro 5.0 (Oct 2024), but there were
 // no changes to CXFILEFMT.H, and we left the data file version at 24.
+// 19nov2024 -- Update to sync with changes in CXFILEFMT.H for Maestro v5.0.2 (data file version = 25). As of that
+// version, Maestro no longer writes stimulus run records (id = CX_STIMRUNRECORD). The typedefs for CX_FILESTIM_U
+// and CXFILESTIMRUNHDR have been REMOVED. ***Because READCXDATA was never able to report stimulus run definitions in
+// its output, I elected to remove those typedefs here as well. READCXDATA will be modified to simply skip any data
+// file record with id==CX_STIMRUNRECORD, regardles the data file version.***
 //=====================================================================================================================
 
 #if !defined(CXFILEFMT_MEX_H__INCLUDED_)
@@ -132,7 +137,7 @@
 #define CXH_NAME_SZ              40                   // max length of names in header, including terminating null char
 #define CXH_MAXAI                16                   // max # of AI channels that can be recorded
 #define CXH_EXTRAS               308                  // # of unused shorts in header record
-#define CXH_CURRENTVERSION       24                   // the current version # (as of Maestro version 4.2.0)
+#define CXH_CURRENTVERSION       25                   // the current version # (as of Maestro version 5.0.2)
 
 #define CXH_RMVDUPEVTSZ          6                    // [V>=22] array size for RMVideo duplicate frame event info
 
@@ -379,7 +384,7 @@ typedef struct tagCxFileHdr
 //    the old structure definitions CXTARGET_V22 and CXFILETGT_V22. These definitions depend on deprecated types 
 //    RMVTGTDEF_V22 (located in rmvideo_common.h) and U_TGPARMS_V22 (in cxobj_ifc.h).
 //
-//    5) Stimulus run definition (record tag 66). [VERSION >= 2]  A ContMode "stimulus run" is defined by some general
+//    5) Stimulus run definition (record tag 66). [2 <= VERSION < 25]  A ContMode "stimulus run" is defined by some 
 //    header parameters, a series of STIMCHAN channels (not all of which may be turned on), and a set of XY scope tgts
 //    participating in the run's XYseq stimulus channel (if there is one).  The XYseq target set is reported in the
 //    target definition record(s), as described above.  The stimulus run header, along with the defns of those stimulus
@@ -394,6 +399,10 @@ typedef struct tagCxFileHdr
 //       !!! because, in typical usage, Maestro will "preload" the stimulus run, then start recording, then start the
 //       !!! previously loaded run!  We include a flag that indicates whether or not the currently efined run is
 //       !!! actually in progress.
+//
+//    As of file version 25 (Maestro 5.0.2), stimulus run definitions are no longer written to the data file. The
+//    stimulus run feature is rarely if ever used, and the only remaining stimulus channel type available at this
+//    point uses the animal chair -- which may not even be available any more AFAIK.
 //
 //    6) Compressed spike trace data (record tag 67). [VERSION >= 2] Maestro dedicates a single channel to record the
 //    raw electrode signal from which "spikes" (or "units", aka action potentials) are extracted.  The channel is
@@ -426,7 +435,15 @@ typedef struct tagCxFileHdr
 #define CX_SPIKESORTREC_LAST     ((BYTE)57)           //
 #define CX_V1TGTRECORD           ((BYTE)64)           // record tag for tgt defn/stim run record for file vers <= 1
 #define CX_TGTRECORD             ((BYTE)65)           // record tag for target definitions
+
+// [deprecated a/o V=25] record tag for stimulus run definition. Support for writing the stimulus run record to the 
+// Maestro data file was removed in Maestro 5.0.2. Cont-mode is rarely used, and now the only available stimulus channel
+// type is "Chair", which also may no longer be in use in any current experiment rigs.
+// While no longer defined in Maestro code base, it is still defined here so that READCXDATA can detect and merely
+// SKIP over all such records in the data file. READCXDATA has never been able to report stimulus run definitions in
+// its output, and stimulus runs are a rarely-if-ever used feature of Maestro...
 #define CX_STIMRUNRECORD         ((BYTE)66)           // record tag for stimulus run definition
+
 #define CX_SPIKEWAVERECORD       ((BYTE)67)           // record tag for compressed, 25KHz-sampled spike trace
 #define CX_TAGSECTRECORD         ((BYTE)68)           // record tag for trial tagged section record
 
@@ -520,7 +537,7 @@ typedef struct tagCxFileTgtRec_V22
 #define CX_RECORDTARGETS_V22    (CX_RECORDBYTES/sizeof(CXFILETGT_V22))
 
 
-
+/* [deprecated a/o file version 25, Maestro 5.0.2]
 typedef struct tagCxFileStimRunHdr                    // persistent storage format for header information describing
 {                                                     // a ContMode stimulus run:
    BOOL     bRunning;                                 //    was stimulus run in progress when recording started?
@@ -540,7 +557,7 @@ typedef union tagCxFileStimRun                        // persistent storage form
 } CXFILESTIM_U, *PCXFILESTIM_U;
 
 #define CX_RECORDSTIMS           (CX_RECORDBYTES/sizeof(CXFILESTIM_U))
-
+*/
 
 typedef struct tagCxFileRec                           // generic format for Maestro file data/info records
 {
@@ -556,7 +573,7 @@ typedef struct tagCxFileRec                           // generic format for Maes
       CXFILETGT_V7 tgtsV7[CX_RECORDTARGETS_V7];       //    for CX_TGTRECORD, v < 8
       CXFILETGT_V12 tgtsV12[CX_RECORDTARGETS_V12];    //    for CX_TGTRECORD, v = [8..12]
       CXFILETGT_V22 tgtsV22[CX_RECORDTARGETS_V22];    //    for CX_TGTRECORD, v = [13..22]
-      CXFILESTIM_U stims[CX_RECORDSTIMS];             //    for CX_STIMRUNRECORD
+      // CXFILESTIM_U stims[CX_RECORDSTIMS];          //    [deprecated a/o v=25] for CX_STIMRUNRECORD
    } u;
 } CXFILEREC, *PCXFILEREC;
 
