@@ -20,6 +20,16 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
+## 02-03 Dec 2024: New special feature `findAndWait`.
+- Like `searchTask`, this special feature requires 2 or more targets turned on in the special segment, which must be the last 
+trial segment. In addition, a target is "found" during the special segment when the subject's eye is within the fixation
+window (**H,V Fixation Accuracy**) of that target for `D` consecutive milliseconds, where `D` is defined by the **Grace Period**
+for the special segment. Unlike the `searchTask` feature, when any target is selected: (1) ALL targets are turned off for the 
+remainder of the trial, which runs to completion while the animal "waits"; (2) a reward (reward pulse 1) is delivered immediately
+if the "correct target" was chosen; (3) regardless, NO reward is delivered at trial's end. The correct target is designated as
+**Fixation Target #1** during the special segment.
+- `maestrodoc()` (v1.2.3) was updated to support specifying a trial that uses the `findAndWait` special feature.
+
 ## 18-20 Nov 2024: Dropped support for the PSGM
 - The Pulse Stimulus Generator Module (PSGM), designed back in 2007, was another "latched device" controlled by Maestro's
 16 digital outputs. It was intended to drive a Grass stimulator to deliver electrical pulses to the brain during a trial

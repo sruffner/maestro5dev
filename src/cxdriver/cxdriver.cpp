@@ -193,6 +193,7 @@
  testing a prototype). (2) Writing stimulus run definitions into the data file. Stimulus runs are rarely if ever used,
  and now that XYScope and PSGM support are dropped, the only available stimulus channel type uses the animal chair,
  which may not be available in any active rigs!
+ 02dec2024-- Implemented new special op "findAndWait" -- see ExecuteSingleTrial().
 ========================================================================================================================
 */
 
@@ -1729,6 +1730,10 @@ VOID RTFCNDCL CCxDriver::RunTrialMode()
  duration is used, so CXDRIVER must adjust the elapsed start times for all remaining segments if Fix1 gets selected!
  If Fix2 is selected, then no adjustment is needed.
 
+ 14) (02dec2024) Added new special op "findAndWait". Similar to "searchTask", except that upon target selection: (a) The
+ reward pulse 1 is delivered immediately if the "correct" target (designated as Fix1) is chosen. (b) ALL targets are
+ turned off, the trial runs to completion, and NO reward is delivered at trial's end. The special segment is ALWAYS the
+ last segment of the trial when this special op is in effect.
 
  @returns The trial result (some combination of IPC flag bits (CX_FT_DONE, etc.).
 ======================================================================================================================*/
@@ -1761,6 +1766,7 @@ const DWORD T_RPDPASS   = ((DWORD) (1<<25)); // for "R/P Distro": set flag if be
 const DWORD T_ST_2GOAL  = ((DWORD) (1<<26)); // "search task" op has 2 goal targets, Fix1 and Fix2.
 const DWORD T_ISSELDUR = ((DWORD)(1 << 27)); // the special op in effect is "selDurByFix".
 const DWORD T_ISFIX    = T_ISFIX1 | T_ISFIX2 | T_ISSELDUR; // mask for the "sel*ByFix*" variants
+const DWORD T_ISFINDW   = ((DWORD)(1 << 28)); // the special op in effect is "findAndWait".
 
 DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
 {
@@ -1925,7 +1931,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    float fRPDWindow[4]; 
    for(i=0; i<4; i++) fRPDWindow[i] = 0.0f;  
 
-   // "selDurByFix" only: the min and maxx durations of the segment AFTER the special segment (SEGDURS trial code)
+   // "selDurByFix" only: the min and max durations of the segment AFTER the special segment (SEGDURS trial code)
    int selectSegDurMin = 0;
    int selectSegDurMax = 0;
 
@@ -2233,6 +2239,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                }
                else if(i == SPECIAL_SEARCH) dwFlags |= T_ISSEARCH;
                else if(i == SPECIAL_SELDURBYFIX) dwFlags |= T_ISSELDUR;
+               else if(i == SPECIAL_FINDANDWAIT) dwFlags |= T_ISFINDW;
                
                // saccade threshold velocity in deg/sec. Use absolute value and convert to raw ADC code
                iSaccThresh = tc.time; 
@@ -2445,18 +2452,18 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
    CFPoint posDelta1_SBF2; 
    CFPoint posDelta2_SBF2; 
 
-   // "searchTask" only: tgt index currently "fixated" (-1 if none), fixation duration, fixation duration required to
-   // satisfy task, final result, search bounds
+   // "searchTask" and "findAndWait" only: tgt index currently "fixated" (-1 if none), fixation duration, fixation 
+   // duration required to indicate tgt was selected, final result, search bounds
    int iSearchTgt = -1;
    int iSearchDur = 0;
    int iSearchReqDur = 0;
    DWORD dwSearchRes = 0;
    CFPoint searchBounds;
-   if(dwFlags & T_ISSEARCH)
+   if(dwFlags & (T_ISSEARCH|T_ISFINDW))
    {
-      // if Fix2 target defined and ON, then it's a 2-goal search task. Fix1 must be defined and ON (enforced by UI).
+      // a "searchTask" with Fix2 target defined and ON is a 2-goal search task. 
       int iFix2 = m_seg[iSaccSeg].iCurrFix2;
-      if((iFix2 > -1) && ((m_seg[iSaccSeg].tgtFlags[iFix2] & TF_TGTON) != 0))
+      if((dwFlags & T_ISSEARCH) && (iFix2 > -1) && ((m_seg[iSaccSeg].tgtFlags[iFix2] & TF_TGTON) != 0))
          dwFlags |= T_ST_2GOAL;
 
       // set the search boundaries to the size of the video display on which the sought-for target is shown.
@@ -2474,7 +2481,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
       // the search task. Here we get the value for that duration.
       iSearchReqDur = m_seg[iSaccSeg].tGrace - m_seg[iSaccSeg].tStart;
    }
-   
+
    // fixation check information: #consecutive ticks fixation is broken, curr pos of 2 eyes in degrees (init: 0.0).
    // NOTE that 2nd eye position (HGPOS2, VEPOS2) is only used when the Eyelink is in use in binocular mode, but ONLY
    // if none of the "special segment operations" -- other than "searchTask" -- are in use. This permits a stereo 
@@ -2828,7 +2835,7 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
          if(iCurrSeg == iSaveSeg)  pTimer->Start();
 
          // start or end of special segment. Enable saccade checking at start. More work to do at segment's end...
-         if(iCurrSeg == iSaccSeg && ((dwFlags & (T_ISSWFIX|T_ISCHFIX|T_ISSEARCH))==0))
+         if(iCurrSeg == iSaccSeg && ((dwFlags & (T_ISSWFIX|T_ISCHFIX|T_ISSEARCH|T_ISFINDW))==0))
             dwFlags |= T_CHECKSACC;
          else if(iCurrSeg == iSaccSeg+1)
          { 
@@ -2836,8 +2843,8 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
             dwFlags &= ~T_CHECKSACC; 
             dwFlags &= ~T_INSACCADE;
             
-            // "searchTask" trial ALWAYS stops at the end of the special segment.
-            if(dwFlags & T_ISSEARCH) 
+            // "searchTask" or "findAndWait" trial ALWAYS stops at the end of the special segment.
+            if(dwFlags & (T_ISSEARCH|T_ISFINDW)) 
                break; 
             // for "selByFix*/selDurByFix" ops, select nearest target if no target has been selected yet.
             else if((dwFlags & T_ISFIX) && !(dwFlags & T_SELECTED)) 
@@ -3091,9 +3098,10 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
          pTraj->vel -= pTraj->pertVelDelta;
          pTraj->patVel -= pTraj->pertPatVelDelta;
          
-         // for search task, we want to ignore targets that are turned OFF during the search segment. Note that we do
-         // NOT use CTrialTraj for the target's ON state, since this will be looking ahead for RMVideo targets!
-         if((dwFlags & T_ISSEARCH) && (iCurrSeg == iSaccSeg) && (pSeg->tStart == nTrialTime))
+         // for "searchTask" and "findAndWait" special ops, we want to ignore targets that are turned OFF during the 
+         // special segment. Note that we do NOT use CTrialTraj for the target's ON state, since this will be looking 
+         // ahead for RMVideo targets!
+         if((dwFlags & (T_ISSEARCH|T_ISFINDW)) && (iCurrSeg == iSaccSeg) && (pSeg->tStart == nTrialTime))
             pTraj->bIsOnForSearch = (pSeg->tgtFlags[i] & TF_TGTON) != 0;
       }
       //
@@ -3145,6 +3153,17 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
       {
          pTraj = &(m_traj[nUnselectedTgt]);
          if(pTraj->wType == CX_RMVTARG) m_RMVUpdVecs[iRMVFrameSlot*nRMVTgts + pTraj->iUpdatePos].bOn = 0;
+      }
+
+      // if a target has been selected during the special segment of a "findAndWait" op, turn off ALL targets for the
+      // remainder of the trial (the special seg will be the last seg for this op).
+      if((dwFlags & T_ISFINDW) && (dwSearchRes != 0))
+      {
+         for(i = 0; i < nTgs; i++)
+         {
+            pTraj = &(m_traj[i]);
+            if(pTraj->wType == CX_RMVTARG) m_RMVUpdVecs[iRMVFrameSlot * nRMVTgts + pTraj->iUpdatePos].bOn = 0;
+         }
       }
 
       // at start of each RMVideo frame N, send target motion vectors for frame N+2. ABORT if update fails. Also abort
@@ -3268,8 +3287,8 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
          if(i == pSeg->iCurrFix2) fix2PosCurr = (pTraj->wType==CX_RMVTARG) ? pTraj->posRMVCurr : pTraj->pos;
       }
 
-      // "searchTask" op: Standard fixation checking disabled throughout the special segment. Instead, we look for
-      // eye to stay on a target for N contiguous ticks, where N is the grace period for the special segment....
+      // "searchTask" op: Standard fixation checking disabled throughout the special segment. Instead, we look for eye 
+      // to stay on a target for N contiguous ticks, where N is the grace period for the special segment....
       if((iCurrSeg == iSaccSeg) && (dwFlags & T_ISSEARCH))
       {
          // if eye was "fixating" a tgt during previous tick..
@@ -3331,7 +3350,76 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
                dwFlags |= T_SOUGHT;
          }
       }
-      
+
+      // "findAndWait" op: Standard fixation checking disabled throughout the special segment. Instead, we look for eye 
+      // to stay on a target for N contiguous ticks, where N is the grace period for the special segment. Once ANY target
+      // is selected, ALL targets are turned off for the remainder of the segment, and we don't check eye position
+      // any more...
+      else if((iCurrSeg == iSaccSeg) && (dwFlags & T_ISFINDW))
+      {
+         if(dwSearchRes == 0)   // so we don't check any more once a target is "found"!
+         {
+            // if eye was "fixating" a tgt during previous tick..
+            if(iSearchTgt > -1)
+            {
+               // if it is still close enough to the same tgt, increment ticks elapsed. If not, reset. If eye has
+               // fixated the same tgt for the required duration, then that target is "found"
+               pTraj = &(m_traj[iSearchTgt]);
+               fPt1 = (pTraj->wType == CX_RMVTARG) ? pTraj->posRMVCurr : pTraj->pos;
+               if(currEyePos.IsNear(fPt1, pSeg->fpFixAcc))
+               {
+                  ++iSearchDur;
+                  if(iSearchDur >= iSearchReqDur)
+                  {
+                     // target FOUND! If correct target (fix1) found, deliver reward pulse #1 IMMEDIATELY.
+                     if(iSearchTgt == pSeg->iCurrFix1)
+                     {
+                        dwSearchRes = CXHF_ST_OK;
+                        if(pTimer->DeliverReward(m_fixRewSettings.iWHVR, nRewPulse1, m_fixRewSettings.iAudioRewLen))
+                        {
+                           m_masterIO.IncrementNumRewards();
+                           m_masterIO.AccumulateRewardPulse(nRewPulse1);
+                           if(m_fixRewSettings.bPlayBeep) m_masterIO.Message("beep");
+                        }
+                     }
+                     else
+                        dwSearchRes = CXHF_ST_DISTRACTED;
+
+                     // NOTE: Setting dwSearchRes to a nonzero value will ensure all RMVideo targets are turned off in all
+                     // future frames (though nothing can be done about the frame updates already queued to RMVideo). See
+                     // code in previous section "UPDATE TARGET MOTION/STATE ON HARDWARE".
+                  }
+               }
+               else
+               {
+                  iSearchTgt = -1;
+                  iSearchDur = 0;
+               }
+            }
+
+            // if eye is not still "on" a target, scan all targets to see if one is close enough. If more than one is
+            // close enough, choose the "closest". Do NOT check targets that are turned OFF.
+            if(iSearchTgt == -1)
+            {
+               float minDistSq = 40000.0f;
+               for(i = 0; i < nTgs; i++)
+               {
+                  pTraj = &(m_traj[i]);
+                  fPt1 = (pTraj->wType == CX_RMVTARG) ? pTraj->posRMVCurr : pTraj->pos;
+                  if(pTraj->bIsOnForSearch && currEyePos.IsNear(fPt1, pSeg->fpFixAcc))
+                  {
+                     float dSq = currEyePos.DistSquared(fPt1);
+                     if(dSq < minDistSq)
+                     {
+                        iSearchTgt = i;
+                        minDistSq = dSq;
+                     }
+                  }
+               }
+            }
+         }
+      }
+
       // if we're in a "chooseFix" segment and the correct target has not yet been selected, see if the eye is now
       // close enough. If so, deliver reward pulse 2, deliver marker on DOUT6, and turn off the other target.
       else if((dwFlags & T_ISCHFIX) && (iCurrSeg == iSaccSeg) && !(dwFlags & T_SELECTED))
@@ -3650,6 +3738,11 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
          if((dwSearchRes == 0) || ((dwFlags & T_ST_2GOAL) && (dwSearchRes == CXHF_ST_DISTRACTED)))
             dwTrialRes |= CX_FT_LOSTFIX;
       }
+
+      // for "findAndWait" trials only, NO reward is ever delivered at trial's end. Here we set the "lost fix" flag
+      // so that a reward is not delivered below.
+      if((dwFlags & T_ISFINDW) != 0)
+         dwTrialRes |= CX_FT_LOSTFIX;
    }
 
    // reward animal if fixation was not broken AND no runtime error occurred AND the trial was not aborted.
@@ -3692,6 +3785,11 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
       if((dwFlags & T_SOUGHT) || ((dwFlags & T_ST_2GOAL) && (dwSearchRes == CXHF_ST_DISTRACTED)))
          dwTrialRes &= ~CX_FT_LOSTFIX;
    }
+
+   // for a "findAndWait" trial, we NEVER deliver a reward at trial's end. If a target was selected, we need to
+   // clear the "lost fix" flag that was set above to deny the reward. If no target was selected, we leave it set.
+   if((dwFlags & T_ISFINDW) && (dwTrialRes & CX_FT_LOSTFIX) && (dwSearchRes != 0))
+      dwTrialRes &= ~CX_FT_LOSTFIX;
 
    // char codes tell external system if animal broke fixation or if trial was aborted by user or stopped
    // prematurely on a runtime error
@@ -3840,8 +3938,9 @@ DWORD RTFCNDCL CCxDriver::ExecuteSingleTrial()
       if((dwFlags & T_ISSWFIX) && iCurrSeg > iSaccSeg) 
          m_Header.flags |= (bSwitchToFix1 ? CXHF_FIX2SELECTED : CXHF_FIX1SELECTED);
 
-      // for "searchTask" op, set appropriate flags and selected target index
-      if(dwFlags & T_ISSEARCH) 
+      // for "searchTask" and "findAndWait" ops, set appropriate flags and selected target index. Note that, for
+      // "findAndWait" the correct target is always Fix1. For the 2-goal searchTask, it could be Fix1 or Fix2.
+      if(dwFlags & (T_ISSEARCH|T_ISFINDW)) 
       {
          m_Header.flags |= (CXHF_ISSEARCHTSK | dwSearchRes);
          if(dwFlags & T_ST_2GOAL) m_Header.flags |= CXHF_ST_2GOAL;

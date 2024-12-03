@@ -118,7 +118,8 @@ private:
                                                    //       this helps us pick the best hardware implementation of tgt!
       BOOL     bIsDotLifeInMS;                     //    [FCDOTLIFE only] TRUE if dot life units are millisecs
 
-      BOOL     bIsOnForSearch;                     //    TRUE iff target is ON during special seg of "searchTask" op
+      BOOL     bIsOnForSearch;                     //    TRUE iff target is ON during special seg of "searchTask" OR
+                                                   //    "findAndWait" op
       
       // for RMVideo targets, 'pos' actually represents the target's position two video frames AFTER the current trial
       // time, because we must send the trajectory data for frame N+2 at the beginning of frame N. Since target pos is

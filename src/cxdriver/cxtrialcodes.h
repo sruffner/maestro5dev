@@ -79,6 +79,7 @@
 // 04nov2024-- New special feature "selDurByFix": added SPECIAL_SELDURBYFIX and new trial code SEGDURS.
 // 18nov2024-- Maestro 5.0.2 dropped support for pulse stimulus generator module (PSGM). It no longer sends the PSGM_TC
 // trial code, nor does CXDRIVER recognize that code.
+// 02dec2024-- New special feature "findAndWait": added constant SPECIAL_FINDANDWAIT.
 //=====================================================================================================================
 
 #if !defined(CXTRIALCODES_H__INCLUDED_)
@@ -220,6 +221,7 @@ const double d_TC_SLOSCALE2      = 100.0;
 #define     SPECIAL_CHOOSEFIX2   7     //    [04jan2007] optype = "choose fixation tgt #2"
 #define     SPECIAL_SEARCH       8     //    [01feb2011] optype = "search task"
 #define     SPECIAL_SELDURBYFIX  9     //    [31oct2024] optype = "selDurByFix"
+#define     SPECIAL_FINDANDWAIT  10    //    [02dec2024] optype = "findAndWait"
 
 // [20may2019] Effective Maestro 4.1.0, reward pulse 1 or 2 may be randomly withheld. When a reward is to be
 // withheld, the pulse length is set to 0!

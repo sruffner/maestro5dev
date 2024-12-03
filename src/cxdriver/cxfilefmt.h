@@ -293,11 +293,14 @@ const DWORD CXHF_HASTAGSECTS     = ((DWORD) (1<<7));  //    [T] if set, trial ha
 const DWORD CXHF_ISRPDISTRO      = ((DWORD) (1<<8));  //    [T, V>=6] if set, trial used the "R/P Distro" op.
 const DWORD CXHF_GOTRPDRESP      = ((DWORD) (1<<9));  //    [T, V>=6] if set, then trial got past "R/P Distro" segment
 
-const DWORD CXHF_ISSEARCHTSK     = ((DWORD) (1<<10)); //    [T, V>=17] if set, trial used the "searchTask" op.
-const DWORD CXHF_ST_OK           = ((DWORD) (1<<11)); //    [T, V>=17] "searchTask" result: goal tgt selected,  
-const DWORD CXHF_ST_DISTRACTED   = ((DWORD) (1<<12)); //    distractor selected, or no tgt selected.
+// this set of flags pertain to trials with the "searchTask" or "findAndWait" special feature in effect.
+const DWORD CXHF_ISSEARCHTSK     = ((DWORD) (1<<10)); //    [T, V>=17] trial used "searchTask" or "findAndWait" 
+const DWORD CXHF_ST_OK           = ((DWORD) (1<<11)); //    [T, V>=17] task result: goal tgt selected, distractor
+const DWORD CXHF_ST_DISTRACTED   = ((DWORD) (1<<12)); //    selected, or no tgt selected.
+
 const DWORD CXHF_EYELINKUSED     = ((DWORD) (1<<13)); //    [V>=20] if set, Eyelink tracker used to monitor eye traj
 const DWORD CXHF_DUPFRAME        = ((DWORD) (1<<14)); //    [V>=22] if set, RMVideo detected 1 or more repeat frames
+
 const DWORD CXHF_ST_2GOAL        = ((DWORD) (1<<15)); //    [V>=24] if set, trial performed 2-goal "searchTask" op.
 
 typedef struct tagCxFileHdr
@@ -370,8 +373,8 @@ typedef struct tagCxFileHdr
    int iStartPosV;                  // [V>=15, T] 1000 * "global" target position vertical offset (deg)
 
    DWORD dwTrialFlags;              // [V>=16, T] Trial flag bits (copy of TRLHDR.dwFlags -- see cxobj_ifc.h)
-   int iSTSelected;                 // [V>=17, T] zero-based index of target selected during "searchTask" trial; -1
-                                    // if no target selected; 0 if this is NOT a "searchTask" trial.
+   int iSTSelected;                 // [V>=17, T] zero-based index of tgt selected during "searchTask" or "findAndWait"
+                                    // trial; -1 if no target selected. Will be 0 if neither special op was in effect.
 
    int iVStabWinLen;                // [V>=18, T] length of sliding window used to average out eye-pos noise to improve
                                     // VStab performance, in ms (ie, no. of "ticks")

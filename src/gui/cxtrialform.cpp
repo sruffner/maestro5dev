@@ -482,6 +482,7 @@
 // 19nov2024-- Dropped support for the never-used PSGM module in Maestro 5.0.2. All PSGM-related widgets removed from
 // CCxPertsPage, and the RV grid control was moved to that page. CCxRandVarsPage deleted, and CCxPertsPage renamed
 // CCxOtherPage.
+// 02dec2024-- Added support for new special op "findAndWait".
 //=====================================================================================================================
 
 
@@ -589,6 +590,7 @@ BOOL CCxMainPage::OnInitDialog()
    m_cbSpecOp.AddString(_T("chooseFix2"));
    m_cbSpecOp.AddString(_T("searchTask"));
    m_cbSpecOp.AddString(_T("selDurByFix"));
+   m_cbSpecOp.AddString(_T("findAndWait"));
 
    return(TRUE);
 }
@@ -2430,8 +2432,8 @@ VOID CCxTrialForm::StuffHdrPB( const TRLHDR& hdr, const UINT id /* = 0 */ )
 //    controls (and associated labels) are dynamically disabled/enabled based on the state of a related parameter:
 //       1) if trial type is "normal", then all staircase trial parameter widgets are disabled
 //       2) if no sacc-trig'd op is selected, then all related widgets are disabled.
-//       3) the second reward pulse length is NOT relevant to the "skipOnSacc" special op; IDC_TRH_REWP2 is disabled
-//          in this case. Also, the sacc threshold velocity does NOT apply to the "searchTask" special op.
+//       3) the second reward pulse length is NOT relevant to the "skipOnSacc" or "findAndWait" special ops; the 
+//          relevant widgets (pulse length and WHVR) are disabled in this case.
 //       4) the mid-trial reward intv widget is enabled only when the mid-trial reward mode is "periodic".
 //
 //    ARGS:       NONE
@@ -2534,10 +2536,11 @@ VOID CCxTrialForm::EnableHdrControls()
       m_mainPage.m_spinSpecial.EnableWindow( bEna );
       m_mainPage.GetDlgItem( IDC_TRH_SPECSEG, &hwnd );
       ::EnableWindow( hwnd, bEna );
-      m_mainPage.m_edSaccVt.EnableWindow( bEna );
-      m_mainPage.m_edRewP2.EnableWindow(bEna && (hdr.iSpecialOp != TH_SOP_SKIP));
-      m_mainPage.m_edWHVR2Num.EnableWindow(bEna && (hdr.iSpecialOp != TH_SOP_SKIP));
-      m_mainPage.m_edWHVR2Den.EnableWindow(bEna && (hdr.iSpecialOp != TH_SOP_SKIP));
+      m_mainPage.m_edSaccVt.EnableWindow(bEna);
+      BOOL bEnaRew2 = bEna && (hdr.iSpecialOp != TH_SOP_SKIP) && (hdr.iSpecialOp != TH_SOP_FINDWAIT);
+      m_mainPage.m_edRewP2.EnableWindow(bEnaRew2);
+      m_mainPage.m_edWHVR2Num.EnableWindow(bEnaRew2);
+      m_mainPage.m_edWHVR2Den.EnableWindow(bEnaRew2);
 
       bEna = BOOL((hdr.dwFlags & THF_MTRMODE) == 0);                    // mid-trial reward intv enabled only for
       m_mainPage.m_edMTRIntv.EnableWindow( bEna );                      // "periodic" mode

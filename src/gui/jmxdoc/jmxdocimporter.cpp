@@ -57,6 +57,7 @@
 // as optional rather than required.
 // 18nov2024-- PSGM dropped from Maestro a/o V5.0.2. Maestrodoc() v1.2.3 and later will not include the field 
 // trial.psgm. If present, the field is now ignored.
+// 02dec2024-- Added support for new special op "findAndWait". See JMXDocImporter::STR_JMXSPECIALOPS[].
 //=====================================================================================================================
 
 #include <stdafx.h>                          // standard MFC stuff
@@ -1264,7 +1265,7 @@ WORD JMXDocImporter::ImportTrialSubset(CCxDoc* pDoc, WORD wSet, JSONObject* pJSO
  * 'failsafeseg': If trial cut short because subject broke fixation, data is still saved trial reached the start of
  *    this segment. Integer in [0..#segs], where 0 => trial must finish. Default = 0.
  * 'specialop': Special feature. Recognized values: 'none', 'skip', 'selbyfix', 'selbyfix2', 'switchfix', 'rpdistro', 
- *    'choosefix1', 'choosefix2', 'search', 'selectDur'. See Maestro User's Guide for a full description. 
+ *    'choosefix1', 'choosefix2', 'search', 'selectDur', 'findAndWait'. See Maestro User's Guide for a full description. 
  *    Default = 'none'. 
  * 'specialseg': Index of segment during which special feature operation occurs. Ignored if 'specialop'=='none'.
  *    Integer in [1..#segs]. Default = 1.
@@ -2201,7 +2202,7 @@ LPCTSTR JMXDocImporter::STR_JMXTGTTYPES_RMV[] =
 /** Maps JMX trial special operation token to corresponding integer type (0-based index) as required by CCxTrial. */
 LPCTSTR JMXDocImporter::STR_JMXSPECIALOPS[] =
 {
-   "none", "skip", "selbyfix", "selbyfix2", "switchfix", "rpdistro", "choosefix1", "choosefix2", "search", "selectDur"
+   "none", "skip", "selbyfix", "selbyfix2", "switchfix", "rpdistro", "choosefix1", "choosefix2", "search", "selectDur", "findAndWait"
 };
 
 /** Maps JMX trial perturbation component token to corresponding integer type (0-based index) required by CCxTrial. */

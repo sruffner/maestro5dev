@@ -237,6 +237,7 @@
 // removed entirely in V5.0.
 // 19nov2024-- Support for the never-used PSGM module dropped in Maestro 5.0.2. PSGM_TC trial code no longer sent to
 // CXDRIVER. Updated GetTrialInfo() accordingly.
+// 02dec2024-- Updated to handle new special feature "findAndWait", which has restrictions similar to "searchTask".
 //=====================================================================================================================
 
 
@@ -944,9 +945,10 @@ WORD CCxTrialSequencer::GetChannels() const
 //       2) A "selByFix*", "chooseFix*", and "selDurByFix" trial MUST specify fixation targets 1 & 2 during the 
 //          designated special segment. The same fixation targets must be specified for all remaining segments after 
 //          the special segment.
-//       3) A "searchTask" trial must have more than one participating target, must specify fixation target 1 during
-//          the special segment, and must specify a non-zero grace period for that segment that is strictly less than
-//          the segment's minimum duration.
+//       3) A "searchTask" or "findAndWait" trial must have more than one participating target, must specify fixation 
+//          target 1 during the special segment, must specify a non-zero grace period for that segment that is strictly 
+//          less than the segment's minimum duration, and must specify the special segment as the LAST trial segment.
+//
 //
 //    Velocity stabilization (TARGET_VSTAB) can be engaged on a per-target, per-segment basis, with some restrictions:
 //       1) The RMVideo RMV_RANDOMDOTS target won't behave correctly when it has a finite dotlife expressed in 
@@ -1089,8 +1091,8 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
          }
       }
 
-      // for ops other than "skipOnSacc" and "searchTask"...
-      if(iSpecOp != TH_SOP_SKIP && iSpecOp != TH_SOP_SEARCH) 
+      // for ops other than "skipOnSacc", "searchTask", and "findAndWait" ...
+      if(iSpecOp != TH_SOP_SKIP && iSpecOp != TH_SOP_SEARCH && iSpecOp != TH_SOP_FINDWAIT)
       {
          // both fix targets must be specified during the "special segment", AND..
          j = pTrial->GetSpecialSegPos(); 
@@ -1124,15 +1126,17 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
          }
       }
       
-      // (3) for the "searchTask" op: Fix1 and positive grace period must be specified during special segment, and
-      // there must be more than 1 participating trial target.
-      if(iSpecOp == TH_SOP_SEARCH)
+      // (3) for the "searchTask" or "findAndWait" op: Fix1 and positive grace period must be specified during special 
+      // segment, grace period must be less than min duration, must be more than 1 participating trial target, and 
+      // special segment must be the last trial segment
+      if(iSpecOp == TH_SOP_SEARCH || iSpecOp == TH_SOP_FINDWAIT)
       {
          j = pTrial->GetSpecialSegPos(); 
          if(nTargs < 2 || pTrial->GetFixTarg1Pos(j) < 0 || pTrial->GetGracePeriod(j) <= 0 || 
-            pTrial->GetGracePeriod(j) >= pTrial->GetCurrMinDuration(j))
+            pTrial->GetGracePeriod(j) >= pTrial->GetCurrMinDuration(j) || (j != pTrial->SegCount() - 1))
          {
-            strErr.Format( "!! Trial _%s_: Does not satisfy implementation constraints for a 'searchTask' trial!",
+            strErr.Format( 
+               "!! Trial _%s_: Does not satisfy constraints for a 'searchTask' or 'findAndWait' trial!",
                pTrial->Name() );
             pApp->LogMessage( strErr );
             return( FALSE );
@@ -1551,7 +1555,8 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
          else if(iSpecOp == TH_SOP_CHOOSEFIX1) pCodes[n].code = SPECIAL_CHOOSEFIX1;
          else if(iSpecOp == TH_SOP_CHOOSEFIX2) pCodes[n].code = SPECIAL_CHOOSEFIX2;
          else if(iSpecOp == TH_SOP_SEARCH)     pCodes[n].code = SPECIAL_SEARCH;
-         else                                  pCodes[n].code = SPECIAL_SELDURBYFIX;
+         else if(iSpecOp == TH_SOP_SELDUR)     pCodes[n].code = SPECIAL_SELDURBYFIX;
+         else                                  pCodes[n].code = SPECIAL_FINDANDWAIT;
          
          pCodes[n++].time = (short) pTrial->GetSaccadeThreshold();
 
@@ -1635,8 +1640,8 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
       // window", so they must be sent to CXDRIVER -- even if we're running in one of the "nofix" modes. The grace 
       // time is ignored.
       //
-      // For the "searchTask op, fixation checking is also disabled during the special segment. In this case, the
-      // grace period is needed as well as the fixation accuracies, even in one of the "nofix" modes. For this op,
+      // For the "searchTask" and "findAndWait" ops, fixation checking is also disabled during the special segment. The
+      // grace period is needed as well as the fixation accuracies, even in one of the "nofix" modes. For these ops,
       // fixation accuracies define the "target is selected" window, and the grace period indicates how long the
       // subject must stay on the target to satisfy the task.
       // 
@@ -1656,7 +1661,7 @@ BOOL CCxTrialSequencer::GetTrialInfo( int* pNT, int* pTgMap, int* pN, const int 
       {
          bIsSelByFix = BOOL(iSpecOp == TH_SOP_SELBYFIX || iSpecOp == TH_SOP_SELBYFIX2 || iSpecOp == TH_SOP_SELDUR);
          bIsChooseFix = BOOL(iSpecOp == TH_SOP_CHOOSEFIX1 || iSpecOp == TH_SOP_CHOOSEFIX2);
-         bIsSearch = BOOL(iSpecOp == TH_SOP_SEARCH);
+         bIsSearch = BOOL(iSpecOp == TH_SOP_SEARCH || iSpecOp == TH_SOP_FINDWAIT);
       }
       short shAccH = (short) (pTrial->GetFixAccH(iSeg) * d_TC_SLOSCALE2);
       short shAccV = (short) (pTrial->GetFixAccV(iSeg) * d_TC_SLOSCALE2);
