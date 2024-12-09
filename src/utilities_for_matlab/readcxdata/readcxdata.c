@@ -198,6 +198,7 @@
 //          -- Removed vestigial field 'psgm' from output. The PSGM was designed conceptually and a prototype tested,
 // but a working module was never put to use in any experiment rigs. The PSGM was removed from Maestro altogether in
 // V5.0.2 (data file version = 25).
+// 09dec2024-- MAX_TRIALTARGS increased to 50.
 //=====================================================================================================================
 
 #include <stdio.h>

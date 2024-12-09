@@ -64,6 +64,7 @@
 //             to data file versions 13-22.
 // 05nov2024-- Modified IAW changes in CXOBJ_IFC.H dtd 15may2019 - 31oct2024.
 // 19nov2024-- Modified IAW changes in CXOBJ_IFC.H dtd 18nov2024: Dropped support for the never-used PSGM module.
+// 09dec2024-- Modified IAW change in CXOBJ_IFC.H dtd 09dec2024: MAX_TRIALTARGS increased to 50.
 //=====================================================================================================================
 
 
@@ -338,7 +339,7 @@ typedef union tagTgParms_v22
 // MAESTRO TRIAL-SPECIFIC DEFINITIONS
 //=====================================================================================================================
 
-#define     MAX_TRIALTARGS       25          // maximum # targets that can participate in a trial
+#define     MAX_TRIALTARGS       50          // maximum # targets that can participate in a trial
 #define     MAX_SEGMENTS         30          // maximum # of segments in a trial
 #define     MAX_STAIRS           5           // maximum # of distinct staircases
 #define     MAX_TRIALPERTS       4           // maximum # of perturbation waveforms that can be defined in a trial
