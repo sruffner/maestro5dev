@@ -409,7 +409,7 @@ typedef union tagTgParms_v22
 // MAESTRO TRIAL-SPECIFIC DEFINITIONS
 //=====================================================================================================================
 
-const int   MAX_TRIALTARGS    = 25;    // maximum # targets that can participate in a trial
+const int   MAX_TRIALTARGS    = 50;    // maximum # targets that can participate in a trial
 const int   MAX_SEGMENTS      = 30;    // maximum # of segments in a trial
 const int   MAX_STAIRS        = 5;     // maximum # of distinct staircases
 const int   MAX_TRIALPERTS    = 4;     // maximum # of perturbation waveforms that can be defined in a trial

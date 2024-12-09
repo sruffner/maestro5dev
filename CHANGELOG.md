@@ -20,6 +20,10 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
+## 09 Dec 2024: Increased max number of trial targets.
+- Maximum number of targets participating in any trial is now 50 instead of 25.
+- `readcxdata()` updated accordingly. No changes required in **JMWork** or `maestrodoc()`.
+
 ## 02-03 Dec 2024: New special feature `findAndWait`.
 - Like `searchTask`, this special feature requires 2 or more targets turned on in the special segment, which must be the last 
 trial segment. In addition, a target is "found" during the special segment when the subject's eye is within the fixation

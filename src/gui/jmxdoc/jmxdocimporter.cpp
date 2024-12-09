@@ -69,6 +69,8 @@
 #include "cxtrial.h"                         // CCxTrial -- the CNTRLX trial data class
 #include "util.h"                            // for cMath functions
 
+#include "cntrlx.h"
+
 #include "jmxdocimporter.h"
 
 

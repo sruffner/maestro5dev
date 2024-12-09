@@ -262,7 +262,7 @@ const DWORD CX_FC_RECORDING   = ((DWORD) (1<<18)); //    data recording in progr
 const DWORD CX_FC_FIXATING    = ((DWORD) (1<<19)); //    fixation is ON
 const DWORD CX_FC_SAVING      = ((DWORD) (1<<20)); //    saving data after recording stopped (in case file I/O blocks)
 
-#define CX_MAXTGTS         200                     // max # of targets in the loaded target list
+#define CX_MAXTGTS         400                     // max # of targets in the loaded target list
 #define CX_MAXTC           3000                    // max # of trial codes defining a single Maestro trial
 #define CX_MAXPATH         257                     // max length of file system pathname
 
