@@ -162,6 +162,13 @@
  09may2019-- Decided to adopt OpenGL3.3 Core Profile, along with the restructuring changes (single concrete CRMVTarget
  class; CRMVRenderer to encapsulate all OpenGL rendering), in the next RMVideo release: V10 with Maestro 4.1.0 -- plan
  to release in Jun 2019.
+ 28jan2020-- Modified to supply nominal refresh rate to CRMVRenderer::measurePeriod().
+ 28jan2020-- In Lubuntu 18.04 under 4.15, 5.0, and 5.3 kernels, running RMVideo's main thread at maximum SCHED_FIFO
+ caused multi-second hangs in network receive packet processing and in NVidia driver's implementation of glFinish()
+ with VSync enabled. While SCHED_FIFO works in the 3.19 kernel under Lubuntu 14.04, it's clearly not an option going
+ forward. On our 4-core development machine, it was not an issue to leave the primary thread at normal SCHED_OTHER
+ priority. Modified open/closeDisplay(), eliminating the change to SCHED_FIFO priority but requiring that the thread be
+ eligible to run on more than one CPU.
 */
 
 #include <stdio.h>
@@ -171,7 +178,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <sched.h>               // for soft real-time scheduling extensions
+#include <pthread.h>             // to verify primary thread is eligible to run on more than one CPU
 
 #include "rmviosim.h"            // CRMVIoSim -- Emulation of communication link with Maestro
 #include "rmvionet.h"            // CRMVIoNet -- Implementation of communication link over TCP/IP
@@ -323,8 +330,8 @@ void CRMVDisplay::start( bool useEmulator )
 //
 //    Create the RMVideo display: a fullscreen window with an associated GLX context for rendering OpenGL commands.
 //    RMVideo requires a direct GL rendering context, double-buffering support, and 24-bit RGB color.  It also requires
-//    high-resolution timing and soft realtime priority scheduling on the host machine, which may require superuser
-//    privileges.
+//    support for high-resolution timing. and the calling thread -- RMVideo's main thread of execution -- must be 
+//    eligible to run on a minimum of 2 processors (a multi-core machine is now a requirement!)
 //
 //    The method fails if RMVideo cannot get access to all of the resources it needs, and an appropriate error message
 //    is written on the standard error stream. In this case, RMVideo should exit. Otherwise, the fullscreen window will
@@ -342,6 +349,14 @@ void CRMVDisplay::start( bool useEmulator )
 //    estimate frame rate, or if the current video mode does not satisfy the minimum requirement and a mode switch was
 //    not possible, method will fail.
 //
+//    27jan2020: Until I began testing RMVideo on Lubuntu 18.04 (4.15 and 5.x kernels), RMVideo's main thread of 
+//    execution was configured here to run with maximum SCHED_FIFO priority. However, testing in 18.04 on a 4-core
+//    machine demonstrated that, under certain circumstance, this caused mysterious multi-second hangs in network 
+//    receieve packet processing and in the NVidia driver's implementation of glFinish() waiting on the vertical blank 
+//    interval (with VSync enabled, the driver must wait on the vertical blank interval before initiating a buffer swap).
+//    Leaving the main thread at normal SCHED_OTHER priority eliminated these hangs entirely. So we no longer require
+//    soft realtime priority here, but we DO require that the main thread be eligible to run on 2 or more cores.
+
 //    ARGS:       NONE.
 //    RETURNS:    True if fullscreen window was successfully opened; false otherwise. 
 bool CRMVDisplay::openDisplay()
@@ -356,20 +371,22 @@ bool CRMVDisplay::openDisplay()
       return( false );
    }
 
-   // begin soft realtime priority scheduling and maximize priority of this thread.  Fail if we cannot do this.
-   if( sysconf(_SC_PRIORITY_SCHEDULING) <= 0 )
+   // we require that RMVideo's main thread of execution (the calling thread) be eligible to run on 2 or more CPUs
+   cpu_set_t cpu;
+   CPU_ZERO(&cpu);
+   int count = 0;
+   if(0 == ::pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu))
    {
-      fprintf(stderr, "ERROR: Soft real-time priority scheduling is not available!\n" );
-      return( false );
+      for(int i=0; i<CPU_SETSIZE; i++) if(CPU_ISSET(i, &cpu)) ++count;
    }
-
-   struct sched_param schParam;
-   schParam.sched_priority = sched_get_priority_max(SCHED_FIFO);
-   if( sched_setscheduler(0, SCHED_FIFO, &schParam) != 0 )
-   {
-      fprintf(stderr, "ERROR: Could not maximize thread priority! (requires superuser privileges)\n" );
-      return( false );
-   }
+   if(count < 1)
+      ::fprintf(stderr, "ERROR: Unable to verify that RMVideo's primary thread can run on multiple cores!\n");
+   else if(count < 2)
+      ::fprintf(stderr, "ERROR: RMVideo requires a multi-processor or multi-core machine. Cannot continue.\n");
+   else if(count < 4)
+      ::fprintf(stderr, "WARNING: Primary thread is configured to run on only %d cores; at least 4 recommended.\n", count);
+   if(count < 2)
+      return(false);
 
    // open a connection to the X server
    m_pDisplay = XOpenDisplay( NULL );
@@ -444,7 +461,7 @@ bool CRMVDisplay::openDisplay()
    // Must be ~60Hz or better. We show display during the measurement so that users can verify there's no tearing.
    // The background is toggled between red and blue every frame, so expect a steady purple background!
    showDisplay(true);
-   bool ok = m_renderer.measureFramePeriod();
+   bool ok = m_renderer.measureFramePeriod(m_bAltVideoModesSupported ? m_pVideoModes[m_idxCurrVideoMode].rate : 0);
    showDisplay(false);
    return(ok);
 }
@@ -741,8 +758,7 @@ void CRMVDisplay::createFullscreenWindow()
 //=== closeDisplay ====================================================================================================
 //
 //    Release the fullscreen window, OpenGL rendering context, and all other resources allocated in openDisplay(). The 
-//    screen should return to normal (and to its original video mode) after calling this function. Thread scheduling is 
-//    also returned to normal.
+//    screen should return to normal (and to its original video mode) after calling this function.
 //
 //    ARGS:       NONE.
 //    RETURNS:    NONE.
@@ -805,14 +821,6 @@ void CRMVDisplay::closeDisplay()
    {
       XCloseDisplay( m_pDisplay );
       m_pDisplay = NULL;
-   }
-
-   // restore normal thread scheduling, if we can
-   if(sysconf(_SC_PRIORITY_SCHEDULING) > 0)
-   {
-      struct sched_param schParam;
-      schParam.sched_priority = sched_get_priority_min(SCHED_OTHER);
-      sched_setscheduler(0, SCHED_OTHER, &schParam);
    }
 }
 
@@ -1310,7 +1318,7 @@ void CRMVDisplay::setCurrentVideoMode()
       showDisplay(true);
 
       // obtain accurate estimate of frame rate.  We rely on this to keep animations in sync with Maestro timeline.
-      m_renderer.measureFramePeriod();
+      m_renderer.measureFramePeriod(m_bAltVideoModesSupported ? m_pVideoModes[m_idxCurrVideoMode].rate : 0);
    }
    
    int reply[2];

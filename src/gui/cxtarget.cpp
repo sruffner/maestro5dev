@@ -238,6 +238,9 @@
 // 30sep2024-- XYScope targets, not supported since V4.0, are officially deprecated as of Maestro 5.0. CCxTarget will
 //             still be able to create XYScope targets, however, in order to support deserialization and migration of
 //             older experiment documents.
+// 11dec2024-- Updated to support new "stereo disparity" feature in the RMVideo dot targets RMV_POINT, RMV_RANDOMDOTS,
+//             and RMV_FLOWFIELD. A field was added to RMVTGTDEF to specify the stereo disparity in visual deg.
+//             Schema version 10, a/o Maestro 5.0.2.
 //=====================================================================================================================
 
 
@@ -256,7 +259,7 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 
-IMPLEMENT_SERIAL( CCxTarget, CTreeObj, 9 | VERSIONABLE_SCHEMA )
+IMPLEMENT_SERIAL( CCxTarget, CTreeObj, 10 | VERSIONABLE_SCHEMA )
 
 
 //=====================================================================================================================
@@ -694,6 +697,9 @@ BOOL CCxTarget::SetParams( PU_TGPARMS pTgt, BOOL& bChanged )
       {
          if( pRMV->nDotSize < RMV_MINDOTSIZE ) { pRMV->nDotSize = RMV_MINDOTSIZE; bOK = FALSE; }
          else if( pRMV->nDotSize > RMV_MAXDOTSIZE ) { pRMV->nDotSize = RMV_MAXDOTSIZE; bOK = FALSE; }
+
+         // dot disparity for stereo experiments: Must be non-negative; 0 = no disparity.
+         if(pRMV->fDotDisp < 0) { pRMV->fDotDisp = 0; bOK = FALSE; }
       }
 
       if( pRMV->iType == RMV_RANDOMDOTS )
@@ -818,6 +824,7 @@ BOOL CCxTarget::SetParams( PU_TGPARMS pTgt, BOOL& bChanged )
 //          deserializing, as we must allow these obsolete target objects to be deserialized from an old document. 
 //          CCxDoc takes care of removing these objects and any dependencies on them. Howver, any attempt to serialize an
 //          XYScope target will fail.
+//      10: Added dot disparity field to RMVTGTDEF. Effective Maestro 5.0.2.
 //
 //    ARGS:       ar -- [in] the serialization archive.
 //
@@ -899,11 +906,15 @@ void CCxTarget::Serialize( CArchive& ar )
 
          // flicker parameters (as of schema 9, V4.1.0) -- applicable to all target types
          ar << pRMV->iFlickerOn << pRMV->iFlickerOff << pRMV->iFlickerDelay;
+
+         // dot disparity (a/o schema 10, V5.0.2) -- while not applicable to all target types, we serialize it
+         // regardless of target type to make deserialization simpler
+         ar << pRMV->fDotDisp;
       }
    }
    else                                                                          // read from archive:
    {
-      if( nSchema < 1 || nSchema > 9 )                                           // unsupported version
+      if( nSchema < 1 || nSchema > 10 )                                           // unsupported version
          ::AfxThrowArchiveException( CArchiveException::badSchema );
 
       ASSERT( ValidTargetType( m_type ) );                                       // validate target obj type
@@ -1056,6 +1067,12 @@ void CCxTarget::Serialize( CArchive& ar )
                   ar >> pRMV->iFlickerOn >> pRMV->iFlickerOff >> pRMV->iFlickerDelay;
                else
                   pRMV->iFlickerOn = pRMV->iFlickerOff = pRMV->iFlickerDelay = 0;
+
+               // as of schema 10, target defn includes a dot disparity field
+               if(nSchema >= 10)
+                  ar >> pRMV->fDotDisp;
+               else
+                  pRMV->fDotDisp = 0;
             }
          }
 
@@ -1370,6 +1387,8 @@ void CCxTarget::Dump( CDumpContext& dc ) const
          str.Format("Flicker: ON=%d, OFF=%d, delay=%d (in video frames)\n", pRMV->iFlickerOn,
             pRMV->iFlickerOff, pRMV->iFlickerDelay);
          dc << str;
+         str.Format("Stereo disparity = %.3f deg (dot tgts only)\n", pRMV->fDotDisp);
+         dc << str;
          break;
    }
 }
@@ -1436,6 +1455,7 @@ VOID CCxTarget::AssignDefaultValues()
       pRMV->iRGBMean[0] = 0x00FFFFFF;
       pRMV->nDotSize = 2;
       pRMV->iPctCoherent = 100;
+      pRMV->fDotDisp = 0;
    }
 }
 

@@ -20,6 +20,17 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
+## 11-18 Dec 2024: New RMVideo target parameter: stereo dot disparity.
+-- In support of stereo experiments (Priebe lab), introduced new RMVideo target parameter `RMVTGTDEF.fDotDisp`, representing
+stereo dot disparity in visual degrees. Applicable only to the **Point**, **Random-Dot Patch**, and **Flow Field** targets.
+Added numeric edit control, **disparity**, in the **Dots** group of the **Target Editor** to expose the new parameter. 
+-- **RMVideo** updated (version 11) to receive the new target parameter (both Ubuntu 14.04 and 18.04 versions).
+-- TODO: Update **RMVideo** to include Nick Priebe's implementation of the stereo dot disparity feature. Only available on a
+system with the requisite NVidia card to support stereo.
+-- `maestrodoc()` (v1.2.3) updated to support specifying the new parameter.
+-- TODO: `readcxdata()` and **JMWork** updated to properly parse target records including the new version of the `RMVTGTDEF` 
+structure.
+
 ## 09 Dec 2024: Increased max number of trial targets.
 - Maximum number of targets participating in any trial is now 50 instead of 25.
 - `readcxdata()` updated accordingly. No changes required in **JMWork** or `maestrodoc()`.

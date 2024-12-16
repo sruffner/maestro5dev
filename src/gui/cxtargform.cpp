@@ -27,7 +27,7 @@
 //           for an RMVideo "grating" target, a button to select the algorithm for generating per-dot speed noise, 
 //           three check boxes to toggle flags governing behavior of the RMVideo RMV_MOVIE target, a check box that
 //           sets frame of reference (target center or screen center) for the RMVideo RMV_RANDOMDOTS target.
-//       (3) IDC_TARGF_ORECTW...IDC_TARGF_FLICKDELAY ==> Numeric edit controls.
+//       (3) IDC_TARGF_ORECTW...IDC_TARGF_DOTDISP ==> Numeric edit controls.
 //       (4) IDC_TARGF_MVFOLDER, _MVFILE ==> Edit controls specifying media source file folder and filename.
 //
 // ==> Interactions with CCxTarget, CCxDoc, other MAESTRO views.
@@ -212,6 +212,7 @@
 // and OFF phases and its initial delay.
 // 16oct2024-- As of Maestro 5.0, there is no support for XYScope targets. Only an RMVideo target can be displayed and
 // modified on this form.
+// 11dec2024-- Mods to support new "stereo disparity" parameter for RMVideo dot targets. Exposed in num edit ctrl.
 //=====================================================================================================================
 
 
@@ -240,7 +241,7 @@ IMPLEMENT_DYNCREATE( CCxTargForm, TVTabPane )
 BEGIN_MESSAGE_MAP( CCxTargForm, TVTabPane )
    ON_CONTROL_RANGE( CBN_SELCHANGE, IDC_TARGF_TYPE, IDC_TARGF_SHAPE, OnChange )
    ON_CONTROL_RANGE( BN_CLICKED, IDC_TARGF_DOTLF_MS, IDC_TARGF_WRTSCRN, OnChange )
-   ON_CONTROL_RANGE(EN_KILLFOCUS, IDC_TARGF_ORECTW, IDC_TARGF_FLICKDELAY, OnChange)
+   ON_CONTROL_RANGE(EN_KILLFOCUS, IDC_TARGF_ORECTW, IDC_TARGF_DOTDISP, OnChange)
    ON_CONTROL_RANGE(EN_KILLFOCUS, IDC_TARGF_MVFOLDER, IDC_TARGF_MVFILE, OnChange)
    ON_COMMAND_RANGE( ID_TARGF_MODTHIS, ID_TARGF_MODSELECTED, OnChange )
    ON_BN_CLICKED( IDC_TARGF_GRAY, OnGrayscale )
@@ -298,7 +299,7 @@ CCxTargForm::CCxTargForm() : TVTabPane( CCxTargForm::IDD )
 //          _NOISESPEED], or sinewave vs squarewave gratings [IDC_TARGF_SINE, _SQUARE].
 //       2) CBN_SELCHANGE ==> User MAY have changed the current selection from one of the dropdown combo boxes
 //          specifying target type (IDC_TARGF_TYPE) or window aperture shape (IDC_TARGF_SHAPE).
-//       3) EN_KILLFOCUS ==> One of the numeric edit controls on this form [IDC_TARGF_ORECTW .. IDC_TARGF_FLICKDELAY]
+//       3) EN_KILLFOCUS ==> One of the numeric edit controls on this form [IDC_TARGF_ORECTW .. IDC_TARGF_DOTDISP]
 //          or one of the standard edit controls [IDC_TARGF_MVFOLDER or _MVFILE] has lost the keyboard focus, so check
 //          to see if its contents have changed. Note that this will also be sent by a control that loses the focus b/c
 //          it is about to be disabled (in this case, the contents have not changed!).
@@ -339,7 +340,7 @@ void CCxTargForm::OnChange( UINT id )
 
    int iValue = 0;                                                   // get value in numeric edit ctrl just modified,
    float fValue = 0.0f;                                              // as an integer and as a float (if applicable)
-   if(id >= IDC_TARGF_ORECTW && id <= IDC_TARGF_FLICKDELAY)
+   if(id >= IDC_TARGF_ORECTW && id <= IDC_TARGF_DOTDISP)
    {
       CNumEdit* pEdit = GetNumEdit( id );
       iValue = pEdit->AsInteger();
@@ -618,6 +619,10 @@ void CCxTargForm::OnChange( UINT id )
 
       case IDC_TARGF_FLICKDELAY:                                     //    flicker initial delay
          m_tgParms.rmv.iFlickerDelay = iValue;
+         break;
+
+      case IDC_TARGF_DOTDISP:                                        //    stereo disparity (target types w/ dots only)
+         m_tgParms.rmv.fDotDisp = fValue;
          break;
 
       default :                                                      //    we should NEVER get here!
@@ -930,6 +935,8 @@ void CCxTargForm::OnInitialUpdate()
       m_edCtrls[32].SetFormat(TRUE, TRUE, 2, 1);
       m_edCtrls[33].SubclassDlgItem(IDC_TARGF_FLICKDELAY, this);
       m_edCtrls[33].SetFormat(TRUE, TRUE, 2, 1);
+      m_edCtrls[34].SubclassDlgItem(IDC_TARGF_DOTDISP, this);
+      m_edCtrls[34].SetFormat(FALSE, TRUE, 5, 2);
 
       m_btnModMode.SubclassDlgItem(IDC_TARGF_MODMODE, this);         // PB for changing tgt modification mode
       m_btnGrayscale.SubclassDlgItem(IDC_TARGF_GRAY, this);          // check box: grayscale on/OFF
@@ -1264,6 +1271,8 @@ VOID CCxTargForm::StuffControls()
    GetNumEdit(IDC_TARGF_FLICKOFF)->SetWindowText(pRMV->iFlickerOff);
    GetNumEdit(IDC_TARGF_FLICKDELAY)->SetWindowText(pRMV->iFlickerDelay);
 
+   GetNumEdit(IDC_TARGF_DOTDISP)->SetWindowText(pRMV->fDotDisp);
+
    // controls unique to the RMVideo "movie" target type
    bSet = BOOL((pRMV->iFlags & RMV_F_REPEAT) != 0);
    m_btnMovieRepeat.SetCheck(bSet ? 1 : 0);
@@ -1376,6 +1385,8 @@ VOID CCxTargForm::UpdateControls()
       GetNumEdit(IDC_TARGF_FLICKON)->EnableWindow(TRUE);
       GetNumEdit(IDC_TARGF_FLICKOFF)->EnableWindow(TRUE);
       GetNumEdit(IDC_TARGF_FLICKDELAY)->EnableWindow(TRUE);
+
+      GetNumEdit(IDC_TARGF_DOTDISP)->EnableWindow(t == RMV_RANDOMDOTS || t == RMV_FLOWFIELD || t == RMV_POINT);
 
       m_btnMovieRepeat.EnableWindow(t==RMV_MOVIE);
       m_btnMoviePause.EnableWindow(t==RMV_MOVIE);
@@ -1899,6 +1910,12 @@ VOID CCxTargForm::Propagate(UINT cid, U_TGPARMS oldParms)
          case IDC_TARGF_FLICKDELAY :
             if(bModify || (dstParms.rmv.iFlickerDelay == oldParms.rmv.iFlickerDelay))
                dstParms.rmv.iFlickerDelay = m_tgParms.rmv.iFlickerDelay;
+            break;
+
+         // stereo disparity for dot targets
+         case IDC_TARGF_DOTDISP :
+            if(bModify || (dstParms.rmv.fDotDisp == oldParms.rmv.fDotDisp))
+               dstParms.rmv.fDotDisp = m_tgParms.rmv.fDotDisp;
             break;
 
          default :                                                      //    we should NEVER get here!

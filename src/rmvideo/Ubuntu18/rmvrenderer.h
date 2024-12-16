@@ -61,7 +61,7 @@ public:
    void uploadMovieFrameToTexture(unsigned int texID, int w, int h, unsigned char* pFrame);
 
    // obtain a precise measure of the monitor's vertical refresh period (over a 500-frame epoch)
-   bool measureFramePeriod();
+   bool measureFramePeriod(int nomRateHz);
    
    // the monitor's vertical refresh period in seconds (with sub-microsec accuracy, hopefully!)
    double getFramePeriod() { return(m_dFramePeriod); }

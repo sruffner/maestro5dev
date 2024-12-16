@@ -43,6 +43,7 @@
 // 25sep2018-- Mods to implement sync spot flash feature. Handle new command RMV_CMD_SETSYNC and new "sync flag" 
 //             included with the _STARTANIMATE and _UPDATEFRAME commands.
 // 08may2019-- Updated parseLoadTargets() to handle new RMVTGTDEF parameters defining the new "flicker" feature.
+// 11dec2024-- Updated parseLoadTargets() to handle new parameter RMVTGTDEF.fDotDisp.
 //=====================================================================================================================
 
 #include <unistd.h>
@@ -791,6 +792,7 @@ bool CRMVIoNet::parseLoadTargets()
                                        m_pTargets[iTgt].iFlickerOff = iValue2;
                                        m_pTargets[iTgt].iFlickerDelay = iValue3;
                                        break;
+         case RMV_TGTDEF_DOTDISP:      m_pTargets[iTgt].fDotDisp = fValue; break;
       }
    }
 

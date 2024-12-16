@@ -43,16 +43,20 @@
  reading frames from each open stream in the background. If this assumption is satisfied, the implementation 
  ensures that the two threads access the streaming infrastructure safely.
 
- Ideally, the RMVideo workstation should have a multi-core processor. When the worker thread is launched in 
- initialize(), the processor affinities of both the calling thread (which is assumed to be the "master"!) and the
- worker thread are modified so that the master can run on all but the last processor, while the worker thread runs
- only on that last processor. The worker thread runs under the normal SCHED_OTHER scheduling policy, while the master
- thread uses SCHED_FIFO. [NOTE: Initially, I configured the worker thread with SCHED_FIFO policy, but performance was
- poor; switching to SCHED_OTHER dramatically improved overall performance!] If the workstation only has a single 
- processor, then the worker thread necessarily must run on that processor. This means it will run only when the 
- master thread yields the CPU. During an animation sequence, this only happens while waiting on the vertical sync. 
- This is not great, as there will be lots of context switches occurring, and it is unlikely that CVidBuffer will be 
- able to handle streaming large movies on a single processor system.
+ To ensure the worker thread gets adequate CPU time, it is a MUST that the RMVideo workstation have a multi-core
+ processor, preferably 4 cores or more (the CVidBuffer class was developed and tested on a 4-core machine). The
+ worker thread is created with the same attributes as RMVideo's "master" thread, which calls initialize().
+
+ [NOTE: In a previous incarnation, when RMVideo's master thread ran with maximum SCHED_FIFO priority, processor 
+ affinities were modified in initialize() so that the CVidBuffer thread only ran on the last processor with 
+ SCHED_OTHER priority, while the master thread was restricted to run on any but that last processor. However, testing
+ in Jan 2020 under 4.15 and 5.x kernels in Lubuntu 18.04 revealed that running the master thread at SCHED_FIFO priority
+ was causing occasional multi-second freezes in the NVidia driver's implementation of glFinish() [with VSync enabled] 
+ and in the processing of network receive packets. With RMVideo's main thread at normal SCHED_OTHER priority, these 
+ "hangs" disappeared. While these hangs did not occur in Lubuntu 14.04 under kernel 3.19, we decided to revert the 
+ primary thread to normal SCHED_OTHER priority while requiring RMVideo run on a multi-CPU workstation. As a result, the
+ CVidBuffer now is created with the same attributes as the master thread: normal SCHED_OTHER priority, allowed to
+ run on any processor.]
 
  USAGE:
  Call initialize() during RMVideo startup. The worker thread is launched and starts waiting until video
@@ -68,7 +72,7 @@
  for another frame. Finally, once the animation ends, call stopBuffering() to idle the worker thread, then 
  closeAllVideoStreams() to close all open streams and release any associated resources.
 
- **************** SUMMARY OF PERFORMANCE TESTING, OCT 2019 ************************************************************
+ **************** SUMMARY OF PERFORMANCE TESTING **********************************************************************
  10/9/19: Testing has suggested that streaming frames from the video file during playback is limiting the bandwidth 
  available on the PCIe bus for uploading each frame to the texture when animating a movie target. When I modified
  CRMVTarget so that it created each frame in memory rather than retrieving it from an open video stream via CVidBuffer,
@@ -144,7 +148,17 @@
  To assess this, I allocated a large pool of memory when CVidBuffer is initialized, and that pool was used for the
  frame queues during streaming. The pool's capacity was fixed, large enough to handle a single 2560x1440 movie, or
  several movies at lower resolution. THERE WAS NO MEASURABLE IMPROVEMENT IN PERFORMANCE.
- **************** SUMMARY OF PERFORMANCE TESTING, OCT 2019 ************************************************************
+
+ 1/28/20: Further testing in Jan 2020 found: (1) It is critical that NVidia's PowerMizer mode be set to "Prefer maximum
+ performance" to get the best performance. Doing so dramatically improved RMVideo's video playback performance. (2) I
+ found that it was a very BAD idea to set RMVideo's master thread priority to SCHED_FIFO. At least under 4.x and 5.x
+ Linux kernels, this caused mysterious multi-second hangs in network receive packet processing and in the NVidia
+ driver's implementation of glFinish(), where it waits on the vertical blank interval prior to buffer swap. Leaving the
+ master thread at normal SCHED_OTHER priority eliminated these hangs. While we did not observe these hangs under kernel
+ 3.19 in Lubuntu 14.04, we decided to revert the master thread to SCHED_OTHER priority in that environment as well. As
+ a consequence, it is no longer necessary to modify the processor affinities of the master thread and the CVidBuffer 
+ worker thread in initialize().
+ **************** SUMMARY OF PERFORMANCE TESTING **********************************************************************
 
  REVISION HISTORY:
  12sep2019-- Started work on a simple implementation to assess feasibility...
@@ -158,10 +172,11 @@
  28oct2019-- Tried a fixed-capacity memory pool to supply the memory for each stream's frame queue. DID NOT improve
  performance.
  04nov2019-- Wrapped up performance tweaking and testing. Releasing changes as RMVideo 10c.
+ 28jan2020-- Removed code in initialize() that modified processor affinities of RMVideo's main thread and CVidBuffer's
+ worker thread, so the main thread now runs with normal SCHED_OTHER priority. See DESCRIPTION and PERFORMANCE TESTING.
 //===================================================================================================================*/
 
 #include <stdio.h>
-#include "sched.h"
 #include "time.h"
 #include "pthread.h"
 #include "utilities.h"
@@ -304,15 +319,11 @@ CVidBuffer::~CVidBuffer()
 /**
  Initialize the video streamer object.
 
- On the first invocation of this method, the background buffering thread is launched IAW the following sequence of 
- steps (based on considerable testing):
-   1) Check the processor affinity mask for the calling thread -- the "master". If it can run on multiple processors, 
- then remove the last numbered proc from its affinity mask.
-   3) Configure select parameters for the worker thread. Its scheduling policy is set to the normal SCHED_OTHER, with 
- the minimum static priority level for that policy. In a multi-CPU scenario, it will be restricted to run on the last
- numbered processor.
-   4) Launch the worker thread. It will simply enter an idle state until there's at least one open stream and buffering
- is enabled.
+ On the first invocation of this method, the background buffering thread is launched with the same thread attributes
+ as the calling thread, which should be RMVideo's main thread. [It is assumed both threads run with normal 
+ SCHED_OTHER priority and can run on any processor. Proper operation requires that RMVideo run on a multi-core
+ machine (preferably 4 cores or more).] The buffering thread enters an idle state until there's at least one open
+ video stream and buffering has been enabled.
 
  Later invocations of the method will simply call reset() to ensure buffering is disabled and any open video streams
  are closed. Testing found that repeatedly terminating and relaunching the buffering thread led to performance
@@ -329,6 +340,39 @@ bool CVidBuffer::initialize()
    // if buffering thread is alive, there's nothing more to do.
    if(m_bAlive) return(true);
 
+   int errCode = 0;
+   bool ok = true;
+
+   // start the worker thread. It should set the "alive" flag and open the video file. Wait up to 1 second for
+   // this to happen.
+   pthread_t workerThrd;
+   if(ok)
+   {
+      m_bOn = true;
+      ok = (0 == ::pthread_create(&workerThrd, NULL, CVidBuffer::runEntryPoint, this));
+      if(!ok) 
+         errCode = 3;
+      else
+      { 
+         CElapsedTime eTime;
+         volatile long count = 0;
+         while(eTime.get() < 1.0 && !m_bAlive) ++count;
+
+         if(!m_bAlive)
+         {
+            m_bOn = false;
+            ok = false;
+            errCode = 4;
+         }
+      }
+   }
+
+   if(!ok) ::fprintf(stderr, "[CVidBuffer] Failed to start background thread for video streaming, err=%d\n", errCode);
+   return(ok);
+
+
+/* OLD CODE that restricted CVidBuffer thread to run on the last processor, and the calling thread to run on any 
+   processor except that one. Saving it just in case we have to go back to that approach.
    cpu_set_t cpu;
    CPU_ZERO(&cpu);
    int errCode = 0;
@@ -407,9 +451,7 @@ bool CVidBuffer::initialize()
    }
 
    ::pthread_attr_destroy(&attr);
-
-   if(!ok) ::fprintf(stderr, "[CVidBuffer] Failed to start background thread for video streaming, err=%d\n", errCode);
-   return(ok);
+*/
 }
 
 /**
@@ -861,7 +903,7 @@ void CVidBuffer::readNextVideoFrame(VideoStream* pStream)
    if(pStream == NULL || pStream->disabledOnError) return;
    if(((pStream->iWrite + 1) % CVidBuffer::QSIZE) == pStream->iRead) return;
    if(pStream->stopOnEOF && pStream->gotEOF) return;
- 
+
    // clear the current write buffer and install it in the destination AVFrame
    ::memset((void*)pStream->frameQueue[pStream->iWrite], 0, pStream->nBytes);
    avpicture_fill((AVPicture *)pStream->pDstFrame, pStream->frameQueue[pStream->iWrite], 

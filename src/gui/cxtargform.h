@@ -34,7 +34,7 @@ class CCxTargForm : public TVTabPane
 //=====================================================================================================================
 private:
    static const int IDD = IDD_TARGFORM;               // resource ID for associated dialog template -- see constructor
-   static const int NUMTGEDITC = 34;                  // # of edit ctrls on this form which are subclassed to CNumEdit
+   static const int NUMTGEDITC = 35;                  // # of edit ctrls on this form which are subclassed to CNumEdit
 
    typedef enum                                       // target modification modes:
    {
@@ -151,7 +151,7 @@ protected:
    CNumEdit* GetNumEdit( const UINT id )                 // retrieve ptr to one of the numeric edit ctrls on form
    {
       ASSERT( id >= IDC_TARGF_ORECTW );
-      ASSERT( id <= IDC_TARGF_FLICKDELAY );
+      ASSERT( id <= IDC_TARGF_DOTDISP );
       CNumEdit* pEdit = (CNumEdit*) GetDlgItem( id );
       ASSERT( pEdit );
       return( pEdit );

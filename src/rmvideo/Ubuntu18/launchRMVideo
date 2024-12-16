@@ -12,12 +12,17 @@
 # even worsen RMVideo performance), so I've commented them out. 
 # 05dec2019: To ensure DPMS disabled, need to set 0 timeouts for standby, suspend, and off modes.
 # 13jan2020: Using nvidia-settings to force NVidia PowerMizerMode to "Prefer maximum performance" before launching 
-# RMVideo, then restore it to Auto/Adaptive after RMVideo terminates. Dramatic performance improvement! Also removed
-# the commented-out commands related to Linux scheduler parameters.
+# RMVideo, then restore it to Auto/Adaptive after RMVideo terminates. Dramatic performance improvement!
 #
 nvidia-settings -a SyncToVBlank=1 -a "[gpu:0]/GpuPowerMizerMode=1"
 xset s off dpms 0 0 0 -dpms
-/usr/local/rmvideo/rmvideo connect 
+# sysctl -w kernel.sched_min_granularity_ns=500000
+# sysctl -w kernel.sched_wakeup_granularity_ns=500000
+# sysctl -w kernel.sched_latency_ns=1000000
+/usr/local/rmvideodev/rmvideo connect 
 xset s on dpms 600 600 900 +dpms
 nvidia-settings -a "[gpu:0]/GpuPowerMizerMode=0"
+# sysctl -w kernel.sched_latency_ns=18000000
+# sysctl -w kernel.sched_wakeup_granularity_ns=3000000
+# sysctl -w kernel.sched_min_granularity_ns=2250000
 

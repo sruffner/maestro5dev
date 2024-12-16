@@ -137,6 +137,7 @@
 //                   parameter.
 //       flicker     onDur offDur delay -- Three nonnegative integer parameters specifying flicker ON cycle duration,
 //                   OFF cycle duration, and initial delay in # of video frames. Range-limited to [0..99].
+//       dotdisp     Stereo dot disparity in visual deg (0 = no disparity); nonnegative floating-pt value.
 //       enddef      (None).  This marks the end of the target record.  Every record must end with this ID on its own
 //                   line in the text file.
 //
@@ -205,6 +206,7 @@
 // 25sep2018-- Modified to support the new vertical sync spot flash feature.
 // 26mar2019-- Modified IAW changes in Maestro-RMVideo communication protocol during animate mode (for version 9).
 // 07may2019-- Added support for target flicker parameters (for version 10).
+// 11dec2024-- Added support for stereo dot disparity parameter, RMVTGTDEF.fDotDisp (for version 11).
 //=====================================================================================================================
 
 #include <unistd.h>
@@ -1089,6 +1091,11 @@ int CRMVIoSim::processTargetRecords( int n )
             m_Targets[iRecordsDone].iFlickerOff = iVal1;
             m_Targets[iRecordsDone].iFlickerDelay = iVal2;
          }
+      }
+      else if(0 == ::strcasecmp(field, "dotdisp"))
+      {
+         bParseErr = (2 != ::sscanf(m_nextLine, " %24s %f", field, &fVal));
+         if(!bParseErr) m_Targets[iRecordsDone].fDotDisp = fVal;
       }
       else
          bParseErr = true;

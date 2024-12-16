@@ -88,6 +88,10 @@ greater.
  primarily to ensure requested GL resources (like texture objects) are allocated immediately on the GPU, rather than
  in the middle of an animation sequence. After target loading, a glFinish() ensures any queued GL commands are 
  executed.
+ 28jan2020-- Modified measureFramePeriod() to use supplied nominal rate to compute an initial estimate of the
+ refresh period, which is then used to detect any skipped frames during the 500-frame measurement period. If a 
+ nominal rate is not supplied, it instead calculates an initial estimate over 50 frames prior to commencing the
+ 500-frame measurement. Backported from Lubuntu 18.04 version of source code.
 */
 
 #include "stdio.h"
@@ -756,9 +760,17 @@ void CRMVRenderer::releaseTexture(unsigned int texID)
  red and blue on every frame. The perception should be a steady purple background, slightly flickering at refresh rates
  less than 80Hz or so. If this is not the case, then something is amiss! (eg, "tearing artifact" if VSync not enabled)
 
+ Though unlikely, it is possible that an extra frame ("skipped frame") could occur during the measurement period. This
+ would result in an overestimate of the refresh period P = T/500, since T would be the elapsed time for 501 or more
+ frames. To guard against this possibility, the method uses the supplied nominal refresh rate to check for any skipped
+ frames and adjust the frame count N=500 accordingly. If a nominal rate is not supplied, the method will add an
+ additional 50 frames to the measurement period and use the first 50 frames to calculate an initial estimate of the
+ refresh period.
+
+ @param nomRateHz The nominal refresh rate in Hz for the current video mode. <=0 if not available.
  @return True if successful; false otherwise. Will fail if estimated frame rate is less than 60Hz.
 */
-bool CRMVRenderer::measureFramePeriod()
+bool CRMVRenderer::measureFramePeriod(int nomRateHz)
 {
    if(m_pDisplay==NULL) return(false);
    if(!CElapsedTime::isSupported())
@@ -769,6 +781,9 @@ bool CRMVRenderer::measureFramePeriod()
    CElapsedTime eTime;
 
    fprintf(stderr, "Estimating vertical refresh period/rate..." );
+
+   double tInitFP = 0, tLast = 0;
+   int nSkips = 0;
 
    // need to do this to get in synch with display's refresh cycle, so we can start our timer at the beginning of a
    // refresh period. NOTE, however, that our measurement could be an overestimate if there's a delay out of the
@@ -786,6 +801,23 @@ bool CRMVRenderer::measureFramePeriod()
    glFinish();
    eTime.reset();  // T=0
 
+   // when a nominal refresh rate is not supplied, we calculate an initial estimate of the refresh period over 50 frames
+   if(nomRateHz <= 0)
+   {
+      for(int i=1; i<=50; i++)
+      {
+         if(i % 2 == 0) glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
+         else glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
+         glClear(GL_COLOR_BUFFER_BIT);
+         m_pDisplay->swap();
+         glFinish();
+      }
+      tInitFP = eTime.getAndReset() / 50.0;
+   }
+   else tInitFP = 1.0/((double)nomRateHz);
+
+   // here we measure the elapsed time over 500 frames, using the initial estimate of the refresh period (or the estimate
+   // based on the supplied nominal refresh rate) to detect any skipped frames
    for(int i=1; i<=500; i++)
    {
       if(i % 2 == 0) glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
@@ -793,6 +825,11 @@ bool CRMVRenderer::measureFramePeriod()
       glClear(GL_COLOR_BUFFER_BIT);
       m_pDisplay->swap();
       glFinish();
+
+      double t = eTime.get();
+      double d = (t-tLast)/tInitFP; 
+      while(cMath::abs(d) > 1.5) {++nSkips; d = d - 1.0; } 
+      tLast = t;
    }
    double tElapsed = eTime.get();
 

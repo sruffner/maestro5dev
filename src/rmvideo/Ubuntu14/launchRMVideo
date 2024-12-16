@@ -10,14 +10,17 @@
 # RMVideo exits. You may need to adjust these parameters for your particular Linux machine!
 # 05mar2019: Further testing indicated that the changes in the Linux scheduler really didn't help much (and may
 # even worsen RMVideo performance), so I've commented them out. 
-# 14jan2020: Use nvidia-settings to set PowerMizer mode to "Prefer maximum performance" while RMVideo is running.
+# 14jan2020: Testing in Lubuntu 18.04 revealed the importance of setting the NVidia PowerMizer mode to "Prefer
+# maximum performance". That setting is not preserved over a restart, and we only really need it when RMVideo is
+# running, so we've added nvidia-setting commands to set it before launching RMVideo and restoring it once RMVideo
+# exits. We implicitly assume here we are using a single video card with a single GPU -- hence the [gpu:0].
 #
 nvidia-settings -a SyncToVBlank=1 -a '[gpu:0]/GPUPowerMizerMode=1'
 xset s off -dpms
 # sysctl -w kernel.sched_min_granularity_ns=500000
 # sysctl -w kernel.sched_wakeup_granularity_ns=500000
 # sysctl -w kernel.sched_latency_ns=1000000
-/usr/local/rmvideo/rmvideo connect 
+/usr/local/rmvideodev/rmvideo connect 
 xset s on +dpms
 nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=0'
 # sysctl -w kernel.sched_latency_ns=18000000

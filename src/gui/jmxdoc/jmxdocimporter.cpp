@@ -58,6 +58,8 @@
 // 18nov2024-- PSGM dropped from Maestro a/o V5.0.2. Maestrodoc() v1.2.3 and later will not include the field 
 // trial.psgm. If present, the field is now ignored.
 // 02dec2024-- Added support for new special op "findAndWait". See JMXDocImporter::STR_JMXSPECIALOPS[].
+// 11dec2024-- Modified to support new "stereo dot disparity" feature for RMVideo target types that draw dots. See
+// ImportRMVTarget().
 //=====================================================================================================================
 
 #include <stdafx.h>                          // standard MFC stuff
@@ -644,11 +646,12 @@ BOOL JMXDocImporter::ImportTargetSets(JSONObject* pJMX, CCxDoc* pDoc, CString& e
  the parameter name. If a parameter is omitted from the array, then it is set to a default value. The recognized
  RMVideo target types are listed below, along with the names of applicable parameters. Default parameter values are
  listed in parentheses.
-    'point'      : 'dotsize' (1), 'rgb' (0x00ffffff), 'flicker' ([0 0 0])
+    'point'      : 'dotsize' (1), 'rgb' (0x00ffffff), 'flicker' ([0 0 0]), 'disparity' (0)
     'dotpatch'   : 'dotsize' (1), 'rgb' (0x00ffffff), 'rgbcon' (0x00000000), 'ndots' (100), 'aperture' ('rect'), 
-                   'dim' ([10 10 5 5]), 'sigma' ([0 0]), 'seed' (0), 'pct' (100), 'dotlf' ([1 0]), 
-                   'noise' ([0 0 100 0]), 'wrtscreen' (0), 'flicker' ([0 0 0])
-    'flowfield'  : 'dotsize' (1), 'rgb' (0x00ffffff), 'ndots' (100), 'dim' ([30 0.5]), 'seed' (0), 'flicker' ([0 0 0])
+                   'dim' ([10 10 5 5]), 'sigma' ([0 0]), 'seed' (0), 'pct' (100), 'dotlf' ([1 0]),
+                   'noise' ([0 0 100 0]), 'wrtscreen' (0), 'flicker' ([0 0 0]), 'disparity' (0)
+    'flowfield'  : 'dotsize' (1), 'rgb' (0x00ffffff), 'ndots' (100), 'dim' ([30 0.5]), 'seed' (0), 'flicker' ([0 0 0]),
+                   'disparity' (0)
     'bar'        : 'rgb' (0x00ffffff), 'dim' ([10 10 0]), 'flicker' ([0 0 0])
     'spot'       : 'rgb' (0x00ffffff), 'aperture' ('rect'), 'dim' ([10 10 5 5]), 'sigma' ([0 0]), 'flicker' ([0 0 0])
     'grating'    : 'aperture' ('rect'), 'dim' ([10 10]), 'sigma' ([0 0]), 'square' (0), 'oriadj' (0),
@@ -718,6 +721,7 @@ WORD JMXDocImporter::ImportRMVTarget(
    tgParms.rmv.fInnerW = tgParms.rmv.fInnerH = 5.0f;
    tgParms.rmv.fSigma[0] = tgParms.rmv.fSigma[1] = 0.0f;
    tgParms.rmv.iFlickerOn = tgParms.rmv.iFlickerOff = tgParms.rmv.iFlickerDelay = 0;
+   tgParms.rmv.fDotDisp = 0;  // applies only to RMV_POINT, _RANDOMDOTS, and _FLOWFIELD
    switch(iTgtType)
    {
       case RMV_POINT :
@@ -1002,6 +1006,12 @@ WORD JMXDocImporter::ImportRMVTarget(
             tgParms.rmv.iFlickerOff = (int)pArVals->ElementAt(1)->AsNumber();
             tgParms.rmv.iFlickerDelay = (int)pArVals->ElementAt(2)->AsNumber();
          }
+      }
+      else if(paramName.Compare("disparity") == 0)
+      {
+         if(iTgtType > RMV_FLOWFIELD) continue;
+         ok = pValue->IsNumber();
+         if(ok) tgParms.rmv.fDotDisp = (float) pValue->AsNumber();
       }
 
       if(!ok)

@@ -79,6 +79,7 @@
 #define IDC_TARGF_FLICKON               1041
 #define IDC_TARGF_FLICKOFF              1042
 #define IDC_TARGF_FLICKDELAY            1043
+#define IDC_TARGF_DOTDISP               1044
 #define IDC_TARGF_MVFOLDER              1048
 #define IDC_TARGF_MVFILE                1049
 #define IDC_TARGF_GRAY                  1050

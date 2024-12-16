@@ -208,12 +208,14 @@
 // is available via other public methods.
 // 07may2019-- Mod LoadTargets() to send target flicker parameters if flicker is enabled for the target. The new
 // feature is applicable to all target types.
-// 14aug2019-- Increated the max wait time for the replies to several RMV_CMD_* commands, in particular LOADTARGETS
+// 14aug2019-- Increased the max wait time for the replies to several RMV_CMD_* commands, in particular LOADTARGETS
 // and the commands related to downloading media files to th RMVideo side. This was because, in recent testing, we
 // found that LoadTargets() would consistently fail on a reply timeout for 3 RMV_IMAGE targets -- one 640x360, one
 // 1280x720, and one 2560x1440. At the same time, implemented an image cache on the RMVideo side that is preloaded when
 // RMVideo starts up -- reducing the likelihood that RMVideo will have to read in the image from its source file 
 // during the relpy to LOADTARGETS.
+// 11dec2024-- Mod LoadTargets() to send new parameter RMVTGTDEF.fDotDisp, which specifies stereo dot disparity in
+// visual deg. Applicable to the target types that draw dots.
 //=====================================================================================================================
 
 #include <winsock2.h>                  // we need this for all TCP/IP socket calls, including WSA extensions
@@ -789,6 +791,8 @@ BOOL RTFCNDCL CCxRMVideo::LoadTargets()
             m_commandBuf[iCmdIdx++] = pTgt->iRGBMean[1];
             m_commandBuf[iCmdIdx++] = RMV_TGTDEF_NDOTSIZE;
             m_commandBuf[iCmdIdx++] = pTgt->nDotSize;
+            m_commandBuf[iCmdIdx++] = RMV_TGTDEF_DOTDISP;
+            m_commandBuf[iCmdIdx++] = int(RMV_TGTDEF_F2I_F * pTgt->fDotDisp + 0.5f);
             break;
 
          case RMV_RANDOMDOTS :
@@ -827,6 +831,8 @@ BOOL RTFCNDCL CCxRMVideo::LoadTargets()
             m_commandBuf[iCmdIdx++] = RMV_TGTDEF_SIGMA;
             m_commandBuf[iCmdIdx++] = int( RMV_TGTDEF_F2I_F * pTgt->fSigma[0] + 0.5f );
             m_commandBuf[iCmdIdx++] = int( RMV_TGTDEF_F2I_F * pTgt->fSigma[1] + 0.5f );
+            m_commandBuf[iCmdIdx++] = RMV_TGTDEF_DOTDISP;
+            m_commandBuf[iCmdIdx++] = int(RMV_TGTDEF_F2I_F * pTgt->fDotDisp + 0.5f);
             break;
 
          case RMV_FLOWFIELD :
@@ -843,6 +849,8 @@ BOOL RTFCNDCL CCxRMVideo::LoadTargets()
             m_commandBuf[iCmdIdx++] = pTgt->nDotSize;
             m_commandBuf[iCmdIdx++] = RMV_TGTDEF_SEED;
             m_commandBuf[iCmdIdx++] = pTgt->iSeed;
+            m_commandBuf[iCmdIdx++] = RMV_TGTDEF_DOTDISP;
+            m_commandBuf[iCmdIdx++] = int(RMV_TGTDEF_F2I_F * pTgt->fDotDisp + 0.5f);
             break;
 
          case RMV_BAR :
