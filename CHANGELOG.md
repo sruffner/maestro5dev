@@ -20,13 +20,19 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
-## 11-18 Dec 2024: New RMVideo target parameter: stereo dot disparity.
+## 11-18 Dec 2024: New RMVideo feature: Stereo dot disparity.
 -- In support of stereo experiments (Priebe lab), introduced new RMVideo target parameter `RMVTGTDEF.fDotDisp`, representing
 stereo dot disparity in visual degrees. Applicable only to the **Point**, **Random-Dot Patch**, and **Flow Field** targets.
 Added numeric edit control, **disparity**, in the **Dots** group of the **Target Editor** to expose the new parameter. 
--- **RMVideo** updated (version 11) to receive the new target parameter (both Ubuntu 14.04 and 18.04 versions).
--- TODO: Update **RMVideo** to include Nick Priebe's implementation of the stereo dot disparity feature. Only available on a
-system with the requisite NVidia card to support stereo.
+-- Updated **RMVideo** (version 11) to receive the new target parameter. 
+-- Updated **RMVideo** (version 11) to implement the stereo disparity feature, IAW implementation code provided by N Priebe. When
+RMVideo starts up, it requests a double-buffered, RGBA visual that supports stereo. If the video card supports it, then
+"stereo mode" is enabled and the disparity feature is available. Otherwise, it requests the normal double-buffereed RGBA
+visual as in past releases, stereo mode is disabled, and the disparity feature is not available. Note that the effective
+"stereo frame rate" is one-half the actual frame rate, and the RMVideo still reports the actual frame rate to Maestro. When
+stereo is enabled, the video card swaps the left backbuffer to the front on one frame, and the right backbuffer to the front on the 
+next, and so on...
+-- Built and tested **RMVideo** v11 both on Ubuntu 14.04 and 18.04.
 -- `maestrodoc()` (v1.2.3) updated to support specifying the new parameter.
 -- TODO: `readcxdata()` and **JMWork** updated to properly parse target records including the new version of the `RMVTGTDEF` 
 structure.

@@ -59,6 +59,17 @@ greater.
  will hopefully increase the frame size of videos that RMVideo can present reliably. The video streamer object is
  public so that CRMTarget objects can conveniently access it during target initialization and motion updates.
 
+  ==> Stereo mode support added in RMVideo v11.
+ In stereo mode operation (CRMVDisplay::isStereoEnabled()), the video card is configured to swap the left and right
+ backbuffers on each frame (so the "stereo frame rate" is really one-half the actual frame rate). Any time we have
+ to write to a backbuffer, in stereo mode we have to update both the left and right backbuffers. Methods affected:
+ measureFramePeriod(), redrawIdleBackground(), and animate().
+
+ Stereo mode is used to implement the stereo dot disparity feature when animating any dot-like targets -- RMV_POINT,
+ RMV_RANDOMDOTS, and RMV_FLOWFIELD. When the targets are drawn to the left buffer, CRMVTarget::draw(float eye) is
+ called with eye = -0.5; for the left buffer, eye = +0.5. When stereo mode is not enabled, we only draw to a single
+ backbuffer and the 'eye' argument is always 0.0.
+
  REVISION HISTORY:
  11apr2019-- Began development.
  24apr2019-- Completed development and tested. Performance worse than previous iteration with multiple target classes,
@@ -92,6 +103,8 @@ greater.
  refresh period, which is then used to detect any skipped frames during the 500-frame measurement period. If a 
  nominal rate is not supplied, it instead calculates an initial estimate over 50 frames prior to commencing the
  500-frame measurement.
+ 16dec2024-- Changes to support "stereo mode" (Priebe lab) in measureFramePeriod(), redrawIdleBackground(), and
+ animate().
 */
 
 #include "stdio.h"
@@ -768,6 +781,12 @@ void CRMVRenderer::releaseTexture(unsigned int texID)
  additional 50 frames to the measurement period and use the first 50 frames to calculate an initial estimate of the
  refresh period.
 
+ NOTE: When stereo mode is enabled, a red background is drawn on the left buffer and a blue on the right buffer. We
+ only draw these once, and then do a swap each frame. In stereo mode, the left buffer is shown for one frame and the
+ right buffer for the next. The frame period measurement is the same whether in stereo not -- and that is the frame
+ period reported to Maestro. But, when stereo mode is enabled, the left and right buffers get alternated every frame,
+ so the effective "stereo frame period" is one-half the actual frame period.
+
  @param nomRateHz The nominal refresh rate in Hz for the current video mode. <=0 if not available.
  @return True if successful; false otherwise. Will fail if estimated frame rate is less than 60Hz.
 */
@@ -786,52 +805,97 @@ bool CRMVRenderer::measureFramePeriod(int nomRateHz)
    double tInitFP = 0, tLast = 0;
    int nSkips = 0;
 
-   // need to do this to get in synch with display's refresh cycle, so we can start our timer at the beginning of a
-   // refresh period. NOTE, however, that our measurement could be an overestimate if there's a delay out of the
-   // second glFinish() call here, or an underestimate if there's a delay out of the last glFinish() for the 500th
-   // frame...
-   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-   glClear(GL_COLOR_BUFFER_BIT);
-   m_pDisplay->swap(); 
-   glFinish();
-   eTime.reset();
-
-   glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
-   glClear(GL_COLOR_BUFFER_BIT);
-   m_pDisplay->swap();
-   glFinish();
-   eTime.reset();  // T=0
-
-   // when a nominal refresh rate is not supplied, we calculate an initial estimate of the refresh period over 50 frames
-   if(nomRateHz <= 0)
+   if(!m_pDisplay->isStereoEnabled())
    {
-      for(int i=1; i<=50; i++)
+      // need to do this to get in synch with display's refresh cycle, so we can start our timer at the beginning of a
+      // refresh period. NOTE, however, that our measurement could be an overestimate if there's a delay out of the
+      // second glFinish() call here, or an underestimate if there's a delay out of the last glFinish() for the 500th
+      // frame...
+      glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+      glClear(GL_COLOR_BUFFER_BIT);
+      m_pDisplay->swap();
+      glFinish();
+      eTime.reset();
+
+      glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
+      glClear(GL_COLOR_BUFFER_BIT);
+      m_pDisplay->swap();
+      glFinish();
+      eTime.reset();  // T=0
+
+      // when a nominal refresh rate is not supplied, we calculate an initial estimate of the refresh period over 50 frames
+      if(nomRateHz <= 0)
+      {
+         for(int i = 1; i <= 50; i++)
+         {
+            if(i % 2 == 0) glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
+            else glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            m_pDisplay->swap();
+            glFinish();
+         }
+         tInitFP = eTime.getAndReset() / 50.0;
+      }
+      else tInitFP = 1.0 / ((double)nomRateHz);
+
+      // here we measure the elapsed time over 500 frames, using the initial estimate of the refresh period (or the estimate
+      // based on the supplied nominal refresh rate) to detect any skipped frames
+      for(int i = 1; i <= 500; i++)
       {
          if(i % 2 == 0) glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
          else glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
          glClear(GL_COLOR_BUFFER_BIT);
          m_pDisplay->swap();
          glFinish();
-      }
-      tInitFP = eTime.getAndReset() / 50.0;
-   }
-   else tInitFP = 1.0/((double)nomRateHz);
 
-   // here we measure the elapsed time over 500 frames, using the initial estimate of the refresh period (or the estimate
-   // based on the supplied nominal refresh rate) to detect any skipped frames
-   for(int i=1; i<=500; i++)
+         double t = eTime.get();
+         double d = (t - tLast) / tInitFP;
+         while(cMath::abs(d) > 1.5) { ++nSkips; d = d - 1.0; }
+         tLast = t;
+      }
+   }
+   else
    {
-      if(i % 2 == 0) glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
-      else glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
-      glClear(GL_COLOR_BUFFER_BIT);
+      // when stereo mode is enabled, the left buffer has the red background and the right buffer has the blue...
+      // and that means we don't have to redraw the backbuffer in the other color each frame. Since the swap() 
+      // swaps the L and R backbuffers in stereo mode, all we have to do is execute a swap each time...
+      glDrawBuffer(GL_BACK_LEFT);
+      glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       m_pDisplay->swap();
       glFinish();
+      eTime.reset();
 
-      double t = eTime.get();
-      double d = (t-tLast)/tInitFP; 
-      while(cMath::abs(d) > 1.5) {++nSkips; d = d - 1.0; } 
-      tLast = t;
+      glDrawBuffer(GL_BACK_RIGHT);
+      glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      m_pDisplay->swap();
+      glFinish();
+      eTime.reset();  // T=0
+
+      if(nomRateHz <= 0)
+      {
+         for(int i = 1; i <= 50; i++)
+         {
+            m_pDisplay->swap();
+            glFinish();
+         }
+         tInitFP = eTime.getAndReset() / 50.0;
+      }
+      else tInitFP = 1.0 / ((double)nomRateHz);
+
+      for(int i = 1; i <= 500; i++)
+      {
+         m_pDisplay->swap();
+         glFinish();
+
+         double t = eTime.get();
+         double d = (t - tLast) / tInitFP;
+         while(cMath::abs(d) > 1.5) { ++nSkips; d = d - 1.0; }
+         tLast = t;
+      }
    }
+
    double tElapsed = eTime.get();
 
    m_dFramePeriod = tElapsed / (500 + nSkips);
@@ -977,8 +1041,10 @@ void CRMVRenderer::updateSyncFlashParams(int sz, int dur)
  Redraw idle state background: clear screen to current bkg color and draw sync spot if applicable.
 
  This method must be called whenever the background color changes. In addition, if the sync spot flash feature is
- enabled, the spot patch is always black in the idle state regardless the background color, so the background must 
+ enabled, the spot patch is always black in the idle state regardless the background color, so the background must
  also be redrawn whenever the sync spot size changes or the display geometry changes (which can effect spot size).
+
+ In stereo mode, both L and R backbuffers are cleared to the current background color.
 
  Since the method waits for the next vertical retrace before swapping buffers, it can take as much as one full video
  refresh period to execute.
@@ -987,9 +1053,24 @@ void CRMVRenderer::redrawIdleBackground()
 {
    if(m_pDisplay == NULL) return;
 
-   glClearColor((float) m_bkgRGB[0], (float) m_bkgRGB[1], (float) m_bkgRGB[2], 0.0f);
-   glClear(GL_COLOR_BUFFER_BIT);
-   drawSyncFlashSpot();
+   if(!m_pDisplay->isStereoEnabled())
+   {
+      glClearColor((float)m_bkgRGB[0], (float)m_bkgRGB[1], (float)m_bkgRGB[2], 0.0f);
+      glClear(GL_COLOR_BUFFER_BIT);
+      drawSyncFlashSpot();
+   }
+   else
+   {
+      glDrawBuffer(GL_BACK_LEFT);
+      glClearColor((float)m_bkgRGB[0], (float)m_bkgRGB[1], (float)m_bkgRGB[2], 0.0f);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      drawSyncFlashSpot();
+      glDrawBuffer(GL_BACK_RIGHT);
+      glClearColor((float)m_bkgRGB[0], (float)m_bkgRGB[1], (float)m_bkgRGB[2], 0.0f);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      drawSyncFlashSpot();
+   }
+
    m_pDisplay->swap();
    glFinish();  // stalls here waiting for vertical blanking interval
 }
@@ -1055,7 +1136,6 @@ bool CRMVRenderer::loadTargets()
    // clear target list if we failed
    if(!bOk) unloadTargets();
 
-
    return(bOk);
 }
 
@@ -1094,7 +1174,7 @@ void CRMVRenderer::unloadTargets()
  the "animate" state, which is managed entirely in this function. It retrieves the first set of target motion records 
  that come with the _STARTANIMATE command; these define changes in target state at the very beginning of the animation 
  sequence ("t=0"). Using this information, it renders the first display frame on the backbuffer. It then swaps buffers 
- and sends the RMV_SIG_ANIMATEMSG signal to Maestro. W2147483647ith VSync on, the execution thread stalls in the glFinish() call 
+ and sends the RMV_SIG_ANIMATEMSG signal to Maestro. With VSync on, the execution thread stalls in the glFinish() call 
  after the buffer swap -- the driver waits for the vertical blanking interval to perform the swap. Thus, this signal is
  sent near the very beginning of the first display frame of the animation sequence -- "t=0". Since Maestro waits for 
  that signal, this scheme permits a *rough* but not perfect synchonization of the RMVideo and Maestro timelines. There
@@ -1204,24 +1284,59 @@ int CRMVRenderer::animate()
    // at this point, we don't know where we are in monitor's refresh cycle. To get sync'd up, we twice clear the back
    // buffer to the current background color and swap. With VSync ON, the glFinish() after the buffer swap should 
    // provide the synchronization. Since the render is simple, hopefully we get close to the start of a refresh cycle.
-   glClearColor((float)m_bkgRGB[0], (float)m_bkgRGB[1], (float)m_bkgRGB[2], 0.0f);
-   glClear(GL_COLOR_BUFFER_BIT);
-   drawSyncFlashSpot();
-   m_pDisplay->swap();
-   glFinish();
-   elapsedTime.reset();
+   if(!m_pDisplay->isStereoEnabled())
+   {
+      glClearColor((float)m_bkgRGB[0], (float)m_bkgRGB[1], (float)m_bkgRGB[2], 0.0f);
+      glClear(GL_COLOR_BUFFER_BIT);
+      drawSyncFlashSpot();
+      m_pDisplay->swap();
+      glFinish();
+      elapsedTime.reset();
 
-   glClear(GL_COLOR_BUFFER_BIT);
-   drawSyncFlashSpot();
-   m_pDisplay->swap();
-   glFinish();
-   elapsedTime.reset();
+      glClear(GL_COLOR_BUFFER_BIT);
+      drawSyncFlashSpot();
+      m_pDisplay->swap();
+      glFinish();
+      elapsedTime.reset();
+   }
+   else
+   {
+      glDrawBuffer(GL_BACK_LEFT);
+      glClearColor((float)m_bkgRGB[0], (float)m_bkgRGB[1], (float)m_bkgRGB[2], 0.0f);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      drawSyncFlashSpot();
+      glDrawBuffer(GL_BACK_RIGHT);
+      glClearColor((float)m_bkgRGB[0], (float)m_bkgRGB[1], (float)m_bkgRGB[2], 0.0f);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      drawSyncFlashSpot();
+      m_pDisplay->swap();
+      glFinish();
+      elapsedTime.reset();
+
+      m_pDisplay->swap();
+      glFinish();
+      elapsedTime.reset();
+   }
 
    // render frame 0 on the back buffer. Rendering is simply a matter of drawing each target in order. The sync flash 
    // spot is always drawn last so it appears on top. Coord system in degrees subtended at eye, IAW display geometry.
-   glClear(GL_COLOR_BUFFER_BIT);
-   for(int i=0; i<m_nTargets; i++) m_pTargetList[i]->draw();
-   drawSyncFlashSpot(); 
+   if(!m_pDisplay->isStereoEnabled())
+   {
+      glClear(GL_COLOR_BUFFER_BIT);
+      for(int i = 0; i < m_nTargets; i++) m_pTargetList[i]->draw(0.0);
+      drawSyncFlashSpot();
+   }
+   else
+   {
+      glDrawBuffer(GL_BACK_LEFT);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      for(int i = 0; i < m_nTargets; i++) m_pTargetList[i]->draw(-0.5);
+      drawSyncFlashSpot();
+      glDrawBuffer(GL_BACK_RIGHT);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      for(int i = 0; i < m_nTargets; i++) m_pTargetList[i]->draw(0.5);
+      drawSyncFlashSpot();
+   }
 
    // swap front and back buffers, then call glFinish() to wait for the vertical blank interval. This is "t=0" in the
    // animation timeline -- display frame 0 is now being drawn to the screen. Signal Maestro that the animation has
@@ -1266,9 +1381,23 @@ int CRMVRenderer::animate()
       }
 
       // render next frame on backbuffer
-      glClear(GL_COLOR_BUFFER_BIT);
-      for(int i=0; i<m_nTargets; i++) m_pTargetList[i]->draw();
-      drawSyncFlashSpot();
+      if(!m_pDisplay->isStereoEnabled())
+      {
+         glClear(GL_COLOR_BUFFER_BIT);
+         for(int i = 0; i < m_nTargets; i++) m_pTargetList[i]->draw(0.0);
+         drawSyncFlashSpot();
+      }
+      else
+      {
+         glDrawBuffer(GL_BACK_LEFT);
+         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+         for(int i = 0; i < m_nTargets; i++) m_pTargetList[i]->draw(-0.5);
+         drawSyncFlashSpot();
+         glDrawBuffer(GL_BACK_RIGHT);
+         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+         for(int i = 0; i < m_nTargets; i++) m_pTargetList[i]->draw(0.5);
+         drawSyncFlashSpot();
+      }
 
       // backbuffer now holds the next display frame, so swap front and back buffers during the next vertical blanking
       // interval. With VSync ON, the glFinish() after the buffer swap should stall in the NVidia OpenGL driver until

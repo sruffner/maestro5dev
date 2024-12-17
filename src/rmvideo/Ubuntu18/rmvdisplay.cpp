@@ -23,6 +23,10 @@
  long obsolete, and one day may be removed altogether from the OpenGL standard (although they're still supported in
  NVidia's Linux drivers as of 2019). For additional details, see CRMVRenderer.
 
+ As of version 11, RMVideo will request a GL visual with stereo support, if available. This is in support of
+ stereo experiments using any of the dots targets (RMV_POINT, RMV_RANDOMDOTS, RMV_FLOWFIELD). Requires an NVidia
+ card configured to provide stereo support.
+
  ==> HISTORY on "SyncToVBlank" and the design of the animation loop.
  1) From 2009: On my machine (Linux Mandriva 10.1, XOrg 6.7, DRI, Matrox G550), vertical sync is off by default. In 
  this case, glXSwapBuffers() swaps ASAP, not during vertical retrace -- so tearing is always present. There are various
@@ -180,6 +184,8 @@ I used it to get the video sync counter before and after a 550-frame epoch; the 
  forward. On our 4-core development machine, it was not an issue to leave the primary thread at normal SCHED_OTHER
  priority. Modified openDisplay(), eliminating the change to SCHED_FIFO priority but requiring that the thread be
  eligible to run on more than one CPU.
+ 16dec2024-- Modified openDisplay() to first request a double-buffered visual with stereo support, in which case stereo
+ mode is enabled. This should only work if the NVidia card supports stereo. For Priebe lab.
 */
 
 #include <stdio.h>
@@ -214,6 +220,7 @@ CRMVDisplay::CRMVDisplay()
    m_glxContext = NULL;
    m_blankCursor = (Cursor) -1;
    m_pXVInfo = NULL;
+   m_bStereoEnabled = false;
 
    m_bAltVideoModesSupported = false;
    m_pScreenRes = NULL;
@@ -341,7 +348,7 @@ void CRMVDisplay::start( bool useEmulator )
 //
 //    Create the RMVideo display: a fullscreen window with an associated GLX context for rendering OpenGL commands.
 //    RMVideo requires a direct GL rendering context, double-buffering support, and 24-bit RGB color. It also requires
-//    support for high-resolution timing, and the calling thread -- RMVideo's main thread of execution -- must be 
+//    support for high-resolution timing. And the calling thread -- RMVideo's main thread of execution -- must be 
 //    eligible to run on a minimum of 2 processors (a multi-core machine is now a requirement!)
 //
 //    The method fails if RMVideo cannot get access to all of the resources it needs, and an appropriate error message
@@ -367,6 +374,9 @@ void CRMVDisplay::start( bool useEmulator )
 //    interval (with VSync enabled, the driver must wait on the vertical blank interval before initiating a buffer swap).
 //    Leaving the main thread at normal SCHED_OTHER priority eliminated these hangs entirely. So we no longer require
 //    soft realtime priority here, but we DO require that the main thread be eligible to run on 2 or more cores.
+//
+//    16dec2024: First requests a stereo-enabled visual via glXChooseVisual; if successful, stereo mode is enabled. Else
+//    requests the usual double-buffered visual.
 //
 //    ARGS:       NONE.
 //    RETURNS:    True if fullscreen window was successfully opened; false otherwise. 
@@ -416,8 +426,8 @@ bool CRMVDisplay::openDisplay()
    *  }
    */
 
-   ::fprintf(stderr, "Initializing X window and OpenGL resources - PLEASE WAIT...\n");
-   CElapsedTime eTime;
+   // ::fprintf(stderr, "Initializing X window and OpenGL resources - PLEASE WAIT...\n");
+   // CElapsedTime eTime;
 
    // open a connection to the X server
    m_pDisplay = XOpenDisplay( NULL );
@@ -436,8 +446,20 @@ bool CRMVDisplay::openDisplay()
       return( false );
    }
 
-   // require a double-buffered visual with 24-bit color and support for alpha channel
-   int doubleBufferVisual[]  =
+   // specify a double-buffered visual with 24-bit color and support for alpha channel AND stereo
+   int doubleBufferVisualStereo[] =
+   {
+      GLX_RGBA,           // Needs to support RGBA color
+      GLX_RED_SIZE, 8,    // 24-bit color
+      GLX_GREEN_SIZE, 8,
+      GLX_BLUE_SIZE, 8,
+      GLX_STEREO,         // stereo support
+      GLX_DOUBLEBUFFER,   // Needs to support double-buffering
+      None                // end of list
+   };
+
+   // specify a double-buffered visual with 24-bit color, alpha channel support, NO stereo
+   int doubleBufferVisual[] =
    {
       GLX_RGBA,           // Needs to support RGBA color
       GLX_RED_SIZE, 8,    // 24-bit color
@@ -446,12 +468,25 @@ bool CRMVDisplay::openDisplay()
       GLX_DOUBLEBUFFER,   // Needs to support double-buffering
       None                // end of list
    };
-   m_pXVInfo = glXChooseVisual( m_pDisplay, DefaultScreen(m_pDisplay), doubleBufferVisual );
-   if( m_pXVInfo == NULL )
+
+   m_pXVInfo = glXChooseVisual(m_pDisplay, DefaultScreen(m_pDisplay), doubleBufferVisualStereo);
+   if(m_pXVInfo == NULL)
    {
-      fprintf(stderr, "ERROR: Graphics doesn't support 24-bit RGB color with alpha channel and double-buffering\n");
-      return( false );
+      m_pXVInfo = glXChooseVisual(m_pDisplay, DefaultScreen(m_pDisplay), doubleBufferVisual);
+      if(m_pXVInfo == NULL)
+      {
+         fprintf(stderr, "ERROR: Graphics doesn't support 24-bit RGB color with alpha channel and double-buffering\n");
+         return(false);
+      }
+      m_bStereoEnabled = false;
+      fprintf(stderr, "===> Stereo Mode NOT available.\n");
    }
+   else
+   {
+      m_bStereoEnabled = true;
+      fprintf(stderr, "Stereo Mode ENABLED!!\n");
+   }
+
 
    // enumerate available video modes that meet minimum requirement: 1024x768@60Hz. If current video mode does not
    // meet this requirement, attempt to switch to a video mode that does.
@@ -492,9 +527,9 @@ bool CRMVDisplay::openDisplay()
    // (04dec2019: This was added because it seemed to catch a temporary hang in the X server or NVidia driver
    // typically lasting ~11.0 or 22.0 seconds. Still don't understand why the hang occurs.)
    // TODO: This may no longer be necessary, since the hang may have been due to RMVideo's SCHED_FIFO priority...
-   m_renderer.redrawIdleBackground();
+   // m_renderer.redrawIdleBackground();
 
-   ::fprintf(stderr, "Started up in ~%.3f secconds\n", eTime.get());
+   // ::fprintf(stderr, "Started up in ~%.3f secconds\n", eTime.get());
 
    // obtain an accurate estimate of the frame rate. We rely on this to keep animations in sync with Maestro timeline.
    // Must be ~60Hz or better. We show display during the measurement so that users can verify there's no tearing.
@@ -697,7 +732,7 @@ void CRMVDisplay::enumerateVideoModes()
 //    RETURNS:    NONE.
 void CRMVDisplay::createFullscreenWindow()
 {
-   ::fprintf(stderr, "Creating fullscreen window and OpenGL rendering context...\n");
+   fprintf(stderr, "Creating fullscreen window, OpenGL rendering context, and context-bound objects (shaders, etc)\n");
 
    // if it already exists, destroy it. We must create a new fullscreen window when switching video modes.
    if(m_bWindowCreated)
@@ -779,7 +814,6 @@ void CRMVDisplay::createFullscreenWindow()
    }
 
    // our renderer must successfully allocate various OpenGL resources it needs
-   ::fprintf(stderr, "Allocating resources for OpenGL renderer...\n");
    if(ok) ok = m_renderer.createResources(this);
 
    // clean up on failure
@@ -863,16 +897,6 @@ void CRMVDisplay::closeDisplay()
       XCloseDisplay( m_pDisplay );
       m_pDisplay = NULL;
    }
-
-   /** COMMENTED OUT - We no longer change the priority of RMVideo's main thread of execution.
-   *  // restore normal thread scheduling, if we can
-   *  if(sysconf(_SC_PRIORITY_SCHEDULING) > 0)
-   *  {
-   *     struct sched_param schParam;
-   *     schParam.sched_priority = sched_get_priority_min(SCHED_OTHER);
-   *     sched_setscheduler(0, SCHED_OTHER, &schParam);
-   *  }
-   */
 }
 
 //=== showDisplay =====================================================================================================

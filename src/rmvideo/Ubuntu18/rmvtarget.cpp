@@ -264,6 +264,9 @@ textures, more OGL state changes) that leads to poorer performance.
  28oct2019-- Tried a single massive persistently mapped PBO that was partitioned into 3-PBO queues for each movie
  target (until fixed capacity reached). DID NOT IMPROVE PERFORMANCE.
  04nov2019-- Wrapped up performance tweaking and testing. Releasing changes as RMVideo 10c.
+ 16dec2024-- To support stereo experiments with the dot targets RMV_POINT, _FLOWFIELD, and _RANDOMDOTS, draw() now
+ takes a parameter 'eye' such that the target center is horizontally offset by 'eye*RMVTGTDEF.fDotDisp'. For all other
+ target types and for dot targets with fDotDisp = 0, this argument has no effect.
 */
 
 #include "stdio.h"
@@ -541,7 +544,7 @@ bool CRMVTarget::initialize(CRMVRenderer* pRenderer, const RMVTGTDEF& tgtDef)
          m_iMovieState = MOVIE_GOTFRAME;
       }
 
-      draw();
+      draw(0);
       setOn(false);
 
       // special case: restore state of RMV_MOVIE to "not started". In addition, we use a round-robin queue of
@@ -1169,8 +1172,14 @@ bool CRMVTarget::updateMovie(float tElapsed, PRMVTGTVEC pVec)
  during an animation sequence. The only OpenGL state that changes from target to target are the values of certain
  uniform variables passed to the shader program, the ID of the bound texture object, and the kind of primitive(s) 
  rendered.
+
+ @param eye For "stereo experiments" using dots targets, the target's stereo dot disparity is multiplied by this factor
+ to compute a horizontal offset in the target's position. Applicable ONLY to RMV_POINT, RMV_RANDOMDOTS, and
+ RMV_FLOWFIELD. Typical usage during a stereo experiment: eye = -0.5 while drawing a dots target in the GL_LEFT
+ backbuffer, and eye = +0.5 while drawing a dots target in the GL_RIGHT backbuffer. No offset if eye = 0 or the target's
+ dot disparity is zero.
 */
-void CRMVTarget::draw()
+void CRMVTarget::draw(float eye)
 {
    // do nothing if target is OFF -- or if it's a movie target and we didn't get the next frame
    if(!isOn()) return;
@@ -1179,9 +1188,10 @@ void CRMVTarget::draw()
    // set up uniform variables accessed in the vertex or fragment shaders
    bool isPts = (m_tgtDef.iType==RMV_POINT) || (m_tgtDef.iType==RMV_RANDOMDOTS) || (m_tgtDef.iType==RMV_FLOWFIELD);
    bool isLine = (m_tgtDef.iType==RMV_BAR) && (m_tgtDef.fOuterW <= 0.0f);
-   m_pRenderer->updateCommonUniforms(m_tgtDef.iType, m_centerPt.GetH(), m_centerPt.GetV(), 
+   m_pRenderer->updateCommonUniforms(m_tgtDef.iType,
+      m_centerPt.GetH() + (isPts ? eye * m_tgtDef.fDotDisp : 0.0f), m_centerPt.GetV(),
       isLine ? 1.0f : (isPts ? 0.0f : m_tgtDef.fOuterW), isPts ? 0.0f : m_tgtDef.fOuterH,
-      m_tgtDef.iType==RMV_BAR ? m_tgtDef.fDriftAxis[0] : 0.0f);
+      m_tgtDef.iType == RMV_BAR ? m_tgtDef.fDriftAxis[0] : 0.0f);
    m_pRenderer->updateTargetColorUniform(m_rgb0[0], m_rgb0[1], m_rgb0[2]);
 
    if(m_tgtDef.iType==RMV_GRATING || m_tgtDef.iType==RMV_PLAID)

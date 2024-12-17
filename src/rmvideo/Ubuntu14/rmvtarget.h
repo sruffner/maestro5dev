@@ -56,7 +56,7 @@ private:
 
 public:
    // render target IAW current state
-   void draw();
+   void draw(float eye);
 
    bool isOn(); 
    void setOn(bool bOn);

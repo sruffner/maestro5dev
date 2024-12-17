@@ -1,7 +1,8 @@
 # Maestro
 
-<mark>I am currently porting Maestro to run under Windows 11 Professional (update 23H2) and RTX64 4.5. The new version
-will be released as Maestro 5.0.0. The source code for the last working release, Maestro 4.2.1, is available at
+<mark>I have recently ported Maestro to run under Windows 11 Professional (update 23H2) and RTX64 4.5. The new version
+has been released as Maestro 5.0.0. Releases 5.0.1 and 5.0.2 implemented a number of requested features; these new
+features will not be backported to Maestro 4.x. The source code for the last 4.x release, Maestro 4.2.1, is available at
 `src/maestro4.2.1_codebase`.</mark>
 
 <mark>NOTE: As of Jan 2025, I will no longer be actively developing **Maestro/RMVideo**. I have made this repo available for 
@@ -79,11 +80,11 @@ defines structures and constants that implement the communication interface betw
   RTX64 process. 
   - `gui`: Source code for building `maestro.exe`, the **Maestro** GUI in which user defines and runs experiments.
   - `rmvideo`: Root folder containing all source code and other files needed to build **RMVideo**.
-    - `forUbuntu14.04`: For building **RMVideo** to run on Lubuntu 14.04. Includes a `Makefile`. The `versions` folder 
+    - `Ubuntu14`: For building **RMVideo** to run on Lubuntu 14.04. Includes a `Makefile`. The `versions` folder 
     contains "readmes" for the most recent and past versions, indicating **Maestro** version compatibility. See [online 
     guide for more information](https://sites.google.com/a/srscicomp.com/maestro/installation/how-to-install-rmvideo) on 
     building the `rmvideo` executable and configuring the Linux workstation appropriately.
-    - `forUbuntu18.04`: For building **RMVideo** to run on Lubuntu 18.04. This version has been tested successfully
+    - `Ubuntu18`: For building **RMVideo** to run on Lubuntu 18.04. This version has been tested successfully
     but is not in use in any labs, AFAIK.
     - `doc`: Contains some sample xorg.conf files and `msimcmds.txt`, a file containing a simulated **Maestro** command
     sequence. It is used to test **RMVideo** without connecting to **Maestro**.

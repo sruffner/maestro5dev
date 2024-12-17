@@ -43,6 +43,8 @@ public:
 
    CRMVMediaMgr* getMediaStoreManager() { return(&mediaMgr); }
 
+   bool isStereoEnabled() { return(m_bStereoEnabled); }        // is stereo mode enabled for dot disparity feature?
+
 private:
    static const int STATE_OFF;                                 // op state: off, waiting for start of cmd session
    static const int STATE_DYING;                               //    about to exit
@@ -59,6 +61,7 @@ private:
    bool m_bWindowDisplayed;                                    // true when fullscreen window is displayed
    GLXContext m_glxContext;                                    // the GLX rendering context assoc. with window
    XVisualInfo* m_pXVInfo;                                     // video configuration
+   bool m_bStereoEnabled;                                      // true if stereo mode enabled
 
    struct VideoMode                                            // information on a video mode
    {
