@@ -65,6 +65,8 @@
 // 05nov2024-- Modified IAW changes in CXOBJ_IFC.H dtd 15may2019 - 31oct2024.
 // 19nov2024-- Modified IAW changes in CXOBJ_IFC.H dtd 18nov2024: Dropped support for the never-used PSGM module.
 // 09dec2024-- Modified IAW change in CXOBJ_IFC.H dtd 09dec2024: MAX_TRIALTARGS increased to 50.
+// 18dec2024-- Modified to handle new version of RMVTGTDEF (added param 'fDotDisp'), for Maestro 5.0.2 and data file
+//             version 25. Deprecated RMVTGTDEF is RMVTGTDEF_V24, applicable to data file versions 23-24.
 //=====================================================================================================================
 
 
@@ -332,6 +334,15 @@ typedef union tagTgParms_v22
    XYPARMS xy;                         // parameters for an XY scope target, OR...
    RMVTGTDEF_V22 rmv;                  // parameters for an RMVideo target (data file versions 13-22)
 } U_TGPARMS_V22, *PU_TGPARMS_V22;
+
+// [DEPRECATED] target parameters for data file versions 23-24 (Maestro V4.1.0 - V5.0.1): One field was added to
+// RMVTGTDEF (rmvideo_common.h) in Maestro v5.0.2 (data file version 25). This deprecated version of U_TGPARMS uses
+// the version of RMVTGTDEF that applied to data file versions 23-24.
+typedef union tagTgParms_v24
+{
+   XYPARMS xy;                         // parameters for an XY scope target, OR...
+   RMVTGTDEF_V24 rmv;                  // parameters for an RMVideo target (data file versions 23-24)
+} U_TGPARMS_V24, * PU_TGPARMS_V24;
 
 
 

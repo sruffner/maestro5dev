@@ -106,6 +106,22 @@
 // parameters governing flicker, and preserved the deprecated structure in RMVTGTDEF_V22 to parse data files that
 // contain RMVTGTDEF_V22 records (data file versions 13-22).
 // 
+// Aug 2019: As of Maestro v4.1.1 and RMVideo v10 (release "b").
+// -- To address long download times and long load-from-disk times for large images (eg, 2560x1440), CRMVMediaMgr now
+// implements an in-memory image cache that can grow to ~300MB, allocated on the heap. At startup, the image cache is
+// preloaded with any images currently in the media store (until the capacity is reached). During runtime, the cache is
+// managed as needed, removing oldest images if the cache capacity is reaches, deleting images that have been removed
+// frome the media store, and adding images as they are downloaded from RMVideo.
+// -- In comments, changed "max wait times" for selected RMV_CMD_* commands. Commensurate changes made in Maestro 
+// V4.1.1.
+// -- Changes don't affect Maestro-RMVideo coordination, so official RMVideo version is unchanged at V=10.
+// 
+// Dec 2024: As of Maestro v5.0.2 and RMVideo v11.
+// -- Increased RMV_MAXDOTSIZE to 25.
+// -- Introduced a new parameter to support stereo experiments: RMVTGTDEF.fDotDisp, specifying stereo disparity in
+// visual degrees. It applies only to RMV_POINT, RMV_RANDOMDOTS, and RMV_FLOWFIELD.
+// -- Since RMVTGTDEF has changed, the previous version of the structure is preserved as RMVTGTDEF_V24 to parse Maestro
+// data files that contain RMVTGTDEF_V24 target records (data file versions 23-24).
 //=====================================================================================================================
 
 
@@ -151,7 +167,7 @@
 // DATA:  None.
 // REPLY: Single 32-bit positive integer, the RMVideo version number. Max wait = 250 ms.
 
-#define RMV_CURRENTVERSION    10           // current RMVideo version number (as of summer 2019, Maestro v4.1.0)
+#define RMV_CURRENTVERSION    11           // current RMVideo version number (as of Dec 2024, Maestro v5.0.2)
 
 #define RMV_CMD_RESTART       2
 // Exit and restart. This command was issued as part of the procedure to automatically update an old version of RMVideo
@@ -171,14 +187,14 @@
 #define RMV_CMD_STARTINGUP    10
 // Maestro is starting up. Stop sleeping, display fullscreen window with black bkg, and enter idle state.
 // DATA:  None.
-// REPLY:  RMV_SIG_IDLE sent as soon as RMVideo has entered the idle state.  Max wait = 5 seconds.
+// REPLY:  RMV_SIG_IDLE sent as soon as RMVideo has entered the idle state.  Max wait = 10 seconds.
 
 #define RMV_CMD_SHUTTINGDN    15
 // Maestro is shutting down.  Return to idle, hide fullscreen window, then enter sleep state, waiting for the next time
 // that Maestro starts up WITHOUT being a CPU hog.  NOTE that RMVideo is designed to run continuously; users should not 
 // have to restart it when Maestro restarts.
 // DATA:  None.
-// REPLY:  RMV_SIG_BYE sent to acknowledge the end of the command session.  Max wait = 1 second.
+// REPLY:  RMV_SIG_BYE sent to acknowledge the end of the command session.  Max wait = 10 seconds.
 
 #define RMV_CMD_SETBKGCOLOR   20
 // Set background RGB color. Invoke only when RMVideo is in the idle state.
@@ -199,7 +215,7 @@
 // N is the number of alternate video modes available. Max allowed value is RMV_MAXVMODES. Each mode is described by an 
 // integer triplet (W, H, R), where W is the screen width in pixels, H is the screen height in pixels, and R is the 
 // refresh rate rounded to the nearest Hz. If mode switching is not supported, N will be 1 and (W,H,R) will be the 
-// nominal screen size and refresh rate. On error, returns a single integer, RMV_SIG_CMDERR. Max wait = 250ms.
+// nominal screen size and refresh rate. On error, returns a single integer, RMV_SIG_CMDERR. Max wait = 1 second.
 
 #define RMV_MAXVMODES 30            // maximum number of alternative RMVideo display modes
 
@@ -258,7 +274,7 @@
 // DATA:  The first integer after the command ID is the number N of targets to be loaded.  This is followed by N
 // "target records", each defining a target that will participate in an animation.  See description below.  Targets are
 // identified during animation by their order of definition in this command.
-// REPLY:  RMV_SIG_CMDACK if successful, RMV_SIG_CMDERR otherwise.  Max wait = 1 second.
+// REPLY:  RMV_SIG_CMDACK if successful, RMV_SIG_CMDERR otherwise.  Max wait = 10 seconds.
 //
 // Format of each target record:  A series of (paramID, value)-pairs, where paramID identifies a member of the
 // RMVTGTDEF structure (see below).  Value may be one or more integers, depending on whether the structure member is
@@ -296,6 +312,7 @@
 #define RMV_TGTDEF_FOLDER     1020  // followed by the folder name string padded with nulls out to 32 bytes
 #define RMV_TGTDEF_FILE       1021  // followed by the file name string padded with nulls out to 32 bytes
 #define RMV_TGTDEF_FLICKER    1022  // follwed by 3 integers (ON dur, OFF dur, initial delay)
+#define RMV_TGTDEF_DOTDISP    1023  
 #define RMV_TGTDEF_END        1099  // end of target definition; NOT paired with a dummy value!
 
 #define RMV_TGTDEF_F2I_F      1000.0f  // divide by this to recover floating-pt value of an int-coded target param
@@ -419,7 +436,7 @@
 // DATA:  None.
 // REPLY: [RMV_SIG_CMDACK, N, folderNames]. N = number of media folders (32-bit int). folderNames = Null-separated list
 // of folder names, always ending with a terminal null and padded with nulls as needed to ensure string length in 
-// bytes is a multiple of 4. If an error occurs, only RMV_SIG_CMDERR is returned. Max wait = 250 msec.
+// bytes is a multiple of 4. If an error occurs, only RMV_SIG_CMDERR is returned. Max wait = 1 second.
 
 #define RMV_CMD_GETMEDIAFILES 101
 // Get the names of all files within a specified folder in the RMVideo media store.
@@ -427,7 +444,7 @@
 // ensure that the total payload length in bytes is a multiple of 4.
 // REPLY: [RMV_SIG_CMDACK, N, fileNames]. N = number of media files (32-bit int). fileNames = Null-separated list
 // of file names, always ending with a terminal null and padded with nulls as needed to ensure string length in 
-// bytes is a multiple of 4. If an error occurs, only RMV_SIG_CMDERR is returned. Max wait = 250 msec.
+// bytes is a multiple of 4. If an error occurs, only RMV_SIG_CMDERR is returned. Max wait = 1 second.
 
 #define RMV_CMD_GETMEDIAINFO  102
 // Get information about a particular media file in the RMVideo media store.
@@ -437,7 +454,7 @@
 // H = the image or movie frame height in pixels, R = the movie's ideal frame rate in milli-Hz (not applicable to an
 // image), and D = approximate duration of movie in milliseconds (not applicable to an image). If any value is unknown,
 // it will be set to 0. For an image file, both R and D are set to -1. If an error occurs or the specified file was not
-// found in the store, only RMV_SIG_CMDERR is returned. Max wait = 250 ms.
+// found in the store, only RMV_SIG_CMDERR is returned. Max wait = 1 second.
 
 #define RMV_CMD_DELETEMEDIA   103
 // Permanently remove a particular media file or the contents of an entire media folder from the RMVideo media store. If
@@ -458,14 +475,14 @@
 // file name, separated by a single null character. The payload ends with a null and is padded with nulls as needed to
 // ensure it is a multiple of 4 bytes in length. The media file must not already exist on the RMVideo host file system!
 // If the specified media folder does not exist, a new folder with that name is created.
-// REPLY: RMV_SIG_CMDACK if RMVideo is ready to receive file, RMV_SIG_CMDERR otherwise. Max wait = 250 msec.
+// REPLY: RMV_SIG_CMDACK if RMVideo is ready to receive file, RMV_SIG_CMDERR otherwise. Max wait = 2 secs.
 
 #define RMV_CMD_PUTFILECHUNK  111
 // Transfer a 2KB chunk of file as part of a download initiated by RMV_CMD_PUTFILE.
 // DATA:  Number of file bytes N in payload (a 32-bit int), followed by those N bytes, followed by padding to ensure 
 // the payload length in bytes in a multiple of 4.
 // REPLY: RMV_SIG_CMDACK if RMVideo processed chunk and is ready for the next, RMV_SIG_CMDERR if an error occurs. In the
-// latter case, the file download has failed and RMVideo returns to the idle state. Max wait = 250 msec.
+// latter case, the file download has failed and RMVideo returns to the idle state. Max wait = 2 secs.
 
 #define RMV_CMD_PUTFILEDONE   112
 // Terminate the download of a file initiated by RMV_CMD_PUTFILE.
@@ -473,7 +490,7 @@
 // file transfer operation should be cancelled and the partially downloaded file should be removed.
 // REPLY: RMV_SIG_CMDACK if file operation was completed successfully or if it was cancelled, RMV_SIG_CMDERR if it was
 // not cancelled and did not complete successfully. This could happen if the downloaded file could not be opened or was
-// not recognized as a supported video or image file. Max wait = 5 secs.
+// not recognized as a supported video or image file. Max wait = 10 secs.
 
 
 //=====================================================================================================================
@@ -549,7 +566,7 @@
 
 #define RMV_MAXNUMDOTS        9999        // [RMV_RANDOMDOTS, _FLOWFIELD] max # dots in target's random-dot pattern
 #define RMV_MINDOTSIZE        1           // [RMV_POINT, _RANDOMDOTS, _FLOWFIELD] min/max dot size in screen pixels
-#define RMV_MAXDOTSIZE        10
+#define RMV_MAXDOTSIZE        25
 
 #define RMV_MINRECTDIM        0.01f       // min/max dimension of bounding rectangle, in deg subtended at eye
 #define RMV_MAXRECTDIM        120.0f
@@ -603,7 +620,55 @@ typedef struct RMVTargetDef         // defining parameters for a video target
    int iFlickerOn;                  //    [all] flicker ON duration in # of video frames (0 = feature disabled)
    int iFlickerOff;                 //    [all] flicker OFF duration in # of video frames (0 = feature disabled)
    int iFlickerDelay;               //    [all] initial delay prior to first flicker ON, in # of video frames
+
+   float fDotDisp;                  //    [RMV_POINT, _RANDOMDOTS, _FLOWFIELD] stereo disparity in visual degs. Must
+                                    //    be >= 0. 0 disables the feature.
 } RMVTGTDEF, *PRMVTGTDEF;
+
+
+// The definition of RMVTGTDEF prior to data file version 25 (Dec 2024). This obsolete version is maintained so that 
+// analysis programs can properly parse target information from Maestro data files.
+typedef struct RMVTargetDef_v24     // defining parameters for a video target (data file version = [23..24])
+{
+   int   iType;                     //    target type (see defined constants)
+   int   iAperture;                 //    shape of target window (see defined constants)
+   int   iFlags;                    //    target flags (see defined constants)
+   int   iRGBMean[2];               //    RGB color spec: mean and constrast for R (byte0), G (byte1), and B (byte2)
+   int   iRGBCon[2];                //    axes. For each coord, luminance is in [0..255], contrast in [0..100%].
+   //    Contrast only applies to grating and plaid tgt types, and the RMV_RANDOMDOTS
+   //    [RMV_PLAID] Both elements used, representing separate color specs for the
+   //    component gratings. 2nd element is ignored for all other tgt types
+
+   float fOuterW;                   //    dimensions of outer and inner bounding rect in deg subtended at eye.  Inner
+   float fOuterH;                   //    dimensions used for annular apertures.
+   float fInnerW;                   //    [RMV_FLOWFIELD] heights ignored; widths treated as inner and outer radii.
+   float fInnerH;                   //
+
+   int   nDots;                     //    [RMV_RANDOMDOTS, _FLOWFIELD] # of dots in random-dot pattern
+   int   nDotSize;                  //    [RMV_POINT, _RANDOMDOTS, _FLOWFIELD] dot size in pixels. Range= [1..10].
+   int   iSeed;                     //    [RMV_RANDOMDOTS, _FLOWFIELD] seed for random# generator that determines
+   //    initial dot locs (also seeds a separate RNG for dot direc or speed noise).
+   int   iPctCoherent;              //    [RMV_RANDOMDOTS] percent coherence in [0..100]
+   int   iNoiseUpdIntv;             //    [RMV_RANDOMDOTS] noise update interval in ms.  If 0, no noise.
+   int   iNoiseLimit;               //    [RMV_RANDOMDOTS] speed or direction noise range limit (see defined constants)
+   float fDotLife;                  //    [RMV_RANDOMDOTS] maximum lifetime of each target dot (0 => infinite lifetime)
+
+   float fSpatialFreq[2];           //    [gratings/plaids] grating spatial frequency in cycle/deg subtended at eye
+   float fDriftAxis[2];             //    [gratings/plaids] grating drift axis in deg CCW. Grating orientation is drift
+   //    axis + 90deg, restricted to the unit circle, [0..360) deg.
+   //    [RMV_BAR] first element holds drift axis of bar/line; 2nd element unused
+   float fGratPhase[2];             //    [gratings/plaids] grating's initial spatial phase in deg
+   float fSigma[2];                 //    [RMV_SPOT, _RANDOMDOTS, _GRATING, _PLAID] standard deviations in X and Y for
+   //    an elliptical Gaussian window, in deg subtended at eye
+
+   char strFolder[32];              //    [RMV_MOVIE, _IMAGE] media store folder containing source media file
+   char strFile[32];                //    [RMV_MOVIE, _IMAGE] name of source media file
+   //    NOTE: We use 32 == 8 4-byte ints. RMV_MVF_LEN must be less than 32!!!!
+
+   int iFlickerOn;                  //    [all] flicker ON duration in # of video frames (0 = feature disabled)
+   int iFlickerOff;                 //    [all] flicker OFF duration in # of video frames (0 = feature disabled)
+   int iFlickerDelay;               //    [all] initial delay prior to first flicker ON, in # of video frames
+} RMVTGTDEF_V24, *PRMVTGTDEF_V24;
 
 
 // The definition of RMVTGTDEF prior to data file version 23 (Jun 2019). This obsolete version is maintained so that 

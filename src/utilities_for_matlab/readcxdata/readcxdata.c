@@ -199,6 +199,9 @@
 // but a working module was never put to use in any experiment rigs. The PSGM was removed from Maestro altogether in
 // V5.0.2 (data file version = 25).
 // 09dec2024-- MAX_TRIALTARGS increased to 50.
+// 18dec2024-- Revised to handle data file format change for Maestro 5.0.2 (data file version 25). Target definition
+// record format was altered by the addition of the float-valued parameter 'fDotDisp' to the RMVTGTDEF structure
+// defined in rmvideo_common.h.
 //=====================================================================================================================
 
 #include <stdio.h>
@@ -244,6 +247,7 @@ void endianSwapHeader( CXFILEHDR* pHdr );
 void endianSwapTgtDefV7( CXFILETGT_V7* pTgt );
 void endianSwapTgtDefV12( CXFILETGT_V12* pTgt );
 void endianSwapTgtDefV22( CXFILETGT_V22* pTgt );
+void endianSwapTgtDefV24(CXFILETGT_V24* pTgt);
 void endianSwapTgtDef( CXFILETGT* pTgt );
 
 BOOL readAI( CXFILEREC* pRec );
@@ -1000,10 +1004,15 @@ BOOL allocBuffers( BOOL bNoHeader )
             i = MAX_ACTIVETGTS + MAXTGTSINXYSEQ;
          cxData.nTgtsBufSz = i + 5;                                        //    plus a little extra
 
-         if(pHdr->version >= 23)                                           //    current CXFILETGT as of v=23
+         if(pHdr->version >= 25)                                           //    current CXFILETGT as of v=25
          {
-            cxData.pTargets = (CXFILETGT*) malloc( sizeof(CXFILETGT) * cxData.nTgtsBufSz );
-            if( cxData.pTargets == NULL ) return( FALSE );
+            cxData.pTargets = (CXFILETGT*)malloc(sizeof(CXFILETGT) * cxData.nTgtsBufSz);
+            if(cxData.pTargets == NULL) return(FALSE);
+         }
+         else if(pHdr->version >= 23)                                      // deprecated CXFILETGT_V24 for v=23..24
+         {
+            cxData.pTargets_V24 = (CXFILETGT_V24*) malloc( sizeof(CXFILETGT_V24) * cxData.nTgtsBufSz );
+            if( cxData.pTargets_V24 == NULL ) return( FALSE );
          }
          else if(pHdr->version >= 13)                                      // deprecated CXFILETGT_V22 for v=13..22
          {
@@ -1061,11 +1070,12 @@ void freeBuffers()
 
    if( cxData.piEdits != NULL ) { free( cxData.piEdits ); cxData.piEdits = NULL; cxData.nEditsBufSz = 0; }
 
-   // CXFILETGT was changed in data file version 8, in version 13, and in version 23
+   // CXFILETGT was changed in data file version 8, 13, 23, and 25
    if(cxData.pTargets != NULL) { free(cxData.pTargets); cxData.pTargets = NULL; cxData.nTgtsBufSz = 0; }
    if(cxData.pTargets_V7 != NULL) { free(cxData.pTargets_V7); cxData.pTargets_V7 = NULL; cxData.nTgtsBufSz = 0; }
    if(cxData.pTargets_V12 != NULL) { free(cxData.pTargets_V12); cxData.pTargets_V12 = NULL; cxData.nTgtsBufSz = 0; }
    if(cxData.pTargets_V22 != NULL) { free(cxData.pTargets_V22); cxData.pTargets_V22 = NULL; cxData.nTgtsBufSz = 0; }
+   if(cxData.pTargets_V24 != NULL) { free(cxData.pTargets_V24); cxData.pTargets_V24 = NULL; cxData.nTgtsBufSz = 0; }
 
    if(cxData.pCodes != NULL) { free(cxData.pCodes); cxData.pCodes = NULL; cxData.nCodesBufSz = 0; }
 }
@@ -1360,14 +1370,14 @@ void endianSwapTgtDefV22( CXFILETGT_V22* pTgt )
    }
 }
 
-//=== endianSwapTgtDef ================================================================================================
+//=== endianSwapTgtDefV24 =============================================================================================
 //
-//    Swaps endianness of the individual members in the CXFILETGT structure encapsulating definition of a Maestro
-//    target within the data file's CX_TGTRECORD record -- for data files with version number >= 23.
+//    Swaps endianness of the individual members in the CXFILETGT_V24 structure encapsulating definition of a Maestro
+//    target within the data file's CX_TGTRECORD record -- for data files with version numbers in [23..24.
 //
 //    ARGS:       pTgt -- [in/out] The target definition structure.  Endianness of atomic members converted in place.
 //
-void endianSwapTgtDef( CXFILETGT* pTgt )
+void endianSwapTgtDefV24( CXFILETGT_V24* pTgt )
 {
    int i, nInt, nFloat;
    WORD wType;
@@ -1427,6 +1437,79 @@ void endianSwapTgtDef( CXFILETGT* pTgt )
       endianSwap( (BYTE*) &(pTgt->def.u.rmv.iFlickerOn), nInt );
       endianSwap( (BYTE*) &(pTgt->def.u.rmv.iFlickerOff), nInt );
       endianSwap( (BYTE*) &(pTgt->def.u.rmv.iFlickerDelay), nInt );
+   }
+}
+
+
+//=== endianSwapTgtDef ================================================================================================
+//
+//    Swaps endianness of the individual members in the CXFILETGT structure encapsulating definition of a Maestro
+//    target within the data file's CX_TGTRECORD record -- for data files with version number >= 25.
+//
+//    ARGS:       pTgt -- [in/out] The target definition structure.  Endianness of atomic members converted in place.
+//
+void endianSwapTgtDef(CXFILETGT* pTgt)
+{
+   int i, nInt, nFloat;
+   WORD wType;
+
+   nInt = sizeof(int);
+   nFloat = sizeof(float);
+
+   endianSwap((BYTE*)&(pTgt->dwState), sizeof(DWORD));
+   endianSwap((BYTE*)&(pTgt->fPosX), nFloat);
+   endianSwap((BYTE*)&(pTgt->fPosY), nFloat);
+
+   endianSwap((BYTE*)&(pTgt->def.wType), sizeof(WORD));
+
+   wType = pTgt->def.wType;                                 // correct endianness of tgt params IAW type of tgt
+   if(wType == CX_XYTARG)                                 // tgt params exist only for XY & RMVideo targets!
+   {
+      endianSwap((BYTE*)&(pTgt->def.u.xy.type), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.xy.ndots), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.xy.iDotLfUnits), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.xy.fDotLife), nFloat);
+      endianSwap((BYTE*)&(pTgt->def.u.xy.fRectW), nFloat);
+      endianSwap((BYTE*)&(pTgt->def.u.xy.fRectH), nFloat);
+      endianSwap((BYTE*)&(pTgt->def.u.xy.fInnerW), nFloat);
+      endianSwap((BYTE*)&(pTgt->def.u.xy.fInnerH), nFloat);
+      endianSwap((BYTE*)&(pTgt->def.u.xy.fInnerX), nFloat);       // v>=9.  Won't impact processing of v=8 files.
+      endianSwap((BYTE*)&(pTgt->def.u.xy.fInnerY), nFloat);
+   }
+   else if(wType == CX_RMVTARG)
+   {
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.iType), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.iAperture), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.iFlags), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.fOuterW), nFloat);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.fOuterH), nFloat);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.fInnerW), nFloat);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.fInnerH), nFloat);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.nDots), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.nDotSize), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.iSeed), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.iPctCoherent), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.iNoiseUpdIntv), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.iNoiseLimit), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.fDotLife), nFloat);
+
+      for(i = 0; i < 2; i++)
+      {
+         endianSwap((BYTE*)&(pTgt->def.u.rmv.iRGBMean[i]), nInt);
+         endianSwap((BYTE*)&(pTgt->def.u.rmv.iRGBCon[i]), nInt);
+         endianSwap((BYTE*)&(pTgt->def.u.rmv.fSpatialFreq[i]), nFloat);
+         endianSwap((BYTE*)&(pTgt->def.u.rmv.fDriftAxis[i]), nFloat);
+         endianSwap((BYTE*)&(pTgt->def.u.rmv.fGratPhase[i]), nFloat);
+         endianSwap((BYTE*)&(pTgt->def.u.rmv.fSigma[i]), nFloat);
+      }
+
+      // strFolder and strFile are char[] arrays. They don't need to be processed !!!!!!!!!!!!!!!
+
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.iFlickerOn), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.iFlickerOff), nInt);
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.iFlickerDelay), nInt);
+
+      endianSwap((BYTE*)&(pTgt->def.u.rmv.fDotDisp), nFloat);
    }
 }
 
@@ -1984,9 +2067,9 @@ BOOL readEdits( CXFILEREC* pRec )
 //    vers# < 2.  The tedious translation work did not seem worth the effort.
 //
 //    The format in which a single target definition is stored, encapsulated by CXFILETGT, changed as of data file
-//    version 8 (Maestro 2.0.0), again as of version 13 (Maestro 2.5.0), and yet again as of version 23 (Maestro 
-//    4.1.0). This method handles both the current and the deprecated (CXFILETGT_V7, CXFILETGT_V12, CXFILETGT_V22)
-//    formats.
+//    version 8 (Maestro 2.0.0), as of version 13 (Maestro 2.5.0), as of version 23 (Maestro 4.1.0), and as of version
+//    25 (Maestro 5.0.2). This method handles both the current and the deprecated (CXFILETGT_V7, CXFILETGT_V12, 
+//    CXFILETGT_V22, CXFILETGT_V24) formats.
 //
 //    ARGS:       pRec  -- [in] ptr to buffer holding the CX_TGTRECORD record.  File fmt encapsulated by the CXFILEREC
 //                         structure (see CXFILEFMT.H).
@@ -1996,7 +2079,8 @@ BOOL readEdits( CXFILEREC* pRec )
 BOOL readTargets( CXFILEREC* pRec )
 {
    int i;
-   CXFILETGT* pTgt;                                                        // for data file versions 23+
+   CXFILETGT* pTgt;                                                        // for data file versions 25+
+   CXFILETGT_V24* pTgtV24;                                                  // for data file versions [23..24]
    CXFILETGT_V22* pTgtV22;                                                 // for data file versions [13..22]
    CXFILETGT_V12* pTgtV12;                                                 // for data file versions [8..12]
    CXFILETGT_V7* pTgtV7;                                                   // for data file versions [2..7]
@@ -2007,20 +2091,36 @@ BOOL readTargets( CXFILEREC* pRec )
       return( FALSE );
    }
 
-   if(cxData.fileHdr.version >= 23) for(i=0; i<CX_RECORDTARGETS; i++)      // copy each tgt defn in rec to buffer:
+   if(cxData.fileHdr.version >= 25) for(i = 0; i < CX_RECORDTARGETS; i++)  // copy each tgt defn in rec to buffer:
    {
-      if( cxData.nTargets == cxData.nTgtsBufSz )                           //    internal buf full.  this should never
+      if(cxData.nTargets == cxData.nTgtsBufSz)                             //    internal buf full.  this should never
       {                                                                    //    happen b/c we preallocate it to handle
-         printf( "ERROR: No more room for target definitions!\n" );        //    the max possible # of tgt defns in a
-         return( FALSE );                                                  //    data file!
+         printf("ERROR: No more room for target definitions!\n");          //    the max possible # of tgt defns in a
+         return(FALSE);                                                    //    data file!
       }
 
       pTgt = &(pRec->u.tgts[i]);
-      if( isBigEndian ) endianSwapTgtDef( pTgt );                          //    convert endianness if necessary
+      if(isBigEndian) endianSwapTgtDef(pTgt);                              //    convert endianness if necessary
 
-      if( pTgt->def.wType == 0 ) break;                                    //    "empty" tgt defn; rest of rec is junk!
+      if(pTgt->def.wType == 0) break;                                      //    "empty" tgt defn; rest of rec is junk!
 
-      memcpy( (void*) &(cxData.pTargets[cxData.nTargets]), (void*) pTgt, sizeof(CXFILETGT) );
+      memcpy((void*)&(cxData.pTargets[cxData.nTargets]), (void*)pTgt, sizeof(CXFILETGT));
+      ++(cxData.nTargets);
+   }
+   else if(cxData.fileHdr.version >= 23) for(i=0; i<CX_RECORDTARGETS_V24; i++) // tgt def format in file V=[23..24]
+   {
+      if(cxData.nTargets == cxData.nTgtsBufSz)
+      {
+         printf( "ERROR: No more room for target definitions!\n" );
+         return( FALSE );
+      }
+
+      pTgtV24 = &(pRec->u.tgtsV24[i]);
+      if( isBigEndian ) endianSwapTgtDefV24( pTgtV24 );
+
+      if( pTgtV24->def.wType == 0 ) break; 
+
+      memcpy( (void*) &(cxData.pTargets_V24[cxData.nTargets]), (void*) pTgtV24, sizeof(CXFILETGT_V24) );
       ++(cxData.nTargets);
    }
    else if(cxData.fileHdr.version >= 13) for(i=0; i<CX_RECORDTARGETS_V22; i++) // tgt def format in file V=[13..22]
@@ -2307,9 +2407,10 @@ void setHeaderOutput( mxArray* pOut )
 //    version >= 2.  Target information is copied from our internal CXFILEDATA structure.
 //
 //    The storage format for target definitions changed with data file version 8 (introduction of RMVideo in place of 
-//    Maestro's old VSG-based FB video), in data file version 13 (introduction of RMVideo "movie" target), and in data
-//    file version 23 (introduction of "flicker" feature for RMVideo targets). The method handles both the current 
-//    (CXFILETGT) and old (CXFILETGT_V7, CXFILETGT_V12, CXFILETGT_V22) formats.
+//    Maestro's old VSG-based FB video), in data file version 13 (introduction of RMVideo "movie" target), in data
+//    file version 23 (introduction of "flicker" feature for RMVideo targets), and in data file version 25 (introduced
+//    stereo dot disparity parameter for RMVideo dot target types). The method handles both the current (CXFILETGT) and 
+//    old (CXFILETGT_V7, CXFILETGT_V12, CXFILETGT_V22, CXFILETGT_V24) formats.
 //
 //    ARGS:       pOut  -- [in/out] ptr to the MATLAB structure array prepared by readcxdata().
 //
@@ -2324,6 +2425,7 @@ void setTargetDefns(mxArray* pOut)
    CXFILETGT_V7* pTgtV7;
    CXFILETGT_V12* pTgtV12;
    CXFILETGT_V22* pTgtV22;
+   CXFILETGT_V24* pTgtV24;
 
    double *dPtr1, *dPtr2, *dPtr3;
    double dTmp;
@@ -2334,94 +2436,191 @@ void setTargetDefns(mxArray* pOut)
    pMXTgt = mxCreateStructMatrix( 1, cxData.nTargets, NUMTGTFIELDS, tgtFields ); // array of tgt defn structs
    if(pMXTgt == NULL) return;
 
-   if(cxData.fileHdr.version >= 23) for(i = 0; i < cxData.nTargets; i++)
+
+   if(cxData.fileHdr.version >= 25) for(i = 0; i < cxData.nTargets; i++)
    {
       pTgt = &(cxData.pTargets[i]);
-      mxSetField( pMXTgt, i, "category", createUInt32Scalar( (DWORD) pTgt->def.wType ) );
-      mxSetField( pMXTgt, i, "name", mxCreateString( pTgt->def.name ) );
+      mxSetField(pMXTgt, i, "category", createUInt32Scalar((DWORD)pTgt->def.wType));
+      mxSetField(pMXTgt, i, "name", mxCreateString(pTgt->def.name));
 
-      if( pTgt->def.wType == CX_XYTARG )                                         // create & fill in defining params
+      if(pTgt->def.wType == CX_XYTARG)                                         // create & fill in defining params
       {                                                                          // for an XY scope tgt, or...
-         pMXParms = mxCreateStructMatrix( 1, 1, NUMXYTGTPARMS, xyTgtParams );
-         mxSetField( pMXParms, 0, "type", createInt32Scalar( pTgt->def.u.xy.type ) );
-         mxSetField( pMXParms, 0, "ndots", createInt32Scalar( pTgt->def.u.xy.ndots ) );
-         mxSetField( pMXParms, 0, "iDotLfUnits", createInt32Scalar( pTgt->def.u.xy.iDotLfUnits ) );
-         mxSetField( pMXParms, 0, "fDotLife", mxCreateDoubleScalar( pTgt->def.u.xy.fDotLife ) );
-         mxSetField( pMXParms, 0, "fRectW", mxCreateDoubleScalar( pTgt->def.u.xy.fRectW ) );
-         mxSetField( pMXParms, 0, "fRectH", mxCreateDoubleScalar( pTgt->def.u.xy.fRectH ) );
-         mxSetField( pMXParms, 0, "fInnerW", mxCreateDoubleScalar( pTgt->def.u.xy.fInnerW ) );
-         mxSetField( pMXParms, 0, "fInnerH", mxCreateDoubleScalar( pTgt->def.u.xy.fInnerH ) );
+         pMXParms = mxCreateStructMatrix(1, 1, NUMXYTGTPARMS, xyTgtParams);
+         mxSetField(pMXParms, 0, "type", createInt32Scalar(pTgt->def.u.xy.type));
+         mxSetField(pMXParms, 0, "ndots", createInt32Scalar(pTgt->def.u.xy.ndots));
+         mxSetField(pMXParms, 0, "iDotLfUnits", createInt32Scalar(pTgt->def.u.xy.iDotLfUnits));
+         mxSetField(pMXParms, 0, "fDotLife", mxCreateDoubleScalar(pTgt->def.u.xy.fDotLife));
+         mxSetField(pMXParms, 0, "fRectW", mxCreateDoubleScalar(pTgt->def.u.xy.fRectW));
+         mxSetField(pMXParms, 0, "fRectH", mxCreateDoubleScalar(pTgt->def.u.xy.fRectH));
+         mxSetField(pMXParms, 0, "fInnerW", mxCreateDoubleScalar(pTgt->def.u.xy.fInnerW));
+         mxSetField(pMXParms, 0, "fInnerH", mxCreateDoubleScalar(pTgt->def.u.xy.fInnerH));
 
          // XYPARMS.fInnerX, .fInnerY were added for V=9.  Implied value is 0 for V<9.
          dTmp = (cxData.fileHdr.version >= 9) ? pTgt->def.u.xy.fInnerX : 0.0;
-         mxSetField( pMXParms, 0, "fInnerX", mxCreateDoubleScalar( dTmp ) );
+         mxSetField(pMXParms, 0, "fInnerX", mxCreateDoubleScalar(dTmp));
          dTmp = (cxData.fileHdr.version >= 9) ? pTgt->def.u.xy.fInnerY : 0.0;
+         mxSetField(pMXParms, 0, "fInnerY", mxCreateDoubleScalar(dTmp));
+
+         mxSetField(pMXTgt, i, "params", pMXParms);
+      }
+      else if(pTgt->def.wType == CX_RMVTARG)                                   // ...a RMVideo tgt.
+      {
+         iType = pTgt->def.u.rmv.iType;
+
+         pMXParms = mxCreateStructMatrix(1, 1, NUMRMVTGTPARMS, rmvTgtParams);
+         mxSetField(pMXParms, 0, "iType", createInt32Scalar(iType));
+         mxSetField(pMXParms, 0, "iAperture", createInt32Scalar(pTgt->def.u.rmv.iAperture));
+         mxSetField(pMXParms, 0, "iFlags", createInt32Scalar(pTgt->def.u.rmv.iFlags));
+         mxSetField(pMXParms, 0, "fOuterW", mxCreateDoubleScalar(pTgt->def.u.rmv.fOuterW));
+         mxSetField(pMXParms, 0, "fOuterH", mxCreateDoubleScalar(pTgt->def.u.rmv.fOuterH));
+         mxSetField(pMXParms, 0, "fInnerW", mxCreateDoubleScalar(pTgt->def.u.rmv.fInnerW));
+         mxSetField(pMXParms, 0, "fInnerH", mxCreateDoubleScalar(pTgt->def.u.rmv.fInnerH));
+         mxSetField(pMXParms, 0, "nDots", createInt32Scalar(pTgt->def.u.rmv.nDots));
+         mxSetField(pMXParms, 0, "nDotSize", createInt32Scalar(pTgt->def.u.rmv.nDotSize));
+         mxSetField(pMXParms, 0, "iSeed", createInt32Scalar(pTgt->def.u.rmv.iSeed));
+         mxSetField(pMXParms, 0, "iPctCoherent", createInt32Scalar(pTgt->def.u.rmv.iPctCoherent));
+         mxSetField(pMXParms, 0, "iNoiseUpdIntv", createInt32Scalar(pTgt->def.u.rmv.iNoiseUpdIntv));
+         mxSetField(pMXParms, 0, "iNoiseLimit", createInt32Scalar(pTgt->def.u.rmv.iNoiseLimit));
+         mxSetField(pMXParms, 0, "fDotLife", mxCreateDoubleScalar(pTgt->def.u.rmv.fDotLife));
+
+         mxSetField(pMXParms, 0, "iRGBMean", mxCreateDoubleMatrix(1, 2, mxREAL));
+         dPtr1 = mxGetPr(mxGetField(pMXParms, 0, "iRGBMean"));
+         for(j = 0; j < 2; j++) dPtr1[j] = pTgt->def.u.rmv.iRGBMean[j];
+
+         mxSetField(pMXParms, 0, "iRGBCon", mxCreateDoubleMatrix(1, 2, mxREAL));
+         dPtr1 = mxGetPr(mxGetField(pMXParms, 0, "iRGBCon"));
+         for(j = 0; j < 2; j++) dPtr1[j] = pTgt->def.u.rmv.iRGBCon[j];
+
+         mxSetField(pMXParms, 0, "fSpatialFreq", mxCreateDoubleMatrix(1, 2, mxREAL));
+         dPtr1 = mxGetPr(mxGetField(pMXParms, 0, "fSpatialFreq"));
+         for(j = 0; j < 2; j++) dPtr1[j] = pTgt->def.u.rmv.fSpatialFreq[j];
+
+         mxSetField(pMXParms, 0, "fDriftAxis", mxCreateDoubleMatrix(1, 2, mxREAL));
+         dPtr1 = mxGetPr(mxGetField(pMXParms, 0, "fDriftAxis"));
+         for(j = 0; j < 2; j++) dPtr1[j] = pTgt->def.u.rmv.fDriftAxis[j];
+
+         mxSetField(pMXParms, 0, "fGratPhase", mxCreateDoubleMatrix(1, 2, mxREAL));
+         dPtr1 = mxGetPr(mxGetField(pMXParms, 0, "fGratPhase"));
+         for(j = 0; j < 2; j++) dPtr1[j] = pTgt->def.u.rmv.fGratPhase[j];
+
+         mxSetField(pMXParms, 0, "fSigma", mxCreateDoubleMatrix(1, 2, mxREAL));
+         dPtr1 = mxGetPr(mxGetField(pMXParms, 0, "fSigma"));
+         for(j = 0; j < 2; j++) dPtr1[j] = pTgt->def.u.rmv.fSigma[j];
+
+         mxSetField(pMXParms, 0, "strFolder",
+            mxCreateString((iType == RMV_MOVIE || iType == RMV_IMAGE) ? pTgt->def.u.rmv.strFolder : ""));
+         mxSetField(pMXParms, 0, "strFile",
+            mxCreateString((iType == RMV_MOVIE || iType == RMV_IMAGE) ? pTgt->def.u.rmv.strFile : ""));
+
+         // target flicker parameters added in V=23
+         mxSetField(pMXParms, 0, "iFlickerOn", createInt32Scalar(pTgt->def.u.rmv.iFlickerOn));
+         mxSetField(pMXParms, 0, "iFlickerOff", createInt32Scalar(pTgt->def.u.rmv.iFlickerOff));
+         mxSetField(pMXParms, 0, "iFlickerDelay", createInt32Scalar(pTgt->def.u.rmv.iFlickerDelay));
+
+         // stereo dot disparity added in V=25
+         mxSetField(pMXParms, 0, "fDotDisp", mxCreateDoubleScalar(pTgt->def.u.rmv.fDotDisp));
+
+         mxSetField(pMXTgt, i, "params", pMXParms);
+      }
+
+      if((cxData.fileHdr.flags & CXHF_ISCONTINUOUS) != 0)                      // remaining fields only apply to
+      {                                                                          // ContMode files...
+         mxSetField(pMXTgt, i, "dwState", createUInt32Scalar(pTgt->dwState));
+         mxSetField(pMXTgt, i, "hPos", mxCreateDoubleScalar(pTgt->fPosX));
+         mxSetField(pMXTgt, i, "vPos", mxCreateDoubleScalar(pTgt->fPosY));
+      }
+   }
+   else if(cxData.fileHdr.version >= 23) for(i = 0; i < cxData.nTargets; i++)
+   {
+      pTgtV24 = &(cxData.pTargets_V24[i]);
+      mxSetField( pMXTgt, i, "category", createUInt32Scalar( (DWORD)pTgtV24->def.wType ) );
+      mxSetField( pMXTgt, i, "name", mxCreateString(pTgtV24->def.name ) );
+
+      if(pTgtV24->def.wType == CX_XYTARG )                                         // create & fill in defining params
+      {                                                                          // for an XY scope tgt, or...
+         pMXParms = mxCreateStructMatrix( 1, 1, NUMXYTGTPARMS, xyTgtParams );
+         mxSetField( pMXParms, 0, "type", createInt32Scalar(pTgtV24->def.u.xy.type ) );
+         mxSetField( pMXParms, 0, "ndots", createInt32Scalar(pTgtV24->def.u.xy.ndots ) );
+         mxSetField( pMXParms, 0, "iDotLfUnits", createInt32Scalar(pTgtV24->def.u.xy.iDotLfUnits ) );
+         mxSetField( pMXParms, 0, "fDotLife", mxCreateDoubleScalar(pTgtV24->def.u.xy.fDotLife ) );
+         mxSetField( pMXParms, 0, "fRectW", mxCreateDoubleScalar(pTgtV24->def.u.xy.fRectW ) );
+         mxSetField( pMXParms, 0, "fRectH", mxCreateDoubleScalar(pTgtV24->def.u.xy.fRectH ) );
+         mxSetField( pMXParms, 0, "fInnerW", mxCreateDoubleScalar(pTgtV24->def.u.xy.fInnerW ) );
+         mxSetField( pMXParms, 0, "fInnerH", mxCreateDoubleScalar(pTgtV24->def.u.xy.fInnerH ) );
+
+         // XYPARMS.fInnerX, .fInnerY were added for V=9.  Implied value is 0 for V<9.
+         dTmp = (cxData.fileHdr.version >= 9) ? pTgtV24->def.u.xy.fInnerX : 0.0;
+         mxSetField( pMXParms, 0, "fInnerX", mxCreateDoubleScalar( dTmp ) );
+         dTmp = (cxData.fileHdr.version >= 9) ? pTgtV24->def.u.xy.fInnerY : 0.0;
          mxSetField( pMXParms, 0, "fInnerY", mxCreateDoubleScalar( dTmp ) );
          
          mxSetField( pMXTgt, i, "params", pMXParms );
       }
-      else if( pTgt->def.wType == CX_RMVTARG )                                   // ...a RMVideo tgt.
+      else if(pTgtV24->def.wType == CX_RMVTARG )                                   // ...a RMVideo tgt.
       {
-         iType = pTgt->def.u.rmv.iType;
+         iType = pTgtV24->def.u.rmv.iType;
 
          pMXParms = mxCreateStructMatrix( 1, 1, NUMRMVTGTPARMS, rmvTgtParams );
          mxSetField( pMXParms, 0, "iType", createInt32Scalar( iType ) );
-         mxSetField( pMXParms, 0, "iAperture", createInt32Scalar( pTgt->def.u.rmv.iAperture ) );
-         mxSetField( pMXParms, 0, "iFlags", createInt32Scalar( pTgt->def.u.rmv.iFlags ) );
-         mxSetField( pMXParms, 0, "fOuterW", mxCreateDoubleScalar( pTgt->def.u.rmv.fOuterW ) );
-         mxSetField( pMXParms, 0, "fOuterH", mxCreateDoubleScalar( pTgt->def.u.rmv.fOuterH ) );
-         mxSetField( pMXParms, 0, "fInnerW", mxCreateDoubleScalar( pTgt->def.u.rmv.fInnerW ) );
-         mxSetField( pMXParms, 0, "fInnerH", mxCreateDoubleScalar( pTgt->def.u.rmv.fInnerH ) );
-         mxSetField( pMXParms, 0, "nDots", createInt32Scalar( pTgt->def.u.rmv.nDots ) );
-         mxSetField( pMXParms, 0, "nDotSize", createInt32Scalar( pTgt->def.u.rmv.nDotSize ) );
-         mxSetField( pMXParms, 0, "iSeed", createInt32Scalar( pTgt->def.u.rmv.iSeed ) );
-         mxSetField( pMXParms, 0, "iPctCoherent", createInt32Scalar( pTgt->def.u.rmv.iPctCoherent ) );
-         mxSetField( pMXParms, 0, "iNoiseUpdIntv", createInt32Scalar( pTgt->def.u.rmv.iNoiseUpdIntv ) );
-         mxSetField( pMXParms, 0, "iNoiseLimit", createInt32Scalar( pTgt->def.u.rmv.iNoiseLimit ) );
-         mxSetField( pMXParms, 0, "fDotLife", mxCreateDoubleScalar( pTgt->def.u.rmv.fDotLife ) );
+         mxSetField( pMXParms, 0, "iAperture", createInt32Scalar(pTgtV24->def.u.rmv.iAperture ) );
+         mxSetField( pMXParms, 0, "iFlags", createInt32Scalar(pTgtV24->def.u.rmv.iFlags ) );
+         mxSetField( pMXParms, 0, "fOuterW", mxCreateDoubleScalar(pTgtV24->def.u.rmv.fOuterW ) );
+         mxSetField( pMXParms, 0, "fOuterH", mxCreateDoubleScalar(pTgtV24->def.u.rmv.fOuterH ) );
+         mxSetField( pMXParms, 0, "fInnerW", mxCreateDoubleScalar(pTgtV24->def.u.rmv.fInnerW ) );
+         mxSetField( pMXParms, 0, "fInnerH", mxCreateDoubleScalar(pTgtV24->def.u.rmv.fInnerH ) );
+         mxSetField( pMXParms, 0, "nDots", createInt32Scalar(pTgtV24->def.u.rmv.nDots ) );
+         mxSetField( pMXParms, 0, "nDotSize", createInt32Scalar(pTgtV24->def.u.rmv.nDotSize ) );
+         mxSetField( pMXParms, 0, "iSeed", createInt32Scalar(pTgtV24->def.u.rmv.iSeed ) );
+         mxSetField( pMXParms, 0, "iPctCoherent", createInt32Scalar(pTgtV24->def.u.rmv.iPctCoherent ) );
+         mxSetField( pMXParms, 0, "iNoiseUpdIntv", createInt32Scalar(pTgtV24->def.u.rmv.iNoiseUpdIntv ) );
+         mxSetField( pMXParms, 0, "iNoiseLimit", createInt32Scalar(pTgtV24->def.u.rmv.iNoiseLimit ) );
+         mxSetField( pMXParms, 0, "fDotLife", mxCreateDoubleScalar(pTgtV24->def.u.rmv.fDotLife ) );
 
          mxSetField( pMXParms, 0, "iRGBMean", mxCreateDoubleMatrix(1, 2, mxREAL) );
          dPtr1 = mxGetPr( mxGetField(pMXParms, 0, "iRGBMean") );
-         for( j=0; j<2; j++ ) dPtr1[j] = pTgt->def.u.rmv.iRGBMean[j];
+         for( j=0; j<2; j++ ) dPtr1[j] = pTgtV24->def.u.rmv.iRGBMean[j];
 
          mxSetField( pMXParms, 0, "iRGBCon", mxCreateDoubleMatrix(1, 2, mxREAL) );
          dPtr1 = mxGetPr( mxGetField(pMXParms, 0, "iRGBCon") );
-         for( j=0; j<2; j++ ) dPtr1[j] = pTgt->def.u.rmv.iRGBCon[j];
+         for( j=0; j<2; j++ ) dPtr1[j] = pTgtV24->def.u.rmv.iRGBCon[j];
 
          mxSetField( pMXParms, 0, "fSpatialFreq", mxCreateDoubleMatrix(1, 2, mxREAL) );
          dPtr1 = mxGetPr( mxGetField(pMXParms, 0, "fSpatialFreq") );
-         for( j=0; j<2; j++ ) dPtr1[j] = pTgt->def.u.rmv.fSpatialFreq[j];
+         for( j=0; j<2; j++ ) dPtr1[j] = pTgtV24->def.u.rmv.fSpatialFreq[j];
 
          mxSetField( pMXParms, 0, "fDriftAxis", mxCreateDoubleMatrix(1, 2, mxREAL) );
          dPtr1 = mxGetPr( mxGetField(pMXParms, 0, "fDriftAxis") );
-         for( j=0; j<2; j++ ) dPtr1[j] = pTgt->def.u.rmv.fDriftAxis[j];
+         for( j=0; j<2; j++ ) dPtr1[j] = pTgtV24->def.u.rmv.fDriftAxis[j];
 
          mxSetField( pMXParms, 0, "fGratPhase", mxCreateDoubleMatrix(1, 2, mxREAL) );
          dPtr1 = mxGetPr( mxGetField(pMXParms, 0, "fGratPhase") );
-         for( j=0; j<2; j++ ) dPtr1[j] = pTgt->def.u.rmv.fGratPhase[j];
+         for( j=0; j<2; j++ ) dPtr1[j] = pTgtV24->def.u.rmv.fGratPhase[j];
 
          mxSetField( pMXParms, 0, "fSigma", mxCreateDoubleMatrix(1, 2, mxREAL) );
          dPtr1 = mxGetPr( mxGetField(pMXParms, 0, "fSigma") );
-         for( j=0; j<2; j++ ) dPtr1[j] = pTgt->def.u.rmv.fSigma[j];
+         for( j=0; j<2; j++ ) dPtr1[j] = pTgtV24->def.u.rmv.fSigma[j];
 
          mxSetField( pMXParms, 0, "strFolder", 
-               mxCreateString( (iType==RMV_MOVIE || iType==RMV_IMAGE) ? pTgt->def.u.rmv.strFolder : "" ) );
+               mxCreateString( (iType==RMV_MOVIE || iType==RMV_IMAGE) ? pTgtV24->def.u.rmv.strFolder : "" ) );
          mxSetField( pMXParms, 0, "strFile", 
-               mxCreateString( (iType==RMV_MOVIE || iType==RMV_IMAGE) ? pTgt->def.u.rmv.strFile : "" ) );
+               mxCreateString( (iType==RMV_MOVIE || iType==RMV_IMAGE) ? pTgtV24->def.u.rmv.strFile : "" ) );
 
          // target flicker parameters added in V=23
-         mxSetField( pMXParms, 0, "iFlickerOn", createInt32Scalar( pTgt->def.u.rmv.iFlickerOn ) );
-         mxSetField( pMXParms, 0, "iFlickerOff", createInt32Scalar( pTgt->def.u.rmv.iFlickerOff ) );
-         mxSetField( pMXParms, 0, "iFlickerDelay", createInt32Scalar( pTgt->def.u.rmv.iFlickerDelay ) );
+         mxSetField( pMXParms, 0, "iFlickerOn", createInt32Scalar(pTgtV24->def.u.rmv.iFlickerOn ) );
+         mxSetField( pMXParms, 0, "iFlickerOff", createInt32Scalar(pTgtV24->def.u.rmv.iFlickerOff ) );
+         mxSetField( pMXParms, 0, "iFlickerDelay", createInt32Scalar(pTgtV24->def.u.rmv.iFlickerDelay ) );
+
+         // stereo dot disparity added in V=25 -- set to 0 for all previous versions
+         mxSetField(pMXParms, 0, "fDotDisp", mxCreateDoubleScalar(0));
 
          mxSetField( pMXTgt, i, "params", pMXParms );
       }
 
       if( (cxData.fileHdr.flags & CXHF_ISCONTINUOUS) != 0 )                      // remaining fields only apply to
       {                                                                          // ContMode files...
-         mxSetField( pMXTgt, i, "dwState", createUInt32Scalar( pTgt->dwState ) );
-         mxSetField( pMXTgt, i, "hPos", mxCreateDoubleScalar( pTgt->fPosX ) );
-         mxSetField( pMXTgt, i, "vPos", mxCreateDoubleScalar( pTgt->fPosY ) );
+         mxSetField( pMXTgt, i, "dwState", createUInt32Scalar(pTgtV24->dwState ) );
+         mxSetField( pMXTgt, i, "hPos", mxCreateDoubleScalar(pTgtV24->fPosX ) );
+         mxSetField( pMXTgt, i, "vPos", mxCreateDoubleScalar(pTgtV24->fPosY ) );
       }
    }
    else if(cxData.fileHdr.version >= 13) for(i = 0; i < cxData.nTargets; i++)
@@ -2504,6 +2703,9 @@ void setTargetDefns(mxArray* pOut)
          mxSetField( pMXParms, 0, "iFlickerOff", createInt32Scalar(0) );
          mxSetField( pMXParms, 0, "iFlickerDelay", createInt32Scalar(0) );
 
+         // stereo dot disparity added in V=25 -- set to 0 for all previous versions
+         mxSetField(pMXParms, 0, "fDotDisp", mxCreateDoubleScalar(0));
+
          mxSetField( pMXTgt, i, "params", pMXParms );
       }
 
@@ -2582,12 +2784,13 @@ void setTargetDefns(mxArray* pOut)
          dPtr1 = mxGetPr( mxGetField(pMXParms, 0, "fSigma") );
          for( j=0; j<2; j++ ) dPtr1[j] = pTgtV12->def.u.rmv.fSigma[j];
 
-         // these next five fields were not present in target records for v=8..12 data files
+         // these next six fields were not present in target records for v=8..12 data files
          mxSetField( pMXParms, 0, "strFolder", mxCreateString( "" ) );
          mxSetField( pMXParms, 0, "strFile", mxCreateString( "" ) );
          mxSetField( pMXParms, 0, "iFlickerOn", createInt32Scalar(0) );
          mxSetField( pMXParms, 0, "iFlickerOff", createInt32Scalar(0) );
          mxSetField( pMXParms, 0, "iFlickerDelay", createInt32Scalar(0) );
+         mxSetField(pMXParms, 0, "fDotDisp", mxCreateDoubleScalar(0));
 
          mxSetField( pMXTgt, i, "params", pMXParms );
       }
@@ -3329,6 +3532,7 @@ void initializeNoisyDotsEmulator()
    CXFILETGT* pTgt;
    CXFILETGT_V12* pTgtV12;
    CXFILETGT_V22* pTgtV22;
+   CXFILETGT_V24* pTgtV24;
    NOISYTGTINFO nti;
 
    len = 0;
@@ -3344,18 +3548,32 @@ void initializeNoisyDotsEmulator()
       // make sure trial includes at least one XYScope OR RMVideo noisy dots target, AND NOT a mix from both displays
       for(i=0; i<cxData.nTargets; i++)
       {
-         if(cxData.fileHdr.version >= 23)
+         if(cxData.fileHdr.version >= 25)
          {
             pTgt = &(cxData.pTargets[i]);
-            if(!gotXY) 
+            if(!gotXY)
             {
-               gotXY = (pTgt->def.wType == CX_XYTARG) && 
+               gotXY = (pTgt->def.wType == CX_XYTARG) &&
                   (pTgt->def.u.xy.type == NOISYDIR || pTgt->def.u.xy.type == NOISYSPEED);
             }
             if(!gotRMV)
             {
                gotRMV = (pTgt->def.wType == CX_RMVTARG) && (pTgt->def.u.rmv.iType == RMV_RANDOMDOTS) &&
                   (pTgt->def.u.rmv.iNoiseUpdIntv > 0) && (pTgt->def.u.rmv.iNoiseLimit > 0);
+            }
+         }
+         else if(cxData.fileHdr.version >= 23)
+         {
+            pTgtV24 = &(cxData.pTargets_V24[i]);
+            if(!gotXY) 
+            {
+               gotXY = (pTgtV24->def.wType == CX_XYTARG) && 
+                  (pTgtV24->def.u.xy.type == NOISYDIR || pTgtV24->def.u.xy.type == NOISYSPEED);
+            }
+            if(!gotRMV)
+            {
+               gotRMV = (pTgtV24->def.wType == CX_RMVTARG) && (pTgtV24->def.u.rmv.iType == RMV_RANDOMDOTS) &&
+                  (pTgtV24->def.u.rmv.iNoiseUpdIntv > 0) && (pTgtV24->def.u.rmv.iNoiseLimit > 0);
             }
          }
          else if(cxData.fileHdr.version >= 13)
@@ -3415,7 +3633,7 @@ void initializeNoisyDotsEmulator()
    // now add the noisy-dots targets to the emulator object
    for(i=0; ok && i<cxData.nTargets; i++)
    {
-      if(cxData.fileHdr.version >= 23)
+      if(cxData.fileHdr.version >= 25)
       {
          pTgt = &(cxData.pTargets[i]);
          if((pTgt->def.wType == CX_XYTARG) && (pTgt->def.u.xy.type == NOISYDIR || pTgt->def.u.xy.type == NOISYSPEED))
@@ -3423,10 +3641,10 @@ void initializeNoisyDotsEmulator()
             nti.type = EMU_NOISYDIR;
             if(pTgt->def.u.xy.type == NOISYSPEED)
                nti.type = (pTgt->def.u.xy.fInnerX != 0) ? EMU_NOISYSPD_MUL : EMU_NOISYSPD_ADD;
-            nti.level = (int) pTgt->def.u.xy.fInnerW;
-            nti.updIntv = (int) pTgt->def.u.xy.fInnerH;
+            nti.level = (int)pTgt->def.u.xy.fInnerW;
+            nti.updIntv = (int)pTgt->def.u.xy.fInnerH;
             nti.nDots = pTgt->def.u.xy.ndots;
-            
+
             ok = addNoisyDotsTarget(i, &nti);
          }
          else if((pTgt->def.wType == CX_RMVTARG) && (pTgt->def.u.rmv.iType == RMV_RANDOMDOTS) &&
@@ -3434,17 +3652,51 @@ void initializeNoisyDotsEmulator()
          {
             if((pTgt->def.u.rmv.iFlags & RMV_F_DIRNOISE) != 0) nti.type = EMU_NOISYDIR;
             else nti.type = ((pTgt->def.u.rmv.iFlags & RMV_F_SPDLOG2) != 0) ? EMU_NOISYSPD_MUL : EMU_NOISYSPD_ADD;
-            
+
             nti.level = pTgt->def.u.rmv.iNoiseLimit;
             nti.updIntv = pTgt->def.u.rmv.iNoiseUpdIntv;
             nti.nDots = pTgt->def.u.rmv.nDots;
-            
+
             nti.iFlags = pTgt->def.u.rmv.iFlags;
             nti.iPctCoherent = pTgt->def.u.rmv.iPctCoherent;
             nti.fDotLife = pTgt->def.u.rmv.fDotLife;
             nti.iSeed = pTgt->def.u.rmv.iSeed;
             nti.fOuterW = pTgt->def.u.rmv.fOuterW;
             nti.fOuterH = pTgt->def.u.rmv.fOuterH;
+
+            ok = addNoisyDotsTarget(i, &nti);
+         }
+      }
+      else if(cxData.fileHdr.version >= 23)
+      {
+         pTgtV24 = &(cxData.pTargets_V24[i]);
+         if((pTgtV24->def.wType == CX_XYTARG) && (pTgtV24->def.u.xy.type == NOISYDIR || pTgtV24->def.u.xy.type == NOISYSPEED))
+         {
+            nti.type = EMU_NOISYDIR;
+            if(pTgtV24->def.u.xy.type == NOISYSPEED)
+               nti.type = (pTgtV24->def.u.xy.fInnerX != 0) ? EMU_NOISYSPD_MUL : EMU_NOISYSPD_ADD;
+            nti.level = (int) pTgtV24->def.u.xy.fInnerW;
+            nti.updIntv = (int) pTgtV24->def.u.xy.fInnerH;
+            nti.nDots = pTgtV24->def.u.xy.ndots;
+            
+            ok = addNoisyDotsTarget(i, &nti);
+         }
+         else if((pTgtV24->def.wType == CX_RMVTARG) && (pTgtV24->def.u.rmv.iType == RMV_RANDOMDOTS) &&
+            (pTgtV24->def.u.rmv.iNoiseUpdIntv > 0) && (pTgtV24->def.u.rmv.iNoiseLimit > 0))
+         {
+            if((pTgtV24->def.u.rmv.iFlags & RMV_F_DIRNOISE) != 0) nti.type = EMU_NOISYDIR;
+            else nti.type = ((pTgtV24->def.u.rmv.iFlags & RMV_F_SPDLOG2) != 0) ? EMU_NOISYSPD_MUL : EMU_NOISYSPD_ADD;
+            
+            nti.level = pTgtV24->def.u.rmv.iNoiseLimit;
+            nti.updIntv = pTgtV24->def.u.rmv.iNoiseUpdIntv;
+            nti.nDots = pTgtV24->def.u.rmv.nDots;
+            
+            nti.iFlags = pTgtV24->def.u.rmv.iFlags;
+            nti.iPctCoherent = pTgtV24->def.u.rmv.iPctCoherent;
+            nti.fDotLife = pTgtV24->def.u.rmv.fDotLife;
+            nti.iSeed = pTgtV24->def.u.rmv.iSeed;
+            nti.fOuterW = pTgtV24->def.u.rmv.fOuterW;
+            nti.fOuterH = pTgtV24->def.u.rmv.fOuterH;
             
             ok = addNoisyDotsTarget(i, &nti);
          }
@@ -3543,6 +3795,7 @@ BOOL shouldAdjustPatternMotionAtSegStart(int pos)
    BOOL adjust;
    int t;
    CXFILETGT* pTgt;
+   CXFILETGT_V24* pTgtV24;
    CXFILETGT_V22* pTgtV22;
    CXFILETGT_V12* pTgtV12;
    CXFILETGT_V7* pTgtV7;
@@ -3551,17 +3804,30 @@ BOOL shouldAdjustPatternMotionAtSegStart(int pos)
    adjust = FALSE;
    if(cxData.fileHdr.version >= 2 && pos >= 0 && pos < cxData.nTargets)
    {
-      if(cxData.fileHdr.version >= 23)
+      if(cxData.fileHdr.version >= 25)
       {
          pTgt = &(cxData.pTargets[pos]);
-         if(pTgt->def.wType == CX_XYTARG && cxData.fileHdr.version < 18) 
+         if(pTgt->def.wType == CX_XYTARG && cxData.fileHdr.version < 18)
          {
             t = pTgt->def.u.xy.type;
-            adjust = (t==FASTCENTER || t==FCDOTLIFE || t==NOISYDIR || t==COHERENTFC || t==NOISYSPEED);
+            adjust = (t == FASTCENTER || t == FCDOTLIFE || t == NOISYDIR || t == COHERENTFC || t == NOISYSPEED);
          }
          else if(pTgt->def.wType == CX_RMVTARG)
          {
             adjust = (pTgt->def.u.rmv.iType == RMV_RANDOMDOTS) && ((pTgt->def.u.rmv.iFlags & RMV_F_WRTSCREEN) != 0);
+         }
+      }
+      else if(cxData.fileHdr.version >= 23)
+      {
+         pTgtV24 = &(cxData.pTargets_V24[pos]);
+         if(pTgtV24->def.wType == CX_XYTARG && cxData.fileHdr.version < 18)
+         {
+            t = pTgtV24->def.u.xy.type;
+            adjust = (t==FASTCENTER || t==FCDOTLIFE || t==NOISYDIR || t==COHERENTFC || t==NOISYSPEED);
+         }
+         else if(pTgtV24->def.wType == CX_RMVTARG)
+         {
+            adjust = (pTgtV24->def.u.rmv.iType == RMV_RANDOMDOTS) && ((pTgtV24->def.u.rmv.iFlags & RMV_F_WRTSCREEN) != 0);
          }
       }
       else if(cxData.fileHdr.version >= 13)
@@ -3622,6 +3888,7 @@ BOOL shouldAdjustPatternMotionDuringVStab(int pos)
 {
    BOOL adjust;
    CXFILETGT* pTgt;
+   CXFILETGT_V24* pTgtV24;
    CXFILETGT_V22* pTgtV22;
    CXFILETGT_V12* pTgtV12;
    CXFILETGT_V7* pTgtV7;
@@ -3639,11 +3906,17 @@ BOOL shouldAdjustPatternMotionDuringVStab(int pos)
    adjust = adjust && pos >= 0 && pos < cxData.nTargets;
    if(adjust)
    {
-      if(cxData.fileHdr.version >= 23)
+      if(cxData.fileHdr.version >= 25)
       {
          pTgt = &(cxData.pTargets[pos]);
-         adjust = (pTgt->def.wType == CX_RMVTARG) && (pTgt->def.u.rmv.iType == RMV_RANDOMDOTS) && 
-                  ((pTgt->def.u.rmv.iFlags & RMV_F_WRTSCREEN) != 0);
+         adjust = (pTgt->def.wType == CX_RMVTARG) && (pTgt->def.u.rmv.iType == RMV_RANDOMDOTS) &&
+            ((pTgt->def.u.rmv.iFlags & RMV_F_WRTSCREEN) != 0);
+      }
+      else if(cxData.fileHdr.version >= 23)
+      {
+         pTgtV24 = &(cxData.pTargets_V24[pos]);
+         adjust = (pTgtV24->def.wType == CX_RMVTARG) && (pTgtV24->def.u.rmv.iType == RMV_RANDOMDOTS) &&
+                  ((pTgtV24->def.u.rmv.iFlags & RMV_F_WRTSCREEN) != 0);
       }
       else if(cxData.fileHdr.version >= 13)
       {
@@ -4678,12 +4951,14 @@ void prepareTgtIDs()
    {                                                              // can deduce the old-style IDs...
       for( i = 0; (i < cxData.nTargets) && (i < MAX_TRIALTARGS); i++ )
       {
-         if( cxData.fileHdr.version <= 7 )                        // tgt defn format changed as of file vers = 8
+         if(cxData.fileHdr.version <= 7)                        // tgt defn format changed as of file vers = 8
             wType = cxData.pTargets_V7[i].def.wType;
          else if(cxData.fileHdr.version <= 12)                    // and again as of file vers = 13
             wType = cxData.pTargets_V12[i].def.wType;
          else if(cxData.fileHdr.version <= 22)                    // and again as of file vers = 23
             wType = cxData.pTargets_V22[i].def.wType;
+         else if(cxData.fileHdr.version <= 24)                    // and again as of file vers = 25
+            wType = cxData.pTargets_V24[i].def.wType;
          else
             wType = cxData.pTargets[i].def.wType;
 

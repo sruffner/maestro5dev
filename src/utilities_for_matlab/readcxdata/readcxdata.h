@@ -171,7 +171,8 @@ typedef struct tagCxDataFile
    CXFILETGT_V7* pTargets_V7;                   // the target definitions [2 <= data file version <= 7]
    CXFILETGT_V12* pTargets_V12;                 // the target definitions [8 <= data file version <= 12]
    CXFILETGT_V22* pTargets_V22;                 // the target definitions [13 <= data file version <= 22]
-   CXFILETGT* pTargets;                         // the target definitions [data file version >= 23]
+   CXFILETGT_V24* pTargets_V24;                 // the target definitions [23 <= data file version <= 24]
+   CXFILETGT* pTargets;                         // the target definitions [data file version >= 25]
 
    int nTrialTgts;                              // old-style target IDs of targets participating in a CNTRLX trial
    int oldTgtIDs[MAX_TRIALTARGS];
@@ -388,9 +389,10 @@ const char *rmvTgtParams[] =  // defining parameters for a Maestro RMVideo targe
    "strFile",                 // string; added 17sep2009, v >= 13. An empty string if v < 13 or type != RMV_MOVIE.
    "iFlickerOn",              // added 13may2019, v >= 23. 0 if v < 23.
    "iFlickerOff",             // ditto.
-   "iFlickerDelay"            // ditto.
+   "iFlickerDelay",           // ditto.
+   "fDotDisp"                 // added 18dec2024, v >= 25. 0 if v < 25.
 };
-const int NUMRMVTGTPARMS = 25;
+const int NUMRMVTGTPARMS = 26;
 
 /* [20nov2024] Eliminated the output fields 'stimulusrun' and ''psgm'.
 const char *runFields[] =     // stimulus run definition extracted from Maestro data files
