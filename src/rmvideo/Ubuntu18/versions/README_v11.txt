@@ -1,18 +1,21 @@
 Installation Notes for RMVideo Version 11 - **** Targeting Lubuntu 18.04 LTS ****
 
-******************** TODO -- Need to update this prior to releasing Maestro 5.0.2 and RMVideo 11 ***************************
-Last Updated: 19 October 2020 (saruffner)
+Last Updated: 30 December 2024 (saruffner)
+----------------------------------------------------------------
 
+Changes:
+==> Implemented "stereo mode" to support stereo dot disparity experiments in Priebe lab. Requires NVidia card that supports
+and is configured for stereo. RMVideo will attempt to enable stereo mode at startup. If not available, it will use the
+default visual (double-buffered, non-stereo RGBA). IF STEREO IS ENABLED, keep in mind that the "stereo frame rate" is one-half
+the monitor's actual frame rate.
+==> A new parameter was added to the RMVideo target definition structure: RMVTGTDEF.fDotDisp, the stereo disparity in visual
+degrees. RMVideo was updated to receive this new parameter from Maestro during target loading, and to use it to differentially
+draw the left and right buffers when stereo is enabled. The disparity parameter applies only to the dot target types "Point",
+"Random-Dot Patch", and "Random-Dot Flowfield".
 
-- Prior releases of version 10 for Lubuntu 14.04 LTS:
-  -— Initial release date: 23 May 2019 (rev 05 Jun), with Maestro v4.1.0. It is not compatible with earlier Maestro releases. 
-  -- 10b release date: 09 Sep 2019, with Maestro v4.1.1. V10b is compatible with Maestro v4.1.0 as well. However, to get 
-  improved handling of large image targets (eg, 2560x1440), recommend installing both Maestro v4.1.1 and RMVideo V10b.
-  -- 10c release date: 04 Nov 2019, with Maestro V4.1.1. V10c is also compatible with Maestro v4.1.0, but same caveat as 
-  with 10b applies.
 
 - THIS RELEASE REQUIRES UBUNTU LINUX 18.04 LTS: Ubuntu 14.04 LTS reached end-of-life in April 2019, so I worked on code
-changes needed to run RMVideo under a more recent OS version, 18.04 LTS (EOL in April 2023). Significant code changes were
+changes needed to run RMVideo under a more recent OS version, 18.04 LTS. Significant code changes were
 necessary since Ubuntu has returned to using the FFMPEG video libraries rather than the LIBAV libraries in 14.04. In addition,
 some other changes were introduced to further improve RMVideo performance under 18.04 LTS. 
    If you wish to install this release of RMVideo, the target workstation should use the latest 18.04.x release of "Lubuntu"
@@ -21,38 +24,8 @@ configuring the workstation:
 
      https://sites.google.com/a/srscicomp.com/maestro/installation/how-to-install-rmvideo
 
-
-- Changes: 
-   --> Implemented new "flicker" feature available for all RMVideo target types. The flicker ON phase duration, OFF phase
-duration, and initial delay (until the first ON phase) are specified in the target definition. All 3 flicker parameters are
-given in # of video frame periods, range-restricted to 0..99. If ON or OFF duration is 0, the feature is disabled. A
-flickering target will flicker whether it is moving or not. The flicker state resets each time the target is toggled ON.
-   --> Adopted the previously developed implementation conforming to OpenGL 3.3 Core Profile. While testing suggested that
-it does not perform quite as well as the original OpenGL 1.1 implementation, the differences are not substantial and are
-only noticeable when animating 3+ fullscreen plaid/grating targets @ refresh rates of 120Hz or better. In fact, the slightly
-poorer performance of the OGL3.3 implementation is due to a different implementation for gratings -- rather than using a
-multi-texturing approach, the OGL3.3 implementation puts the grating calculations in the fragment shader, which is a more
-intuitive solution. I may revert to the multi-texturing strategy in a later release, if necessary.
-   --> REVISED 05 Jun: Fixed two bugs in the implementation of the Random-Dot Patch target: (1) Using an alpha mask texture
-to implement a non-rectangular aperture led to different-colored dots along the aperture edge -- essentially these dots were
-only partially masked (alpha neither 0 nor 1). Reverted to the original approach, which calculates per-dot alpha on every
-frame. The per-dot alpha is delivered via the vertex attribute representing the dot's texel coordinate Tx. Had to make a
-minor change to the fragment shader. (2) Fixed coding mistake in the computation of the colors for two-color contrast mode.
-   --> RELEASE 10b, 10 Sep: To improve performance when presenting very large image targets (eg, 2560x1440), implemented an
-in-memory image cache that is preloaded at startup with any existing images in the media store, up to a 300MB capacity.
-   --> RELEASE 10c, 04 Nov: Implemented major design changes to dramatically boost RMVideo's movie playback performance: 
-(1) a separate worker thread (running with a normal rather than a real-time scheduling policy) handles reading and 
-buffering video frames from the source file; (2) CRMVTarget uses a round-robin queue of OpenGL "pixel buffer objects" to
-allow for asynchronous upload of video frames to the texture object on the GPU, thereby increasing overall throughput.
-Prior to the change, a trial presenting a 1024x768 video at a playback rate of 120Hz was successfully completed on only
-33% of trial reps. After the change, a trial presenting a 1280x720 video @120Hz was successful on 100% of reps, while a
-trial presenting a 1920x1080 move @ 120Hz was succssful on 96% of reps. NOTE that performance will depend on the capabilities
-of the RMVideo workstation. The aforementioned results were on a 2016-era workstation with a 4-core 3+ GHz processor, 8GB RAM,
-and an NVidia GeForce GTX 1060 6GB GPU.
-   --> RELEASE 10d, 20 Oct 2020: This release includes all necessary code changes to build and run RMVideo in Lubuntu 18.04.1 LTS
-(kernel 5.3.0-45-generic). Most of the code changes involved adapting RMVideo to use the FFMPEG video libraries instead of
-LIBAV. THIS RELEASE IS NOT COMPATIBLE WITH Lubuntu 14.04 LTS.
-
+Ubuntu 18.04 LTS reached EOL in April 2023. Unfortunately, RMVideo has not been built/tested on more recent Ubuntu
+distributions.
 
 
 — Code archives: The source code for RMVideo is made freely available in case you would need to rebuild it for your particular 

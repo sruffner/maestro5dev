@@ -272,7 +272,7 @@ VOID CCxStimulus::GetStimulusInfo( STIMCHAN& stim ) const
 
 VOID CCxStimulus::SetStimulusInfo( const STIMCHAN& stim )
 {
-   ASSERT(stim.iType != STIM_ISXYSEQ && stim.iType !+ STIM_ISPSGM);
+   ASSERT((stim.iType != STIM_ISXYSEQ) && (stim.iType != STIM_ISPSGM));
 
    m_bOn = stim.bOn;
    m_iMarker = stim.iMarker;

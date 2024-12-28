@@ -94,7 +94,7 @@ Root: HKLM; Subkey: "SOFTWARE\HHMI-LisbergerLab\Maestro"; ValueType: string; Val
 
 [Code]
 const
-  MaestroVersionStr = '5.0.1';
+  MaestroVersionStr = '5.0.2';
 
 var
   AlreadyInstalled: Boolean;

@@ -321,7 +321,7 @@ BEGIN
     LTEXT           "Maestro",IDC_STATIC,44,18,26,8,SS_NOPREFIX
     LTEXT           "Copyright (C) 2000-2025",IDC_STATIC,44,38,77,8
     DEFPUSHBUTTON   "OK",IDOK,272,7,32,14,WS_GROUP
-    LTEXT           "Version 5.0.2 (Nov 2024)",IDC_STATIC,44,28,77,8
+    LTEXT           "Version 5.0.2 (Dec 2024)",IDC_STATIC,44,28,77,8
     LTEXT           "Inquiries:  Scott Ruffner (sruffner@srscicomp.com)",IDC_STATIC,20,74,172,8
     LTEXT           "Online User's Guide:  https://sites.google.com/a/srscicomp.com/maestro",IDC_STATIC,19,59,255,8
 END

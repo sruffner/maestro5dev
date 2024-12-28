@@ -20,6 +20,9 @@ Lisberger laboratory. In Sep 2024 I began the process of porting Maestro to run 
 
 This file documents changes in the codebase since the repo was created in June 2024.
 
+## 30 Dec 2024: Maestro 5.0.2 released
+-- Includes all changes below from 12 Nov - 18 Dec 2024.
+
 ## 11-18 Dec 2024: New RMVideo feature: Stereo dot disparity.
 -- In support of stereo experiments (Priebe lab), introduced new RMVideo target parameter `RMVTGTDEF.fDotDisp`, representing
 stereo dot disparity in visual degrees. Applicable only to the **Point**, **Random-Dot Patch**, and **Flow Field** targets.
@@ -29,12 +32,12 @@ Added numeric edit control, **disparity**, in the **Dots** group of the **Target
 RMVideo starts up, it requests a double-buffered, RGBA visual that supports stereo. If the video card supports it, then
 "stereo mode" is enabled and the disparity feature is available. Otherwise, it requests the normal double-buffereed RGBA
 visual as in past releases, stereo mode is disabled, and the disparity feature is not available. Note that the effective
-"stereo frame rate" is one-half the actual frame rate, and the RMVideo still reports the actual frame rate to Maestro. When
+"stereo frame rate" is one-half the actual frame rate, and that **RMVideo** still reports the actual frame rate to Maestro. When
 stereo is enabled, the video card swaps the left backbuffer to the front on one frame, and the right backbuffer to the front on the 
 next, and so on...
 -- Built and tested **RMVideo** v11 both on Ubuntu 14.04 and 18.04.
 -- `maestrodoc()` (v1.2.3) updated to support specifying the new parameter.
--- TODO: `readcxdata()` and **JMWork** updated to properly parse target records including the new version of the `RMVTGTDEF` 
+-- `readcxdata()` and **JMWork** updated to properly parse target records including the new version of the `RMVTGTDEF` 
 structure.
 
 ## 09 Dec 2024: Increased max number of trial targets.
